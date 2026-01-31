@@ -33,6 +33,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OnboardingPPPSection } from "@/components/client/OnboardingPPPSection";
+import { AIGenerationSection } from "@/components/client/AIGenerationSection";
 
 type Client = Tables<"clients">;
 
@@ -348,6 +349,10 @@ export default function ClientDetails() {
 
       {/* Seção de Onboarding PPP */}
       <OnboardingPPPSection client={client} onStatusChange={handleRefreshClient} />
+
+      {/* Seção de Geração com IA */}
+      <AIGenerationSection client={client} onGenerated={handleRefreshClient} />
+
 
       {/* Ações */}
       <Card>
