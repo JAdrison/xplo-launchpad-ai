@@ -1,142 +1,154 @@
 
 
-# Visualizacao e Edicao de Onboarding PPP por Cliente
+# Correção da Aba Onboarding PPP e Gerador IA
 
-## Problema Identificado
-1. A pagina de detalhes do cliente nao exibe informacoes do onboarding (ICPs, dores, promessa)
-2. O botao "Iniciar Onboarding" so aparece para clientes com status `draft`
-3. Nao ha como continuar ou editar um onboarding em andamento ou concluido
-4. Os dados do onboarding nao estao sendo exibidos na pagina do cliente
+## Problemas Identificados
 
----
+### 1. Aba Onboarding PPP Vazia
+A página `/onboarding` só mostra um card pedindo para selecionar cliente quando acessada diretamente pelo menu. Não existe uma listagem dos onboardings.
 
-## Solucao
+### 2. Gerador IA Não Funcional
+A página `/generator` apenas exibe um card estático que redireciona para configurações. Não há funcionalidade real de geração.
 
-Adicionar uma secao completa de **Onboarding PPP** na pagina de detalhes do cliente que:
-- Mostra o progresso/resumo dos dados ja preenchidos
-- Permite iniciar, continuar ou editar o onboarding a qualquer momento
-- Exibe ICPs, dores e promessa de forma organizada
+### 3. Falta de Geração com IA nos Detalhes do Cliente
+Após concluir o PPP, não há como gerar ofertas/LPs/anúncios a partir dos dados coletados.
 
 ---
 
-## Interface Proposta
+## Solução Proposta
+
+### Parte 1: Refatorar Página de Onboarding PPP
+
+Transformar `/onboarding` em uma listagem de todos os clientes com seus status de onboarding:
 
 ```text
 +----------------------------------------------------------+
-|  XPLO SOLAR LTDA                     [PPP em andamento]   |
+|  Onboarding PPP                                           |
+|  Acompanhe o processo de discovery dos seus clientes      |
 |----------------------------------------------------------|
 |                                                           |
-|  INFORMACOES DO CLIENTE (card existente)                  |
-|  ...                                                      |
+|  [Tabs: Todos | Em andamento | Concluídos | Pendentes]    |
 |                                                           |
 |  +-----------------------------------------------------+  |
-|  | ONBOARDING PPP                                      |  |
-|  |-----------------------------------------------------|  |
-|  |                                                      |  |
-|  |  Status: Em andamento                               |  |
-|  |  Progresso: 2 de 5 etapas                           |  |
-|  |                                                      |  |
-|  |  PRODUTO                                            |  |
-|  |  Nome: Sistema de Gestao Solar                      |  |
-|  |  Descricao: Plataforma para monitoramento...        |  |
-|  |                                                      |  |
-|  |  ICPs DEFINIDOS (2)                                 |  |
-|  |  - Empresas de energia renovavel                    |  |
-|  |  - Instaladores de paineis solares                  |  |
-|  |                                                      |  |
-|  |  PROMESSA                                           |  |
-|  |  (Ainda nao definida)                               |  |
-|  |                                                      |  |
-|  |  [ Continuar Onboarding ]  [ Editar Onboarding ]    |  |
+|  | XPLO SOLAR LTDA                    [PPP Concluído]  |  |
+|  | Produto: Assinatura de energia                      |  |
+|  | ICPs: 1 | Promessa: Definida                        |  |
+|  | [Ver Detalhes] [Editar PPP] [Gerar com IA]          |  |
+|  +-----------------------------------------------------+  |
+|                                                           |
+|  +-----------------------------------------------------+  |
+|  | Adrison Magalhaes                  [Em andamento]   |  |
+|  | Progresso: 40% (2 de 5 etapas)                      |  |
+|  | [Continuar Onboarding]                              |  |
 |  +-----------------------------------------------------+  |
 |                                                           |
 +----------------------------------------------------------+
 ```
 
----
+### Parte 2: Refatorar Página Gerador IA
 
-## Logica de Exibicao
+Transformar `/generator` em uma ferramenta de geração baseada em clientes que concluíram o PPP:
 
-| Status do Cliente | Botao Principal | Botao Secundario |
-|-------------------|-----------------|------------------|
-| `draft` | Iniciar Onboarding | - |
-| `ppp_in_progress` | Continuar Onboarding | Editar Onboarding |
-| `ppp_completed` | - | Editar Onboarding |
-| outros | - | Ver Onboarding |
+```text
++----------------------------------------------------------+
+|  Gerador IA                                               |
+|  Gere ofertas, LPs e anúncios com IA                      |
+|----------------------------------------------------------|
+|                                                           |
+|  Selecione um cliente:                                    |
+|  [Dropdown: Clientes com PPP concluído]                   |
+|                                                           |
+|  +-----------------------------------------------------+  |
+|  | O que deseja gerar?                                 |  |
+|  |-----------------------------------------------------|  |
+|  |  [ ] Oferta Hormozi                                 |  |
+|  |  [ ] Landing Page                                   |  |
+|  |  [ ] Anúncios (Scripts + Headlines)                 |  |
+|  |                                                      |  |
+|  |  [Gerar com IA]                                     |  |
+|  +-----------------------------------------------------+  |
+|                                                           |
++----------------------------------------------------------+
+```
+
+### Parte 3: Adicionar Ações de IA nos Detalhes do Cliente
+
+Para clientes com `ppp_completed`:
+- Botão "Gerar Oferta com IA"
+- Botão "Gerar LP com IA"
+- Botão "Gerar Anúncios com IA"
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| `src/pages/ClientDetails.tsx` | Adicionar secao de Onboarding PPP com dados e acoes |
+| `src/pages/Onboarding.tsx` | Refatorar para exibir listagem de onboardings quando sem parâmetro `client` |
+| `src/pages/Generator.tsx` | Implementar seleção de cliente e opções de geração |
+| `src/pages/ClientDetails.tsx` | Adicionar seção de geração IA para clientes com PPP concluído |
 
 ---
 
-## Funcionalidades a Implementar
+## Detalhamento Técnico
 
-### 1. Carregar Dados do Onboarding
-Buscar dados relacionados ao cliente:
-- `client_profile`: nome do produto, descricao, diferenciais
-- `icps`: lista de ICPs definidos
-- `icp_pains`: dores mapeadas para cada ICP
-- `client_promise`: promessa principal
+### Onboarding.tsx - Nova Estrutura
 
-### 2. Exibir Resumo do Onboarding
-Card com:
-- Indicador de progresso (baseado nos dados preenchidos)
-- Resumo dos dados de produto
-- Lista de ICPs com contagem
-- Promessa (se existir)
+Quando acessado SEM parâmetro `client`:
+1. Buscar todos os clientes com dados de onboarding (join com `client_profile`, `icps`, `client_promise`)
+2. Exibir cards com progresso de cada cliente
+3. Filtros por status (tabs)
+4. Ações contextuais por status
 
-### 3. Acoes Contextuais
-- **Iniciar**: Para clientes `draft`, navega para `/onboarding?client=id`
-- **Continuar**: Para `ppp_in_progress`, navega para onboarding na etapa atual
-- **Editar**: Para qualquer status, permite voltar ao wizard para alteracoes
+Quando acessado COM parâmetro `client`:
+- Manter o wizard atual de 5 etapas
+
+### Generator.tsx - Nova Funcionalidade
+
+1. Dropdown para selecionar cliente (apenas os com `ppp_completed` ou superior)
+2. Checkboxes para tipo de geração
+3. Botão de gerar que chama a API de IA (usando Lovable AI)
+4. Exibir resultado e salvar nas tabelas correspondentes
+
+### ClientDetails.tsx - Seção de Geração
+
+Para clientes com `ppp_completed`:
+- Card "Gerar com IA"
+- Botões para cada tipo de geração
+- Indicador se já foi gerado
 
 ---
 
-## Estrutura do Codigo
+## Fluxo de Dados para Geração com IA
 
-```typescript
-// Novos estados para dados do onboarding
-const [onboardingData, setOnboardingData] = useState({
-  profile: null,
-  icps: [],
-  pains: [],
-  promise: null,
-});
-
-// Buscar dados do onboarding junto com o cliente
-const fetchOnboardingData = async (clientId: string) => {
-  const [profileRes, icpsRes, painsRes, promiseRes] = await Promise.all([
-    supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
-    supabase.from("icps").select("*").eq("client_id", clientId).order("sort_order"),
-    supabase.from("icp_pains").select("*, icps(name)"),
-    supabase.from("client_promise").select("*").eq("client_id", clientId).maybeSingle(),
-  ]);
-  
-  // Popular estado
-};
-
-// Calcular progresso
-const calculateProgress = () => {
-  let completed = 0;
-  if (onboardingData.profile?.product_name) completed++;
-  if (onboardingData.icps.length > 0) completed++;
-  if (onboardingData.pains.some(p => p.main_pain)) completed++;
-  if (onboardingData.promise?.promise_text) completed++;
-  return completed;
-};
+```text
+client_profile + icps + icp_pains + client_promise
+                    |
+                    v
+            [Edge Function: generate-offer]
+                    |
+                    v
+              offers_hormozi (salvar)
+                    |
+                    v
+            [Edge Function: generate-lp]
+                    |
+                    v
+              landing_pages (salvar)
+                    |
+                    v
+            [Edge Function: generate-ads]
+                    |
+                    v
+                 ads (salvar)
 ```
 
 ---
 
-## Beneficios
+## Benefícios
 
-- Visibilidade completa do progresso do onboarding
-- Facil acesso para continuar ou editar a qualquer momento
-- Resumo rapido dos dados ja preenchidos
-- Fluxo intuitivo baseado no status do cliente
+- Visibilidade completa de todos os onboardings em andamento
+- Fluxo direto para gerar conteúdo após PPP concluído
+- Múltiplos pontos de acesso para geração (menu Gerador IA ou detalhes do cliente)
+- Integração com Lovable AI (sem necessidade de API key externa)
 
