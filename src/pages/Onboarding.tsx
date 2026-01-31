@@ -68,9 +68,10 @@ export default function Onboarding() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const clientId = searchParams.get("client");
+  const stepParam = searchParams.get("step");
 
   const [client, setClient] = useState<Client | null>(null);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(stepParam ? parseInt(stepParam, 10) : 1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 

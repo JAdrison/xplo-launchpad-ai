@@ -26,12 +26,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Play } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { OnboardingPPPSection } from "@/components/client/OnboardingPPPSection";
 
 type Client = Tables<"clients">;
 
@@ -63,7 +64,6 @@ export default function ClientDetails() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isStartingOnboarding, setIsStartingOnboarding] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -199,26 +199,17 @@ export default function ClientDetails() {
     }
   };
 
-  const handleStartOnboarding = async () => {
+  const handleRefreshClient = async () => {
     if (!id) return;
-
-    setIsStartingOnboarding(true);
-
-    const { error } = await supabase
+    
+    const { data } = await supabase
       .from("clients")
-      .update({ status: "ppp_in_progress" })
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error starting onboarding:", error);
-      toast({
-        title: "Erro ao iniciar onboarding",
-        description: "Não foi possível iniciar o processo de onboarding.",
-        variant: "destructive",
-      });
-      setIsStartingOnboarding(false);
-    } else {
-      navigate(`/onboarding?client=${id}`);
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    
+    if (data) {
+      setClient(data);
     }
   };
 
@@ -355,32 +346,8 @@ export default function ClientDetails() {
         </CardContent>
       </Card>
 
-      {/* Próxima Etapa */}
-      {client.status === "draft" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Próxima Etapa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Inicie o processo de discovery para este cliente. O onboarding PPP irá
-              guiá-lo através da definição do produto, público e posicionamento.
-            </p>
-            <Button
-              onClick={handleStartOnboarding}
-              disabled={isStartingOnboarding}
-              className="gap-2"
-            >
-              {isStartingOnboarding ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-              Iniciar Onboarding PPP
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* Seção de Onboarding PPP */}
+      <OnboardingPPPSection client={client} onStatusChange={handleRefreshClient} />
 
       {/* Ações */}
       <Card>
