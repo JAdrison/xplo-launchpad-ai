@@ -32,7 +32,7 @@ interface OnboardingData {
   promise: ClientPromise | null;
 }
 
-interface OnboardingPPPSectionProps {
+interface OnboardingX1SectionProps {
   client: Client;
   onStatusChange?: () => void;
 }
@@ -45,7 +45,7 @@ const STEPS = [
   { name: "Revisão", icon: CheckCircle },
 ];
 
-export function OnboardingPPPSection({ client, onStatusChange }: OnboardingPPPSectionProps) {
+export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1SectionProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
@@ -195,7 +195,7 @@ export function OnboardingPPPSection({ client, onStatusChange }: OnboardingPPPSe
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            Onboarding PPP
+            Onboarding X1
           </CardTitle>
           {isCompleted && (
             <Badge variant="default" className="gap-1">

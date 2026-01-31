@@ -20,7 +20,7 @@ interface AppSidebarProps {
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Clientes", href: "/clients", icon: Users },
-  { name: "Onboarding PPP", href: "/onboarding", icon: ClipboardList },
+  { name: "Onboarding X1", href: "/onboarding", icon: ClipboardList },
   { name: "Gerador IA", href: "/generator", icon: Sparkles },
   { name: "Ativos", href: "/assets", icon: FileStack },
   { name: "Configurações", href: "/settings", icon: Settings },

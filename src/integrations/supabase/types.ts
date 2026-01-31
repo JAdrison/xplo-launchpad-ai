@@ -345,7 +345,10 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
+          demand_generation_channels: string[] | null
+          demand_generation_strategies: Json | null
           guarantee: string | null
+          icp_id: string | null
           id: string
           is_active: boolean | null
           main_cta: string | null
@@ -359,7 +362,10 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
+          demand_generation_channels?: string[] | null
+          demand_generation_strategies?: Json | null
           guarantee?: string | null
+          icp_id?: string | null
           id?: string
           is_active?: boolean | null
           main_cta?: string | null
@@ -373,7 +379,10 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string
+          demand_generation_channels?: string[] | null
+          demand_generation_strategies?: Json | null
           guarantee?: string | null
+          icp_id?: string | null
           id?: string
           is_active?: boolean | null
           main_cta?: string | null
@@ -390,6 +399,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_hormozi_icp_id_fkey"
+            columns: ["icp_id"]
+            isOneToOne: false
+            referencedRelation: "icps"
             referencedColumns: ["id"]
           },
         ]

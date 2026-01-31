@@ -25,6 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { OnboardingDashboard } from "@/components/onboarding/OnboardingDashboard";
+import { PPPIntroCard } from "@/components/onboarding/PPPIntroCard";
+import { StepGenerateOffer } from "@/components/onboarding/StepGenerateOffer";
 
 type Client = Tables<"clients">;
 
@@ -59,10 +61,11 @@ interface FormData {
 
 const STEPS = [
   { number: 1, name: "Produto", icon: Package, description: "Descreva seu produto/serviço" },
-  { number: 2, name: "ICPs", icon: Users, description: "Defina seus clientes ideais" },
-  { number: 3, name: "Dores", icon: AlertTriangle, description: "Mapeie as dores de cada ICP" },
+  { number: 2, name: "ICPs", icon: Users, description: "Defina seus clientes ideais (Público)" },
+  { number: 3, name: "Dores", icon: AlertTriangle, description: "Mapeie as dores de cada ICP (Problema)" },
   { number: 4, name: "Promessa", icon: Sparkles, description: "Crie sua promessa principal" },
   { number: 5, name: "Revisão", icon: FileCheck, description: "Revise e finalize" },
+  { number: 6, name: "Oferta", icon: Sparkles, description: "Gere ofertas com IA (opcional)" },
 ];
 
 export default function Onboarding() {
@@ -72,9 +75,10 @@ export default function Onboarding() {
   const stepParam = searchParams.get("step");
 
   const [client, setClient] = useState<Client | null>(null);
-  const [currentStep, setCurrentStep] = useState(stepParam ? parseInt(stepParam, 10) : 1);
+  const [currentStep, setCurrentStep] = useState(stepParam ? parseInt(stepParam, 10) : 0); // 0 = intro
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showIntro, setShowIntro] = useState(!stepParam);
 
   const [formData, setFormData] = useState<FormData>({
     product: { product_name: "", product_description: "", differentiators: [""] },
@@ -317,7 +321,7 @@ export default function Onboarding() {
 
   const handleNext = async () => {
     await saveCurrentStep();
-    if (currentStep < 5) {
+    if (currentStep < 6) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -337,7 +341,7 @@ export default function Onboarding() {
         .update({ status: "ppp_completed" })
         .eq("id", clientId);
 
-      toast.success("Onboarding PPP concluído com sucesso!");
+      toast.success("Onboarding X1 concluído com sucesso!");
       navigate(`/clients/${clientId}`);
     } catch (error) {
       console.error("Erro ao finalizar:", error);
@@ -345,6 +349,22 @@ export default function Onboarding() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleStartFromIntro = async () => {
+    if (client?.status === "draft") {
+      await supabase
+        .from("clients")
+        .update({ status: "ppp_in_progress" })
+        .eq("id", clientId);
+    }
+    setShowIntro(false);
+    setCurrentStep(1);
+  };
+
+  const handleGoToStep6 = async () => {
+    await handleComplete();
+    setCurrentStep(6);
   };
 
   // Estado: Sem cliente selecionado - mostrar dashboard
@@ -361,7 +381,12 @@ export default function Onboarding() {
     );
   }
 
-  const progressPercent = (currentStep / 5) * 100;
+  // Estado: Mostrar intro do PPP
+  if (showIntro && currentStep === 0 && client) {
+    return <PPPIntroCard clientName={client.name} onStart={handleStartFromIntro} />;
+  }
+
+  const progressPercent = (currentStep / 6) * 100;
   const currentStepInfo = STEPS[currentStep - 1];
 
   return (
@@ -375,14 +400,14 @@ export default function Onboarding() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-                Onboarding PPP
+                Onboarding X1
               </h1>
               <p className="text-muted-foreground">{client?.name}</p>
             </div>
           </div>
         </div>
         <Badge variant="outline" className="text-sm">
-          Etapa {currentStep} de 5
+          Etapa {currentStep} de 6
         </Badge>
       </div>
 
@@ -465,6 +490,15 @@ export default function Onboarding() {
           {currentStep === 5 && (
             <StepReview formData={formData} />
           )}
+
+          {/* Step 6: Gerar Oferta (Opcional) */}
+          {currentStep === 6 && (
+            <StepGenerateOffer 
+              clientId={clientId!}
+              icps={formData.icps.filter(icp => icp.id).map(icp => ({ id: icp.id!, name: icp.name }))}
+              onOfferGenerated={() => navigate(`/clients/${clientId}`)}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -487,14 +521,26 @@ export default function Onboarding() {
             Próximo
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
+        ) : currentStep === 5 ? (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleComplete} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              Concluir
+            </Button>
+            <Button onClick={handleNext} disabled={isSaving}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Gerar Oferta
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         ) : (
-          <Button onClick={handleComplete} disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="mr-2 h-4 w-4" />
-            )}
-            Concluir Onboarding
+          <Button variant="outline" onClick={() => navigate(`/clients/${clientId}`)}>
+            <Check className="mr-2 h-4 w-4" />
+            Finalizar
           </Button>
         )}
       </div>
@@ -879,7 +925,7 @@ function StepReview({ formData }: { formData: FormData }) {
       <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
         <h4 className="font-medium text-primary mb-2">✓ Revisão Final</h4>
         <p className="text-sm text-muted-foreground">
-          Revise todas as informações antes de concluir o onboarding PPP.
+          Revise todas as informações antes de concluir o Onboarding X1.
         </p>
       </div>
 

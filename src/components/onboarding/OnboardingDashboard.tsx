@@ -35,7 +35,7 @@ interface ClientWithOnboarding extends Client {
 const STATUS_LABELS: Record<Client["status"], string> = {
   draft: "Pendente",
   ppp_in_progress: "Em andamento",
-  ppp_completed: "PPP Concluído",
+  ppp_completed: "X1 Concluído",
   offer_generated: "Oferta gerada",
   assets_generated: "Assets gerados",
   archived: "Arquivado",
@@ -177,7 +177,7 @@ export function OnboardingDashboard() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Onboarding PPP</h1>
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Onboarding X1</h1>
           <p className="text-muted-foreground">Acompanhe o processo de discovery dos seus clientes</p>
         </div>
         <div className="space-y-4">
@@ -200,7 +200,7 @@ export function OnboardingDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground md:text-3xl">Onboarding PPP</h1>
+        <h1 className="text-2xl font-bold text-foreground md:text-3xl">Onboarding X1</h1>
         <p className="text-muted-foreground">Acompanhe o processo de discovery dos seus clientes</p>
       </div>
 
@@ -212,7 +212,7 @@ export function OnboardingDashboard() {
             </div>
             <h3 className="mt-4 text-lg font-semibold">Nenhum cliente cadastrado</h3>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Crie um cliente para iniciar o processo de Onboarding PPP.
+              Crie um cliente para iniciar o processo de Onboarding X1.
             </p>
             <Button asChild className="mt-6 gap-2">
               <Link to="/clients/new">
@@ -383,7 +383,7 @@ function ClientOnboardingCard({ client, onNavigate }: ClientOnboardingCardProps)
                 </Button>
                 <Button variant="outline" onClick={handleEditOnboarding} size="sm" className="gap-2">
                   <Pencil className="h-4 w-4" />
-                  Editar PPP
+                  Editar X1
                 </Button>
                 <Button onClick={handleGenerateWithAI} size="sm" className="gap-2">
                   <Sparkles className="h-4 w-4" />

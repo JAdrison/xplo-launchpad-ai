@@ -19,9 +19,9 @@ export default function Assets() {
             <FileStack className="h-8 w-8 text-muted-foreground" />
           </div>
           <h3 className="mt-4 text-lg font-semibold">Nenhum ativo gerado</h3>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Complete o onboarding PPP e gere ofertas para criar seus primeiros ativos.
-          </p>
+        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+          Complete o Onboarding X1 e gere ofertas para criar seus primeiros ativos.
+        </p>
           <Button asChild className="mt-6 gap-2">
             <Link to="/clients">
               Ir para Clientes
