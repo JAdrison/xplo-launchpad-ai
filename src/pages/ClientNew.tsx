@@ -16,7 +16,13 @@ export default function ClientNew() {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    cnpj: "",
+    responsible_name: "",
+    responsible_cpf: "",
+    email: "",
+    phone: "",
     niche: "",
+    product_description: "",
     notes: "",
   });
 
@@ -44,7 +50,13 @@ export default function ClientNew() {
         .from("clients")
         .insert({
           name: formData.name.trim(),
+          cnpj: formData.cnpj.trim() || null,
+          responsible_name: formData.responsible_name.trim() || null,
+          responsible_cpf: formData.responsible_cpf.trim() || null,
+          email: formData.email.trim() || null,
+          phone: formData.phone.trim() || null,
           niche: formData.niche.trim() || null,
+          product_description: formData.product_description.trim() || null,
           notes: formData.notes.trim() || null,
           status: "draft",
         })
@@ -96,30 +108,116 @@ export default function ClientNew() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome do Cliente *</Label>
-              <Input
-                id="name"
-                name="name"
-                placeholder="Ex: Empresa ABC Ltda"
-                value={formData.name}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
+            {/* Dados da Empresa */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Dados da Empresa</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome do Cliente *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Ex: Empresa ABC Ltda"
+                    value={formData.name}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Input
+                    id="cnpj"
+                    name="cnpj"
+                    placeholder="00.000.000/0000-00"
+                    value={formData.cnpj}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="niche">Nicho / Segmento</Label>
+                <Input
+                  id="niche"
+                  name="niche"
+                  placeholder="Ex: Saúde, Tecnologia, E-commerce..."
+                  value={formData.niche}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="niche">Nicho / Segmento</Label>
-              <Input
-                id="niche"
-                name="niche"
-                placeholder="Ex: Saúde, Tecnologia, E-commerce..."
-                value={formData.niche}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
+            {/* Dados do Responsável */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Dados do Responsável</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="responsible_name">Nome do Responsável</Label>
+                  <Input
+                    id="responsible_name"
+                    name="responsible_name"
+                    placeholder="Nome completo"
+                    value={formData.responsible_name}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="responsible_cpf">CPF</Label>
+                  <Input
+                    id="responsible_cpf"
+                    name="responsible_cpf"
+                    placeholder="000.000.000-00"
+                    value={formData.responsible_cpf}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="contato@empresa.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    placeholder="(00) 00000-0000"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Produto */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Produto / Serviço</h3>
+              <div className="space-y-2">
+                <Label htmlFor="product_description">Descrição do Produto</Label>
+                <Textarea
+                  id="product_description"
+                  name="product_description"
+                  placeholder="Descreva o produto ou serviço principal do cliente..."
+                  value={formData.product_description}
+                  onChange={handleChange}
+                  disabled={isLoading}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Observações */}
             <div className="space-y-2">
               <Label htmlFor="notes">Observações</Label>
               <Textarea
@@ -129,7 +227,7 @@ export default function ClientNew() {
                 value={formData.notes}
                 onChange={handleChange}
                 disabled={isLoading}
-                rows={4}
+                rows={3}
               />
             </div>
 
