@@ -1,232 +1,269 @@
 
-# Refatoracao Completa do Onboarding X1 e Gerador IA
 
-## Resumo das Mudancas Solicitadas
+# IA Estrategista de Demanda Automatica
 
-1. **Oferta baseada em 1 ICP**: Adicionar selecao de ICP especifico para gerar ofertas
-2. **Anuncios criados a partir de oferta**: Anuncios devem usar dados da oferta, nao do PPP
-3. **Etapa 6 opcional no onboarding**: Gerar oferta ao final (nao obrigatorio)
-4. **Oportunidades de geracao de demanda**: Adicionar secao com canais de aquisicao na oferta
-5. **Renomear para Onboarding X1**: Substituir "Onboarding PPP" em todos os locais
-6. **Explicar PPP no inicio**: Publico, Problema, Promessa - comunicacao no inicio do wizard
+## O que vamos mudar
+
+A IA deixara de pedir para o usuario escolher canais de demanda. Em vez disso, ela vai analisar automaticamente o contexto do negocio (nicho, produto, ICP, dores) e recomendar uma estrategia completa e integrada de geracao de demanda.
+
+## Mudancas Principais
+
+### 1. Remover Selecao Manual de Canais
+
+O usuario nao precisara mais escolher checkboxes de canais. A IA vai decidir quais canais sao relevantes baseado no contexto.
+
+### 2. IA Estrategista Inteligente
+
+A IA vai:
+- Analisar o nicho do negocio
+- Considerar o perfil do ICP (segmento, caracteristicas, situacao atual)
+- Entender as dores do publico
+- Priorizar Facebook/Meta Ads como canal principal (seu forte)
+- Sugerir estrategias combinadas e sinergicas
+
+### 3. Plano de Demanda Integrado
+
+Em vez de estrategias isoladas por canal, a IA vai criar:
+- Estrategia Principal (Facebook/Meta Ads)
+- Estrategias Complementares integradas
+- Funil de aquisicao com etapas
+- Sinergias entre canais (ex: conteudo que alimenta remarketing)
+- Cronograma sugerido de implementacao
+- Orcamento relativo sugerido por canal
 
 ---
 
-## Parte 1: Renomear Onboarding PPP para Onboarding X1
+## Nova Estrutura da Oferta
 
-### Arquivos a Modificar
+```text
+OFERTA HORMOZI COMPLETA
+|
++-- Promessa Principal
++-- Mecanismo Unico
++-- Garantia
++-- Prova Social
++-- Reversao de Risco
++-- Pilha de Valor
++-- CTA Principal
+|
++-- PLANO DE GERACAO DE DEMANDA (NOVO - AUTOMATICO)
+    |
+    +-- Analise do Contexto
+    |   - Nicho identificado
+    |   - Perfil do ICP
+    |   - Canais recomendados
+    |
+    +-- Estrategia Principal: Facebook/Meta Ads
+    |   - Tipo de campanha
+    |   - Publicos sugeridos
+    |   - Criativos recomendados
+    |   - Orcamento relativo
+    |
+    +-- Estrategias Complementares
+    |   - Canal 1 + como integra com principal
+    |   - Canal 2 + como integra com principal
+    |
+    +-- Funil de Aquisicao
+    |   - Topo: como atrair
+    |   - Meio: como engajar
+    |   - Fundo: como converter
+    |
+    +-- Sinergias entre Canais
+    |   - Como um canal alimenta outro
+    |   - Sequencias recomendadas
+    |
+    +-- Cronograma de Implementacao
+        - Semana 1-2: ...
+        - Semana 3-4: ...
+```
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Acao |
 |---------|------|
-| `src/components/layout/AppSidebar.tsx` | Alterar nome do menu |
-| `src/pages/Onboarding.tsx` | Alterar titulos e textos |
-| `src/components/onboarding/OnboardingDashboard.tsx` | Alterar titulos e textos |
-| `src/components/client/OnboardingPPPSection.tsx` | Renomear componente e textos |
-| `src/pages/ClientDetails.tsx` | Atualizar import do componente |
-| `src/pages/Generator.tsx` | Atualizar referencias |
-| `src/pages/Assets.tsx` | Atualizar referencias |
+| `src/pages/Generator.tsx` | Remover selecao de canais, simplificar interface |
+| `src/components/onboarding/StepGenerateOffer.tsx` | Remover selecao de canais |
+| `supabase/functions/generate-content/index.ts` | Novo prompt estrategico para IA |
+| `src/components/generator/GeneratedContentViewer.tsx` | Exibir novo formato de plano de demanda |
 
 ---
 
-## Parte 2: Adicionar Comunicacao PPP no Inicio do Onboarding
+## Detalhamento Tecnico
 
-No inicio do wizard (antes da etapa 1 ou como introducao), adicionar:
+### Novo Prompt da IA (Edge Function)
+
+O prompt sera completamente reformulado para:
+
+```text
+Voce e um estrategista de marketing digital especializado em aquisicao de clientes 
+via trafego pago, especialmente Facebook/Meta Ads.
+
+Analise o contexto do negocio:
+- Nicho: [nicho do cliente]
+- Produto: [descricao do produto]
+- ICP: [nome, segmento, caracteristicas, situacao atual]
+- Dores: [principais dores do ICP]
+- Promessa: [promessa principal]
+
+Crie um PLANO ESTRATEGICO DE GERACAO DE DEMANDA completo que:
+
+1. PRIORIZE Facebook/Meta Ads como canal principal (este e nosso forte)
+
+2. Identifique 2-3 canais complementares que fazem sentido para este negocio
+
+3. Mostre como os canais se integram e se alimentam mutuamente
+
+4. Crie um funil de aquisicao completo (TOFU, MOFU, BOFU)
+
+5. Sugira um cronograma de implementacao realista
+
+6. De estimativas de orcamento relativo por canal (ex: 60% Meta, 20% Google, etc)
+
+A estrategia deve ser PRATICA e ACIONAVEL, nao generica.
+```
+
+### Novo Formato JSON da Resposta
+
+```json
+{
+  "promise": "...",
+  "unique_mechanism": "...",
+  "guarantee": "...",
+  "proof": "...",
+  "risk_reversal": "...",
+  "value_stack": [...],
+  "main_cta": "...",
+  "demand_plan": {
+    "context_analysis": {
+      "niche": "Energia Solar",
+      "icp_profile": "Moradores de apartamento que querem economia",
+      "key_insight": "Publico nao pode instalar paineis, busca alternativa simples"
+    },
+    "primary_strategy": {
+      "channel": "Facebook/Meta Ads",
+      "campaign_type": "Lead Generation + Conversao",
+      "audiences": [
+        "Lookalike de clientes atuais",
+        "Interesse em sustentabilidade + apartamentos"
+      ],
+      "creative_types": ["Video curto", "Carrossel de beneficios"],
+      "budget_percentage": 60,
+      "expected_cpl": "R$15-25"
+    },
+    "complementary_strategies": [
+      {
+        "channel": "Google Ads",
+        "role": "Captura de demanda existente",
+        "integration": "Remarketing para leads nao convertidos do Meta",
+        "budget_percentage": 25
+      },
+      {
+        "channel": "Programa de Indicacao",
+        "role": "Reducao de CAC pos-primeira conversao",
+        "integration": "Oferecer desconto extra para quem indica",
+        "budget_percentage": 15
+      }
+    ],
+    "acquisition_funnel": {
+      "tofu": {
+        "objective": "Awareness",
+        "channels": ["Meta Ads - Video Views", "Conteudo organico"],
+        "message": "Voce paga demais na conta de energia?"
+      },
+      "mofu": {
+        "objective": "Consideracao",
+        "channels": ["Meta Ads - Lead Gen", "Remarketing"],
+        "message": "Descubra como economizar 20% sem instalar nada"
+      },
+      "bofu": {
+        "objective": "Conversao",
+        "channels": ["WhatsApp", "Call de vendas"],
+        "message": "Comece a economizar hoje. Garantia de 30 dias."
+      }
+    },
+    "channel_synergies": [
+      "Leads do Meta que nao convertem vao para remarketing no Google",
+      "Clientes convertidos entram no programa de indicacao",
+      "Conteudo organico e reaproveitado como criativo de ads"
+    ],
+    "implementation_timeline": {
+      "week_1_2": "Setup de campanhas Meta Ads + landing page",
+      "week_3_4": "Testes A/B de criativos, lancamento Google",
+      "week_5_8": "Otimizacao, lancamento programa indicacao"
+    }
+  }
+}
+```
+
+---
+
+## Mudancas na Interface
+
+### Generator.tsx (Simplificado)
+
+Remover toda a secao de selecao de canais. O fluxo sera:
+
+```text
+1. Selecione um cliente
+2. Selecione um ICP
+3. O que deseja gerar?
+   [x] Oferta Hormozi (inclui plano de demanda automatico)
+   [ ] Landing Page
+   [ ] Anuncios
+
+[Gerar com IA]
+```
+
+### GeneratedContentViewer.tsx (Novo Design)
+
+Nova secao "Plano de Demanda" com:
 
 ```text
 +----------------------------------------------------------+
-|  Onboarding X1                                            |
-|  [Cliente: XPLO Solar]                                    |
+| PLANO DE GERACAO DE DEMANDA                               |
 |----------------------------------------------------------|
 |                                                           |
-|  +-----------------------------------------------------+  |
-|  |  O que e o PPP?                                     |  |
-|  |-----------------------------------------------------|  |
-|  |  O PPP e a metodologia que usamos para entender     |  |
-|  |  profundamente seu negocio:                         |  |
-|  |                                                      |  |
-|  |  P - PUBLICO: Quem sao seus clientes ideais (ICPs)  |  |
-|  |  P - PROBLEMA: Quais dores eles enfrentam           |  |
-|  |  P - PROMESSA: O que voce promete resolver          |  |
-|  |                                                      |  |
-|  |  Essas informacoes serao usadas para gerar          |  |
-|  |  ofertas, landing pages e anuncios personalizados.  |  |
-|  +-----------------------------------------------------+  |
+| ANALISE DO CONTEXTO                                       |
+| Nicho: Energia Solar                                      |
+| Insight: Publico nao pode instalar paineis...             |
 |                                                           |
-|  [Iniciar]                                                |
+| ESTRATEGIA PRINCIPAL: Facebook/Meta Ads (60% do budget)   |
+| - Campanha: Lead Generation + Conversao                   |
+| - Publicos: Lookalike, Interesse sustentabilidade         |
+| - Criativos: Video curto, Carrossel                       |
+| - CPL esperado: R$15-25                                   |
+|                                                           |
+| ESTRATEGIAS COMPLEMENTARES                                |
+| +-- Google Ads (25%): Remarketing de leads nao convertidos|
+| +-- Indicacao (15%): Desconto para quem indica            |
+|                                                           |
+| FUNIL DE AQUISICAO                                        |
+| TOPO    -> Meta Video Views: "Voce paga demais?"          |
+| MEIO    -> Lead Gen + Remarketing: "Economize 20%"        |
+| FUNDO   -> WhatsApp/Vendas: "Comece hoje"                 |
+|                                                           |
+| SINERGIAS                                                 |
+| - Leads Meta nao convertidos -> Remarketing Google        |
+| - Clientes -> Programa de Indicacao                       |
+| - Conteudo organico -> Criativos de ads                   |
+|                                                           |
+| CRONOGRAMA                                                |
+| Semana 1-2: Setup Meta + LP                               |
+| Semana 3-4: Testes A/B, Google                            |
+| Semana 5-8: Otimizacao, Indicacao                         |
 +----------------------------------------------------------+
 ```
-
----
-
-## Parte 3: Adicionar Etapa 6 Opcional - Geracao de Oferta
-
-Modificar o wizard para ter 6 etapas:
-
-| Etapa | Nome | Descricao |
-|-------|------|-----------|
-| 1 | Produto | Descreva seu produto/servico |
-| 2 | ICPs (Publico) | Defina seus clientes ideais |
-| 3 | Dores (Problema) | Mapeie as dores de cada ICP |
-| 4 | Promessa | Crie sua promessa principal |
-| 5 | Revisao | Revise e finalize |
-| 6 | Gerar Oferta (opcional) | Gere ofertas com IA para seus ICPs |
-
-Na etapa 5, o botao sera "Concluir" ou "Concluir e Gerar Oferta".
-Na etapa 6, o usuario pode selecionar um ICP e gerar a oferta.
-
----
-
-## Parte 4: Oferta Baseada em 1 ICP + Oportunidades de Demanda
-
-### Alteracoes no Gerador
-
-1. Apos selecionar cliente, mostrar dropdown de ICPs
-2. Usuario escolhe 1 ICP especifico para a oferta
-3. A geracao usa apenas os dados daquele ICP
-
-### Novo Campo na Oferta: Oportunidades de Geracao de Demanda
-
-Adicionar secao com checkboxes para canais:
-
-```text
-+----------------------------------------------------------+
-|  Oportunidades de Geracao de Demanda                      |
-|----------------------------------------------------------|
-|  Selecione os canais relevantes para sua estrategia:     |
-|                                                           |
-|  [ ] Trafego Pago - TikTok Ads                           |
-|  [ ] Trafego Pago - Google Ads                           |
-|  [ ] Trafego Pago - Meta Ads (Facebook/Instagram)        |
-|  [ ] Programa de Indicacao                               |
-|  [ ] Parceria com Influenciadores                        |
-|  [ ] Outbound (Prospecao ativa)                          |
-|  [ ] Marketing de Conteudo                               |
-|  [ ] Email Marketing                                     |
-|                                                           |
-|  A IA vai sugerir estrategias baseadas no seu nicho      |
-|  e nas informacoes do onboarding.                        |
-+----------------------------------------------------------+
-```
-
-A IA gerara estrategias personalizadas para cada canal selecionado.
-
-### Alteracoes no Banco de Dados
-
-Adicionar nova coluna na tabela `offers_hormozi`:
-- `icp_id` (uuid): Referencia ao ICP usado na geracao
-- `demand_generation_channels` (text[]): Canais selecionados
-- `demand_generation_strategies` (jsonb): Estrategias geradas pela IA
-
----
-
-## Parte 5: Anuncios Criados a partir de Oferta
-
-### Fluxo Atual (Errado)
-```
-PPP Data -> generate-content(ads) -> ads
-```
-
-### Novo Fluxo (Correto)
-```
-PPP Data -> generate-content(offer) -> offers_hormozi
-                                              |
-                                              v
-                    Oferta selecionada -> generate-content(ads) -> ads
-```
-
-### Alteracoes no Gerador
-
-1. Para gerar anuncios, primeiro deve existir uma oferta
-2. Usuario seleciona qual oferta usar como base
-3. A geracao de ads usa dados da oferta (nao do PPP)
-
----
-
-## Arquivos a Criar/Modificar
-
-### Criar
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/onboarding/PPPIntroCard.tsx` | Card explicando PPP no inicio |
-| `src/components/onboarding/StepGenerateOffer.tsx` | Etapa 6 do wizard |
-
-### Modificar
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/Onboarding.tsx` | Adicionar etapa 6, intro PPP, renomear textos |
-| `src/pages/Generator.tsx` | Adicionar selecao de ICP, vincular ads a oferta |
-| `supabase/functions/generate-content/index.ts` | Alterar logica para ICP unico e demanda |
-| `src/components/generator/GeneratedContentViewer.tsx` | Mostrar oportunidades de demanda |
-| `src/components/client/OnboardingPPPSection.tsx` | Renomear para OnboardingX1Section |
-| `src/components/onboarding/OnboardingDashboard.tsx` | Renomear textos |
-| `src/components/layout/AppSidebar.tsx` | Renomear menu |
-
-### Migracoes de Banco de Dados
-```sql
--- Adicionar colunas na tabela offers_hormozi
-ALTER TABLE offers_hormozi ADD COLUMN icp_id uuid REFERENCES icps(id);
-ALTER TABLE offers_hormozi ADD COLUMN demand_generation_channels text[];
-ALTER TABLE offers_hormozi ADD COLUMN demand_generation_strategies jsonb;
-
--- Adicionar referencia a oferta na tabela ads
-ALTER TABLE ads ADD COLUMN offer_id uuid REFERENCES offers_hormozi(id);
-```
-
----
-
-## Interface do Gerador Atualizada
-
-```text
-+----------------------------------------------------------+
-|  Gerador IA                                               |
-|----------------------------------------------------------|
-|                                                           |
-|  1. Selecione um cliente:                                |
-|  [Dropdown: XPLO Solar]                                  |
-|                                                           |
-|  2. Selecione um ICP:                                    |
-|  [Dropdown: Empresas de energia renovavel]               |
-|                                                           |
-|  3. O que deseja gerar?                                  |
-|                                                           |
-|  [x] Oferta Hormozi                                      |
-|      -> Inclui selecao de canais de demanda              |
-|                                                           |
-|  [ ] Landing Page                                        |
-|      -> Baseada na oferta selecionada                    |
-|                                                           |
-|  [ ] Anuncios                                            |
-|      -> Requer uma oferta existente                      |
-|      [Dropdown: Selecione a oferta]                      |
-|                                                           |
-|  Canais de Geracao de Demanda:                           |
-|  [x] Meta Ads  [x] TikTok Ads  [ ] Google Ads            |
-|  [ ] Indicacao  [ ] Influenciadores  [x] Outbound        |
-|                                                           |
-|  [Gerar com IA]                                          |
-|                                                           |
-+----------------------------------------------------------+
-```
-
----
-
-## Etapas de Implementacao
-
-1. **Migracao do banco**: Adicionar novas colunas
-2. **Renomear textos**: PPP -> X1 em todos os arquivos
-3. **Intro PPP**: Criar card explicativo
-4. **Etapa 6**: Adicionar geracao opcional no wizard
-5. **Selecao de ICP**: Modificar gerador para filtrar por ICP
-6. **Canais de demanda**: Adicionar selecao e geracao
-7. **Vincular ads a oferta**: Modificar fluxo de geracao
 
 ---
 
 ## Beneficios
 
-- Ofertas mais direcionadas para cada publico (1 ICP)
-- Anuncios coerentes com a oferta criada
-- Estrategias de demanda personalizadas
-- Fluxo mais claro com explicacao do PPP
-- Opcao de gerar oferta direto no onboarding
-- Nomenclatura consistente (Onboarding X1)
+- IA mais inteligente que analisa o contexto automaticamente
+- Estrategias integradas e sinergicas (nao isoladas)
+- Facebook/Meta Ads sempre priorizado como canal principal
+- Usuario nao precisa saber quais canais escolher
+- Plano acionavel com cronograma e orcamento
+- Funil completo de aquisicao
+
