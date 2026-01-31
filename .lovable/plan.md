@@ -1,182 +1,119 @@
 
+# Implementação do Wizard de Onboarding PPP
 
-# Pagina de Detalhes do Cliente
-
-## Objetivo
-Criar a pagina `/clients/:id` que exibe as informacoes do cliente de forma fixa e permite:
-- Visualizar todos os dados do cliente
-- Editar/personalizar informacoes
-- Deletar o cliente
-- Iniciar o onboarding PPP
+## Problema
+A página de Onboarding não processa o parâmetro `client` da URL e não possui o wizard de etapas implementado.
 
 ---
 
-## Interface Proposta
+## Solução
+
+Criar um wizard completo de 5 etapas para o processo PPP:
 
 ```text
 +----------------------------------------------------------+
-|  [<-] Empresa ABC                                         |
-|       Nicho: Tecnologia              [Rascunho]           |
+|  Onboarding PPP - Empresa ABC                            |
+|  Etapa 1 de 5: Produto                                    |
 |----------------------------------------------------------|
 |                                                           |
-|  +-----------------------------------------------------+  |
-|  | INFORMACOES DO CLIENTE                              |  |
-|  |-----------------------------------------------------|  |
-|  |  Nome:    Empresa ABC Ltda                          |  |
-|  |  Nicho:   Tecnologia                                |  |
-|  |  Status:  Rascunho                                  |  |
-|  |  Notas:   Cliente interessado em automacao...       |  |
-|  |  Criado:  31/01/2026                                |  |
-|  +-----------------------------------------------------+  |
+|  Progresso: [=====>                    ] 20%              |
 |                                                           |
 |  +-----------------------------------------------------+  |
-|  | PROXIMA ETAPA                                       |  |
+|  | DESCRIÇÃO DO PRODUTO                                |  |
 |  |-----------------------------------------------------|  |
-|  |  Inicie o processo de discovery para este cliente.  |  |
 |  |                                                      |  |
-|  |  [ Iniciar Onboarding PPP -> ]                      |  |
+|  |  O que você vende?                                   |  |
+|  |  [ Textarea para descrição do produto ]              |  |
+|  |                                                      |  |
+|  |  Qual problema resolve?                              |  |
+|  |  [ Textarea ]                                        |  |
+|  |                                                      |  |
+|  |  Qual o diferencial?                                 |  |
+|  |  [ Textarea ]                                        |  |
+|  |                                                      |  |
 |  +-----------------------------------------------------+  |
 |                                                           |
-|  +-----------------------------------------------------+  |
-|  | ACOES                                               |  |
-|  |-----------------------------------------------------|  |
-|  |  [ Editar Cliente ]    [ Deletar Cliente ]          |  |
-|  +-----------------------------------------------------+  |
-|                                                           |
+|                      [Anterior]  [Próximo ->]             |
 +----------------------------------------------------------+
 ```
+
+---
+
+## Etapas do Wizard
+
+| Etapa | Nome | Descrição |
+|-------|------|-----------|
+| 1 | Produto | Descrição do produto/serviço, problema que resolve, diferencial |
+| 2 | ICPs | Definir até 3 perfis de cliente ideal |
+| 3 | Dores | Mapear dores e frustrações de cada ICP |
+| 4 | Promessa | Criar a promessa principal baseada nas dores |
+| 5 | Revisão | Revisar tudo antes de concluir |
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/Onboarding.tsx` | Refatorar completamente |
 
 ---
 
 ## Funcionalidades
 
-### 1. Visualizacao de Dados (Fixa)
-- Exibe nome, nicho, status, notas e data de criacao
-- Badge colorido para o status atual
-- Layout limpo e organizado em cards
+### 1. Leitura do Cliente
+- Captura o parâmetro `client` da URL usando `useSearchParams`
+- Busca os dados do cliente no Supabase
+- Exibe nome do cliente no cabeçalho
 
-### 2. Iniciar Onboarding
-- Botao proeminente para iniciar o processo PPP
-- Redireciona para `/onboarding?client=<id>`
-- Atualiza status do cliente para `ppp_in_progress`
+### 2. Navegação entre Etapas
+- Barra de progresso visual
+- Botões "Anterior" e "Próximo"
+- Validação antes de avançar
 
-### 3. Editar Cliente (Dialog)
-- Abre um modal com formulario de edicao
-- Campos: nome, nicho, notas
-- Salva alteracoes no banco de dados
-- Toast de confirmacao
+### 3. Salvamento Automático
+- Salva dados no banco conforme o usuário avança
+- Atualiza status do cliente ao concluir
 
-### 4. Deletar Cliente (AlertDialog)
-- Confirmacao antes de deletar
-- Mensagem clara sobre a acao irreversivel
-- Redireciona para `/clients` apos deletar
-- Toast de confirmacao
+### 4. Estados
+- Loading: Enquanto busca dados do cliente
+- Sem cliente: Se não houver parâmetro na URL
+- Wizard: Exibe a etapa atual
 
 ---
 
-## Detalhes Tecnicos
-
-### Arquivos a Criar/Modificar
-
-| Arquivo | Acao |
-|---------|------|
-| `src/pages/ClientDetails.tsx` | Criar (nova pagina) |
-| `src/App.tsx` | Modificar (adicionar rota) |
-
-### Rota a Adicionar
-
-```typescript
-<Route path="/clients/:id" element={<ClientDetails />} />
-```
-
-### Componentes Utilizados
-- `Card`, `CardContent`, `CardHeader`, `CardTitle` - Layout
-- `Badge` - Status do cliente
-- `Button` - Acoes
-- `Dialog` - Modal de edicao
-- `AlertDialog` - Confirmacao de exclusao
-- `Input`, `Textarea`, `Label` - Formulario de edicao
-- `Loader2` - Estado de carregamento
-
-### Estrutura do Componente
+## Estrutura do Componente
 
 ```typescript
 // Estados principais
-const { id } = useParams();
+const [searchParams] = useSearchParams();
+const clientId = searchParams.get("client");
+
 const [client, setClient] = useState<Client | null>(null);
+const [currentStep, setCurrentStep] = useState(1);
 const [isLoading, setIsLoading] = useState(true);
-const [isEditOpen, setIsEditOpen] = useState(false);
-const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-const [isSaving, setIsSaving] = useState(false);
 
-// Buscar cliente
+// Dados do wizard
+const [formData, setFormData] = useState({
+  product: { description: "", problem: "", differentiator: "" },
+  icps: [],
+  pains: [],
+  promise: "",
+});
+
+// Carregar cliente
 useEffect(() => {
-  fetchClient(id);
-}, [id]);
-
-// Funcoes
-const handleUpdate = async (formData) => { ... };
-const handleDelete = async () => { ... };
-const handleStartOnboarding = async () => {
-  // Atualiza status para ppp_in_progress
-  // Navega para /onboarding?client=id
-};
-```
-
-### Queries do Supabase
-
-```typescript
-// Buscar cliente
-const { data } = await supabase
-  .from("clients")
-  .select("*")
-  .eq("id", id)
-  .maybeSingle();
-
-// Atualizar cliente
-await supabase
-  .from("clients")
-  .update({ name, niche, notes })
-  .eq("id", id);
-
-// Deletar cliente
-await supabase
-  .from("clients")
-  .delete()
-  .eq("id", id);
-
-// Iniciar onboarding (atualizar status)
-await supabase
-  .from("clients")
-  .update({ status: "ppp_in_progress" })
-  .eq("id", id);
+  if (clientId) {
+    fetchClient(clientId);
+  }
+}, [clientId]);
 ```
 
 ---
 
-## Fluxo de Usuario
+## Benefícios
 
-```text
-Lista de Clientes
-       |
-       v
- [Ver Detalhes]
-       |
-       v
- Pagina de Detalhes
-       |
-       +-- [Editar] --> Dialog de Edicao --> Salvar
-       |
-       +-- [Deletar] --> Confirmacao --> Lista de Clientes
-       |
-       +-- [Iniciar Onboarding] --> Atualiza Status --> /onboarding?client=id
-```
-
----
-
-## Tratamento de Erros
-
-- Cliente nao encontrado: Exibe mensagem amigavel com link para lista
-- Erro ao salvar: Toast com mensagem de erro
-- Erro ao deletar: Toast com mensagem de erro
-
+- Fluxo guiado passo a passo
+- Dados salvos progressivamente
+- Integração com dados existentes do cliente
+- Barra de progresso visual para orientar o usuário
