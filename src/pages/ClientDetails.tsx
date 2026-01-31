@@ -1,0 +1,430 @@
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Loader2, Pencil, Trash2, Play } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/types";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+type Client = Tables<"clients">;
+
+const STATUS_LABELS: Record<Client["status"], string> = {
+  draft: "Rascunho",
+  ppp_in_progress: "PPP em andamento",
+  ppp_completed: "PPP concluído",
+  offer_generated: "Oferta gerada",
+  assets_generated: "Assets gerados",
+  archived: "Arquivado",
+};
+
+const STATUS_VARIANTS: Record<Client["status"], "default" | "secondary" | "outline"> = {
+  draft: "secondary",
+  ppp_in_progress: "outline",
+  ppp_completed: "default",
+  offer_generated: "default",
+  assets_generated: "default",
+  archived: "secondary",
+};
+
+export default function ClientDetails() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [client, setClient] = useState<Client | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isStartingOnboarding, setIsStartingOnboarding] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    niche: "",
+    notes: "",
+  });
+
+  useEffect(() => {
+    async function fetchClient() {
+      if (!id) return;
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching client:", error);
+        toast({
+          title: "Erro ao carregar cliente",
+          description: "Não foi possível carregar os dados do cliente.",
+          variant: "destructive",
+        });
+      } else if (data) {
+        setClient(data);
+        setFormData({
+          name: data.name,
+          niche: data.niche || "",
+          notes: data.notes || "",
+        });
+      }
+      setIsLoading(false);
+    }
+
+    fetchClient();
+  }, [id, toast]);
+
+  const handleUpdate = async () => {
+    if (!id || !formData.name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Por favor, preencha o nome do cliente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        name: formData.name.trim(),
+        niche: formData.niche.trim() || null,
+        notes: formData.notes.trim() || null,
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating client:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível atualizar os dados do cliente.",
+        variant: "destructive",
+      });
+    } else {
+      setClient((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: formData.name.trim(),
+              niche: formData.niche.trim() || null,
+              notes: formData.notes.trim() || null,
+            }
+          : null
+      );
+      toast({
+        title: "Cliente atualizado",
+        description: "Os dados do cliente foram salvos com sucesso.",
+      });
+      setIsEditOpen(false);
+    }
+
+    setIsSaving(false);
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    setIsDeleting(true);
+
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+
+    if (error) {
+      console.error("Error deleting client:", error);
+      toast({
+        title: "Erro ao deletar",
+        description: "Não foi possível excluir o cliente.",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+    } else {
+      toast({
+        title: "Cliente excluído",
+        description: "O cliente foi removido com sucesso.",
+      });
+      navigate("/clients");
+    }
+  };
+
+  const handleStartOnboarding = async () => {
+    if (!id) return;
+
+    setIsStartingOnboarding(true);
+
+    const { error } = await supabase
+      .from("clients")
+      .update({ status: "ppp_in_progress" })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error starting onboarding:", error);
+      toast({
+        title: "Erro ao iniciar onboarding",
+        description: "Não foi possível iniciar o processo de onboarding.",
+        variant: "destructive",
+      });
+      setIsStartingOnboarding(false);
+    } else {
+      navigate(`/onboarding?client=${id}`);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <h3 className="text-lg font-semibold">Cliente não encontrado</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              O cliente que você está procurando não existe ou foi removido.
+            </p>
+            <Button asChild className="mt-6">
+              <Link to="/clients">Voltar para lista de clientes</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/clients">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+                {client.name}
+              </h1>
+              <Badge variant={STATUS_VARIANTS[client.status]}>
+                {STATUS_LABELS[client.status]}
+              </Badge>
+            </div>
+            {client.niche && (
+              <p className="text-muted-foreground">{client.niche}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Informações do Cliente */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações do Cliente</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Nome</p>
+              <p className="text-foreground">{client.name}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Nicho</p>
+              <p className="text-foreground">{client.niche || "—"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Status</p>
+              <p className="text-foreground">{STATUS_LABELS[client.status]}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Criado em</p>
+              <p className="text-foreground">
+                {format(new Date(client.created_at), "dd 'de' MMMM 'de' yyyy", {
+                  locale: ptBR,
+                })}
+              </p>
+            </div>
+          </div>
+          {client.notes && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Notas</p>
+              <p className="text-foreground whitespace-pre-wrap">{client.notes}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Próxima Etapa */}
+      {client.status === "draft" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Próxima Etapa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Inicie o processo de discovery para este cliente. O onboarding PPP irá
+              guiá-lo através da definição do produto, público e posicionamento.
+            </p>
+            <Button
+              onClick={handleStartOnboarding}
+              disabled={isStartingOnboarding}
+              className="gap-2"
+            >
+              {isStartingOnboarding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              Iniciar Onboarding PPP
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ações */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ações</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3">
+          {/* Edit Dialog */}
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Pencil className="h-4 w-4" />
+                Editar Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Cliente</DialogTitle>
+                <DialogDescription>
+                  Atualize as informações do cliente abaixo.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome *</Label>
+                  <Input
+                    id="edit-name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="Nome do cliente"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-niche">Nicho</Label>
+                  <Input
+                    id="edit-niche"
+                    value={formData.niche}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, niche: e.target.value }))
+                    }
+                    placeholder="Ex: Tecnologia, Saúde, Educação"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-notes">Notas</Label>
+                  <Textarea
+                    id="edit-notes"
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                    }
+                    placeholder="Observações sobre o cliente"
+                    rows={4}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditOpen(false)}
+                  disabled={isSaving}
+                >
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdate} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete AlertDialog */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Deletar Cliente
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir o cliente "{client.name}"? Esta
+                  ação não pode ser desfeita e todos os dados associados serão
+                  removidos permanentemente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
