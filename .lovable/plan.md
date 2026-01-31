@@ -1,110 +1,157 @@
 
-
-# Atualização do Design System - XPLO STARTER
+# Configuração de IA com Troca entre Lovable AI e API Própria
 
 ## Objetivo
-Atualizar o sistema de cores para seguir o padrão do XPLO Metricas: fundo branco limpo, sidebar clara com destaques roxos nos pontos-chave, e cores de apoio (verde, vermelho, amarelo) para status.
+Atualizar a página de Configurações para permitir alternar entre duas fontes de IA:
+1. **Lovable AI** (recomendado) - Modelos mais recentes sem precisar de API Key
+2. **API Própria** - Para quem preferir usar sua própria chave
 
 ---
 
-## Mudanças no Design
+## Interface Final
 
-### Paleta de Cores
-
-| Elemento | Atual | Novo |
-|----------|-------|------|
-| Sidebar | Roxa sólida | Branca/clara |
-| Item ativo sidebar | Roxo claro | Roxo suave com texto roxo |
-| Background geral | Cinza claro | Branco/cinza muito claro |
-| Botoes primarios | Roxo | Roxo (mantido) |
-| Sucesso | - | Verde vivo |
-| Alerta | - | Amarelo |
-| Erro | Vermelho | Vermelho (ajustado) |
-
-### Novas Cores de Apoio (HSL)
-- **Success:** Verde vivo - `142 76% 45%`
-- **Warning:** Amarelo - `45 93% 47%`
-- **Destructive:** Vermelho - `0 84% 60%` (manter)
-
----
-
-## Arquivos a Modificar
-
-### 1. src/index.css
-Atualizar variáveis CSS para:
-- Sidebar com fundo branco
-- Adicionar cores success e warning
-- Manter roxo como cor primaria para acentos
-
-### 2. tailwind.config.ts
-Adicionar cores:
-- `success` e `success-foreground`
-- `warning` e `warning-foreground`
-
-### 3. src/components/layout/AppSidebar.tsx
-- Usar logo XPLO oficial (copiar imagem para o projeto)
-- Estilizar sidebar com fundo branco
-- Item ativo com fundo roxo claro e texto roxo
-
-### 4. Copiar Logo
-- Copiar `user-uploads://LOGO_ROXO_PNG-2.png` para `src/assets/logo-xplo.png`
-- Importar e usar na sidebar
-
----
-
-## Resultado Visual Esperado
-
-```
-+------------------+----------------------------------------+
-|  [LOGO XPLO]     |  Dashboard                             |
-|  Starter         |  Subtitulo da pagina                   |
-|------------------|----------------------------------------|
-|  Dashboard    <- |  +--------+ +--------+ +--------+      |
-|  Clientes        |  | Card 1 | | Card 2 | | Card 3 |      |
-|  Onboarding      |  +--------+ +--------+ +--------+      |
-|  Gerador IA      |                                        |
-|  Ativos          |  [Conteudo principal]                  |
-|  Configuracoes   |                                        |
-+------------------+----------------------------------------+
-
-Legenda:
-- Sidebar: fundo branco, borda direita cinza sutil
-- Item ativo: fundo roxo claro, texto e icone roxo
-- Cards: brancos com sombra suave
-- Badges de status: verde/amarelo/vermelho
+```text
++----------------------------------------------------------+
+|  Configuração de IA                                       |
+|  Escolha como usar a inteligência artificial              |
+|----------------------------------------------------------|
+|                                                           |
+|  Fonte de IA                                              |
+|  +------------------------------------------------------+ |
+|  |  (X) Lovable AI (Recomendado)                        | |
+|  |      Sem configuração. Usa créditos automaticamente. | |
+|  +------------------------------------------------------+ |
+|  |  ( ) API Própria                                     | |
+|  |      Use sua própria chave OpenAI ou Google.         | |
+|  +------------------------------------------------------+ |
+|                                                           |
+|  Provedor                                                 |
+|  [ Google Gemini             v ]                          |
+|                                                           |
+|  Modelo                                                   |
+|  [ Gemini 3 Flash (Novo)     v ]                          |
+|                                                           |
+|  [Só aparece se API Própria:]                             |
+|  API Key                                                  |
+|  [ AIza...                    👁 ]                        |
+|                                                           |
+|                              [ Salvar Configurações ]     |
++----------------------------------------------------------+
 ```
 
 ---
 
-## Detalhes Tecnicos
+## Modelos Disponíveis
 
-### CSS Variables (Light Mode)
-```css
-/* Sidebar clara */
---sidebar-background: 0 0% 100%;
---sidebar-foreground: 260 10% 20%;
---sidebar-primary: 262 83% 58%;
---sidebar-primary-foreground: 0 0% 100%;
---sidebar-accent: 262 60% 95%;
---sidebar-accent-foreground: 262 83% 50%;
---sidebar-border: 260 15% 90%;
+### Lovable AI (sem API Key necessária)
 
-/* Cores de apoio */
---success: 142 76% 45%;
---success-foreground: 0 0% 100%;
---warning: 45 93% 47%;
---warning-foreground: 0 0% 10%;
+| Provedor | Modelo | Descrição |
+|----------|--------|-----------|
+| Google | gemini-3-flash-preview | Novo, rápido e capaz |
+| Google | gemini-3-pro-preview | Novo, muito potente |
+| Google | gemini-2.5-flash | Equilibrado |
+| Google | gemini-2.5-pro | Alta qualidade |
+| OpenAI | gpt-5.2 | Novo, raciocínio avançado |
+| OpenAI | gpt-5 | Muito potente |
+| OpenAI | gpt-5-mini | Bom custo-benefício |
+| OpenAI | gpt-5-nano | Mais rápido |
+
+### API Própria (requer sua chave)
+
+| Provedor | Modelo |
+|----------|--------|
+| Google | gemini-2.5-flash, gemini-2.5-pro |
+| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo |
+
+---
+
+## Armazenamento (localStorage)
+
+```javascript
+xplo_ai_source: "lovable" | "custom"     // Fonte selecionada
+xplo_ai_provider: "gemini" | "openai"    // Provedor
+xplo_ai_model: "google/gemini-3-flash-preview" // Modelo
+xplo_api_key: "..."                      // Só se custom
 ```
 
-### Tailwind Config
-```ts
-success: {
-  DEFAULT: "hsl(var(--success))",
-  foreground: "hsl(var(--success-foreground))",
-},
-warning: {
-  DEFAULT: "hsl(var(--warning))",
-  foreground: "hsl(var(--warning-foreground))",
-},
+---
+
+## Lógica de Interface
+
+- **Fonte = Lovable AI:**
+  - Mostra seletor de provedor e modelo
+  - Esconde campo de API Key
+  - Mostra nota sobre créditos Lovable
+
+- **Fonte = API Própria:**
+  - Mostra seletor de provedor e modelo (lista diferente)
+  - Mostra campo de API Key
+  - Placeholder muda conforme provedor (sk-... ou AIza...)
+
+---
+
+## Detalhes Técnicos
+
+### Arquivo a Modificar
+- `src/pages/Settings.tsx`
+
+### Componentes Necessários
+- `RadioGroup`, `RadioGroupItem` - Seleção de fonte
+- `Select`, `SelectTrigger`, `SelectContent`, `SelectItem` - Dropdowns
+- `Input` - Campo de API Key (condicional)
+- `Badge` - Tags "Novo", "Recomendado"
+
+### Estrutura de Dados
+
+```typescript
+const LOVABLE_MODELS = {
+  gemini: [
+    { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash", badge: "Novo" },
+    { value: "google/gemini-3-pro-preview", label: "Gemini 3 Pro", badge: "Novo" },
+    { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", badge: "Recomendado" },
+    { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  ],
+  openai: [
+    { value: "openai/gpt-5.2", label: "GPT-5.2", badge: "Novo" },
+    { value: "openai/gpt-5", label: "GPT-5" },
+    { value: "openai/gpt-5-mini", label: "GPT-5 Mini", badge: "Recomendado" },
+    { value: "openai/gpt-5-nano", label: "GPT-5 Nano" },
+  ],
+};
+
+const CUSTOM_MODELS = {
+  gemini: [
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash", badge: "Recomendado" },
+    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+  ],
+  openai: [
+    { value: "gpt-4o", label: "GPT-4o", badge: "Recomendado" },
+    { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+    { value: "gpt-4-turbo", label: "GPT-4 Turbo" },
+  ],
+};
 ```
 
+### Estados do Componente
+
+```typescript
+const [source, setSource] = useState<"lovable" | "custom">("lovable");
+const [provider, setProvider] = useState<"gemini" | "openai">("gemini");
+const [model, setModel] = useState("google/gemini-3-flash-preview");
+const [apiKey, setApiKey] = useState("");
+
+// Ao trocar fonte ou provedor, ajusta modelo padrão
+useEffect(() => {
+  const models = source === "lovable" ? LOVABLE_MODELS : CUSTOM_MODELS;
+  setModel(models[provider][0].value);
+}, [source, provider]);
+```
+
+---
+
+## Benefícios
+
+- **Flexibilidade total:** Alterna entre Lovable AI e API própria com um clique
+- **Modelos mais recentes:** Acesso a Gemini 3 e GPT-5.2 via Lovable AI
+- **Economia:** Lovable AI não precisa de configuração de API Key
+- **Preparado para uso:** Configuração salva será usada pelo Gerador de Conteúdo
