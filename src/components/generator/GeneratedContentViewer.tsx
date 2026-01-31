@@ -22,7 +22,10 @@ import {
   Gift,
   MessageSquare,
   Megaphone,
-  Users,
+  TrendingUp,
+  Calendar,
+  Zap,
+  ArrowRight,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -59,23 +62,38 @@ interface VideoScript {
   duration?: string;
 }
 
-interface DemandStrategy {
-  approach?: string;
-  content_type?: string;
-  angles?: string[] | string;
-  metrics?: string[] | string;
+interface DemandPlan {
+  context_analysis?: {
+    niche?: string;
+    icp_profile?: string;
+    key_insight?: string;
+  };
+  primary_strategy?: {
+    channel?: string;
+    campaign_type?: string;
+    audiences?: string[];
+    creative_types?: string[];
+    budget_percentage?: number;
+    expected_cpl?: string;
+  };
+  complementary_strategies?: Array<{
+    channel?: string;
+    role?: string;
+    integration?: string;
+    budget_percentage?: number;
+  }>;
+  acquisition_funnel?: {
+    tofu?: { objective?: string; channels?: string[]; message?: string };
+    mofu?: { objective?: string; channels?: string[]; message?: string };
+    bofu?: { objective?: string; channels?: string[]; message?: string };
+  };
+  channel_synergies?: string[];
+  implementation_timeline?: {
+    week_1_2?: string;
+    week_3_4?: string;
+    week_5_8?: string;
+  };
 }
-
-const CHANNEL_LABELS: Record<string, string> = {
-  meta_ads: "Meta Ads",
-  google_ads: "Google Ads",
-  tiktok_ads: "TikTok Ads",
-  referral: "Indicação",
-  influencers: "Influenciadores",
-  outbound: "Outbound",
-  content_marketing: "Conteúdo",
-  email_marketing: "Email",
-};
 
 export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedContentViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -157,144 +175,310 @@ export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedCo
                 </div>
               </AccordionTrigger>
               <AccordionContent className="space-y-6 pt-4">
-                {offers.map((offer, offerIdx) => (
-                  <div key={offer.id} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline">Oferta {offerIdx + 1}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(offer.created_at).toLocaleDateString("pt-BR")}
-                      </span>
-                    </div>
-
-                    {/* Promessa */}
-                    {offer.promise && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Target className="h-4 w-4 text-primary" />
-                            Promessa Principal
-                          </h4>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.promise!, "Promessa")}>
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <p className="text-sm bg-muted p-3 rounded-lg">{offer.promise}</p>
+                {offers.map((offer, offerIdx) => {
+                  const demandPlan = (offer as any).demand_generation_strategies as DemandPlan | null;
+                  
+                  return (
+                    <div key={offer.id} className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">Oferta {offerIdx + 1}</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(offer.created_at).toLocaleDateString("pt-BR")}
+                        </span>
                       </div>
-                    )}
 
-                    {/* Mecanismo Único */}
-                    {offer.unique_mechanism && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-primary" />
-                            Mecanismo Único
-                          </h4>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.unique_mechanism!, "Mecanismo único")}>
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <p className="text-sm bg-muted p-3 rounded-lg">{offer.unique_mechanism}</p>
-                      </div>
-                    )}
-
-                    {/* Garantia */}
-                    {offer.guarantee && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-primary" />
-                            Garantia
-                          </h4>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.guarantee!, "Garantia")}>
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <p className="text-sm bg-muted p-3 rounded-lg">{offer.guarantee}</p>
-                      </div>
-                    )}
-
-                    {/* Pilha de Valor */}
-                    {offer.value_stack && Array.isArray(offer.value_stack) && (offer.value_stack as unknown as ValueStackItem[]).length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
-                          <Gift className="h-4 w-4 text-primary" />
-                          Pilha de Valor
-                        </h4>
+                      {/* Promessa */}
+                      {offer.promise && (
                         <div className="space-y-2">
-                          {(offer.value_stack as unknown as ValueStackItem[]).map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
-                              <span>{item.name}</span>
-                              <Badge variant="secondary">{item.perceived_value}</Badge>
-                            </div>
-                          ))}
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <Target className="h-4 w-4 text-primary" />
+                              Promessa Principal
+                            </h4>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.promise!, "Promessa")}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-sm bg-muted p-3 rounded-lg">{offer.promise}</p>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* CTA */}
-                    {offer.main_cta && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                      {/* Mecanismo Único */}
+                      {offer.unique_mechanism && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-primary" />
+                              Mecanismo Único
+                            </h4>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.unique_mechanism!, "Mecanismo único")}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-sm bg-muted p-3 rounded-lg">{offer.unique_mechanism}</p>
+                        </div>
+                      )}
+
+                      {/* Garantia */}
+                      {offer.guarantee && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-primary" />
+                              Garantia
+                            </h4>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.guarantee!, "Garantia")}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-sm bg-muted p-3 rounded-lg">{offer.guarantee}</p>
+                        </div>
+                      )}
+
+                      {/* Pilha de Valor */}
+                      {offer.value_stack && Array.isArray(offer.value_stack) && (offer.value_stack as unknown as ValueStackItem[]).length > 0 && (
+                        <div className="space-y-2">
                           <h4 className="text-sm font-medium flex items-center gap-2">
-                            <MessageSquare className="h-4 w-4 text-primary" />
-                            CTA Principal
+                            <Gift className="h-4 w-4 text-primary" />
+                            Pilha de Valor
                           </h4>
-                          <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.main_cta!, "CTA")}>
-                            <Copy className="h-3 w-3" />
-                          </Button>
+                          <div className="space-y-2">
+                            {(offer.value_stack as unknown as ValueStackItem[]).map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-muted p-2 rounded-lg text-sm">
+                                <span>{item.name}</span>
+                                <Badge variant="secondary">{item.perceived_value}</Badge>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <p className="text-sm bg-primary/10 p-3 rounded-lg font-medium">{offer.main_cta}</p>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Estratégias de Demanda */}
-                    {(offer as any).demand_generation_strategies && (
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
-                          <Megaphone className="h-4 w-4 text-primary" />
-                          Estratégias de Geração de Demanda
-                        </h4>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {Object.entries((offer as any).demand_generation_strategies as Record<string, DemandStrategy>).map(([channelId, strategy]) => (
-                            <div key={channelId} className="border rounded-lg p-3 space-y-2">
-                              <Badge variant="outline">{CHANNEL_LABELS[channelId] || channelId}</Badge>
-                              {strategy.approach && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Abordagem</p>
-                                  <p className="text-sm">{strategy.approach}</p>
-                                </div>
+                      {/* CTA */}
+                      {offer.main_cta && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-primary" />
+                              CTA Principal
+                            </h4>
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.main_cta!, "CTA")}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-sm bg-primary/10 p-3 rounded-lg font-medium">{offer.main_cta}</p>
+                        </div>
+                      )}
+
+                      {/* PLANO DE GERAÇÃO DE DEMANDA */}
+                      {demandPlan && (
+                        <div className="space-y-4 pt-4 border-t">
+                          <h4 className="text-base font-semibold flex items-center gap-2">
+                            <Megaphone className="h-5 w-5 text-primary" />
+                            Plano de Geração de Demanda
+                          </h4>
+
+                          {/* Análise do Contexto */}
+                          {demandPlan.context_analysis && (
+                            <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <Zap className="h-4 w-4" />
+                                Análise do Contexto
+                              </h5>
+                              {demandPlan.context_analysis.niche && (
+                                <p className="text-sm"><strong>Nicho:</strong> {demandPlan.context_analysis.niche}</p>
                               )}
-                              {strategy.content_type && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Tipo de Conteúdo</p>
-                                  <p className="text-sm">{strategy.content_type}</p>
-                                </div>
+                              {demandPlan.context_analysis.icp_profile && (
+                                <p className="text-sm"><strong>Perfil ICP:</strong> {demandPlan.context_analysis.icp_profile}</p>
+                              )}
+                              {demandPlan.context_analysis.key_insight && (
+                                <p className="text-sm"><strong>Insight:</strong> {demandPlan.context_analysis.key_insight}</p>
                               )}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                          )}
 
-                    {/* Canais Selecionados */}
-                    {(offer as any).demand_generation_channels && (offer as any).demand_generation_channels.length > 0 && !(offer as any).demand_generation_strategies && (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium flex items-center gap-2">
-                          <Megaphone className="h-4 w-4 text-primary" />
-                          Canais de Demanda
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {((offer as any).demand_generation_channels as string[]).map((channelId) => (
-                            <Badge key={channelId} variant="secondary">
-                              {CHANNEL_LABELS[channelId] || channelId}
-                            </Badge>
-                          ))}
+                          {/* Estratégia Principal */}
+                          {demandPlan.primary_strategy && (
+                            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <Target className="h-4 w-4 text-primary" />
+                                Estratégia Principal: {demandPlan.primary_strategy.channel}
+                                {demandPlan.primary_strategy.budget_percentage && (
+                                  <Badge variant="default">{demandPlan.primary_strategy.budget_percentage}% do budget</Badge>
+                                )}
+                              </h5>
+                              {demandPlan.primary_strategy.campaign_type && (
+                                <p className="text-sm"><strong>Campanha:</strong> {demandPlan.primary_strategy.campaign_type}</p>
+                              )}
+                              {demandPlan.primary_strategy.audiences && demandPlan.primary_strategy.audiences.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium">Públicos:</p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {demandPlan.primary_strategy.audiences.map((aud, i) => (
+                                      <Badge key={i} variant="secondary" className="text-xs">{aud}</Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {demandPlan.primary_strategy.creative_types && demandPlan.primary_strategy.creative_types.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium">Criativos:</p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {demandPlan.primary_strategy.creative_types.map((ct, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs">{ct}</Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {demandPlan.primary_strategy.expected_cpl && (
+                                <p className="text-sm"><strong>CPL esperado:</strong> {demandPlan.primary_strategy.expected_cpl}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Estratégias Complementares */}
+                          {demandPlan.complementary_strategies && demandPlan.complementary_strategies.length > 0 && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium">Estratégias Complementares</h5>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {demandPlan.complementary_strategies.map((strategy, idx) => (
+                                  <div key={idx} className="border rounded-lg p-3 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-sm">{strategy.channel}</span>
+                                      {strategy.budget_percentage && (
+                                        <Badge variant="secondary">{strategy.budget_percentage}%</Badge>
+                                      )}
+                                    </div>
+                                    {strategy.role && <p className="text-xs text-muted-foreground">{strategy.role}</p>}
+                                    {strategy.integration && (
+                                      <p className="text-xs flex items-center gap-1">
+                                        <ArrowRight className="h-3 w-3" />
+                                        {strategy.integration}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Funil de Aquisição */}
+                          {demandPlan.acquisition_funnel && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4" />
+                                Funil de Aquisição
+                              </h5>
+                              <div className="space-y-2">
+                                {demandPlan.acquisition_funnel.tofu && (
+                                  <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                                    <Badge variant="outline" className="shrink-0">TOPO</Badge>
+                                    <div className="space-y-1 flex-1">
+                                      <p className="text-sm font-medium">{demandPlan.acquisition_funnel.tofu.objective}</p>
+                                      {demandPlan.acquisition_funnel.tofu.message && (
+                                        <p className="text-xs text-muted-foreground italic">"{demandPlan.acquisition_funnel.tofu.message}"</p>
+                                      )}
+                                      {demandPlan.acquisition_funnel.tofu.channels && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {demandPlan.acquisition_funnel.tofu.channels.map((ch, i) => (
+                                            <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {demandPlan.acquisition_funnel.mofu && (
+                                  <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                                    <Badge variant="outline" className="shrink-0">MEIO</Badge>
+                                    <div className="space-y-1 flex-1">
+                                      <p className="text-sm font-medium">{demandPlan.acquisition_funnel.mofu.objective}</p>
+                                      {demandPlan.acquisition_funnel.mofu.message && (
+                                        <p className="text-xs text-muted-foreground italic">"{demandPlan.acquisition_funnel.mofu.message}"</p>
+                                      )}
+                                      {demandPlan.acquisition_funnel.mofu.channels && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {demandPlan.acquisition_funnel.mofu.channels.map((ch, i) => (
+                                            <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {demandPlan.acquisition_funnel.bofu && (
+                                  <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                                    <Badge variant="outline" className="shrink-0">FUNDO</Badge>
+                                    <div className="space-y-1 flex-1">
+                                      <p className="text-sm font-medium">{demandPlan.acquisition_funnel.bofu.objective}</p>
+                                      {demandPlan.acquisition_funnel.bofu.message && (
+                                        <p className="text-xs text-muted-foreground italic">"{demandPlan.acquisition_funnel.bofu.message}"</p>
+                                      )}
+                                      {demandPlan.acquisition_funnel.bofu.channels && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {demandPlan.acquisition_funnel.bofu.channels.map((ch, i) => (
+                                            <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Sinergias */}
+                          {demandPlan.channel_synergies && demandPlan.channel_synergies.length > 0 && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <Zap className="h-4 w-4" />
+                                Sinergias entre Canais
+                              </h5>
+                              <ul className="space-y-1">
+                                {demandPlan.channel_synergies.map((syn, i) => (
+                                  <li key={i} className="text-sm flex items-start gap-2">
+                                    <ArrowRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                    {syn}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Cronograma */}
+                          {demandPlan.implementation_timeline && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                Cronograma de Implementação
+                              </h5>
+                              <div className="space-y-2">
+                                {demandPlan.implementation_timeline.week_1_2 && (
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <Badge variant="outline" className="shrink-0">Sem 1-2</Badge>
+                                    <span>{demandPlan.implementation_timeline.week_1_2}</span>
+                                  </div>
+                                )}
+                                {demandPlan.implementation_timeline.week_3_4 && (
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <Badge variant="outline" className="shrink-0">Sem 3-4</Badge>
+                                    <span>{demandPlan.implementation_timeline.week_3_4}</span>
+                                  </div>
+                                )}
+                                {demandPlan.implementation_timeline.week_5_8 && (
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <Badge variant="outline" className="shrink-0">Sem 5-8</Badge>
+                                    <span>{demandPlan.implementation_timeline.week_5_8}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  );
+                })}
               </AccordionContent>
             </AccordionItem>
           )}
@@ -416,37 +600,42 @@ export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedCo
                         question_box: "Caixinha de Perguntas",
                       };
                       return (
-                        <div key={ad.id} className="border rounded-lg p-4 space-y-2">
+                        <div key={ad.id} className="border rounded-lg p-4 space-y-3">
                           <div className="flex items-center justify-between">
                             <Badge variant="outline">{angleLabels[ad.ad_angle || ""] || ad.ad_angle}</Badge>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => copyToClipboard(JSON.stringify(script, null, 2), `Script ${ad.ad_angle}`)}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {script?.duration && (
+                                <span className="text-xs text-muted-foreground">{script.duration}</span>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => copyToClipboard(
+                                  `HOOK:\n${script?.hook}\n\nBODY:\n${script?.body}\n\nCTA:\n${script?.cta}`,
+                                  `Script ${ad.ad_angle}`
+                                )}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           {script?.hook && (
                             <div>
-                              <p className="text-xs text-muted-foreground">Hook</p>
+                              <p className="text-xs text-muted-foreground font-medium">Hook (Gancho)</p>
                               <p className="text-sm">{script.hook}</p>
                             </div>
                           )}
                           {script?.body && (
                             <div>
-                              <p className="text-xs text-muted-foreground">Desenvolvimento</p>
+                              <p className="text-xs text-muted-foreground font-medium">Desenvolvimento</p>
                               <p className="text-sm">{script.body}</p>
                             </div>
                           )}
                           {script?.cta && (
                             <div>
-                              <p className="text-xs text-muted-foreground">CTA</p>
+                              <p className="text-xs text-muted-foreground font-medium">CTA</p>
                               <p className="text-sm font-medium text-primary">{script.cta}</p>
                             </div>
-                          )}
-                          {script?.duration && (
-                            <Badge variant="secondary" className="mt-2">{script.duration}</Badge>
                           )}
                         </div>
                       );

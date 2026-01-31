@@ -28,6 +28,7 @@ interface PPPData {
   promise: {
     promise_text: string | null;
   } | null;
+  niche?: string | null;
 }
 
 interface RequestBody {
@@ -36,19 +37,7 @@ interface RequestBody {
   pppData: PPPData;
   icpId?: string;
   offerId?: string;
-  demandChannels?: string[];
 }
-
-const CHANNEL_LABELS: Record<string, string> = {
-  meta_ads: "Meta Ads (Facebook/Instagram)",
-  google_ads: "Google Ads",
-  tiktok_ads: "TikTok Ads",
-  referral: "Programa de Indicação",
-  influencers: "Parceria com Influenciadores",
-  outbound: "Outbound (Prospecção ativa)",
-  content_marketing: "Marketing de Conteúdo",
-  email_marketing: "Email Marketing",
-};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -57,7 +46,7 @@ serve(async (req) => {
   }
 
   try {
-    const { type, clientId, pppData, icpId, offerId, demandChannels } = await req.json() as RequestBody;
+    const { type, clientId, pppData, icpId, offerId } = await req.json() as RequestBody;
 
     console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}`);
 
@@ -76,40 +65,92 @@ serve(async (req) => {
 
     switch (type) {
       case "offer":
-        const channelsList = demandChannels?.map(c => CHANNEL_LABELS[c] || c).join(", ") || "Não especificado";
-        
-        systemPrompt = `Você é um especialista em marketing direto e criação de ofertas irresistíveis usando a metodologia do Alex Hormozi.
-Sua tarefa é criar uma oferta estruturada com base nos dados de discovery (PPP) fornecidos.
-A oferta deve ser direcionada para um ICP específico e incluir estratégias de geração de demanda para os canais selecionados.`;
+        systemPrompt = `Você é um estrategista de marketing digital especializado em aquisição de clientes via tráfego pago, especialmente Facebook/Meta Ads. Você também é expert na metodologia de ofertas irresistíveis do Alex Hormozi.
+
+Sua tarefa é:
+1. Criar uma Oferta Hormozi completa
+2. Criar um PLANO ESTRATÉGICO DE GERAÇÃO DE DEMANDA integrado e acionável
+
+IMPORTANTE: Facebook/Meta Ads é nosso canal principal e mais forte. Sempre priorize este canal.`;
+
         prompt = `Com base nos seguintes dados de discovery:
 
 ${context}
 
-**Canais de Geração de Demanda selecionados:** ${channelsList}
+Crie uma resposta em JSON com DUAS partes:
 
-Crie uma Oferta Hormozi completa com:
-1. **Promessa Principal**: Uma frase impactante que resume a transformação
-2. **Mecanismo Único**: O que diferencia seu método/produto
-3. **Garantia**: Tipo de garantia oferecida (30 dias, resultado ou dinheiro de volta, etc)
-4. **Prova Social**: Sugestões de provas sociais que podem ser usadas
-5. **Reversão de Risco**: Como você remove o risco do cliente
-6. **Pilha de Valor**: Lista de bônus e entregáveis com valores percebidos
-7. **CTA Principal**: Call-to-action principal
-8. **Estratégias de Geração de Demanda**: Para CADA canal selecionado, sugira:
-   - Abordagem específica para esse canal
-   - Tipo de conteúdo/anúncio ideal
-   - Ângulos de comunicação que funcionam
-   - Métricas de sucesso esperadas
+## PARTE 1: OFERTA HORMOZI
+- promise: Promessa principal impactante
+- unique_mechanism: O que diferencia seu método/produto
+- guarantee: Tipo de garantia oferecida
+- proof: Sugestões de provas sociais
+- risk_reversal: Como você remove o risco do cliente
+- value_stack: Array de objetos com {name, perceived_value}
+- main_cta: Call-to-action principal
 
-Responda em formato JSON com as chaves: 
-- promise (string)
-- unique_mechanism (string)
-- guarantee (string)
-- proof (string)
-- risk_reversal (string)
-- value_stack (array de objetos com name e perceived_value)
-- main_cta (string)
-- demand_strategies (objeto com uma chave para cada canal selecionado, contendo: approach, content_type, angles, metrics)`;
+## PARTE 2: PLANO DE GERAÇÃO DE DEMANDA (demand_plan)
+Analise o contexto do negócio e crie um plano PRÁTICO e ACIONÁVEL:
+
+{
+  "demand_plan": {
+    "context_analysis": {
+      "niche": "Identificação do nicho",
+      "icp_profile": "Resumo do perfil do ICP",
+      "key_insight": "Principal insight estratégico"
+    },
+    "primary_strategy": {
+      "channel": "Facebook/Meta Ads",
+      "campaign_type": "Tipo de campanha recomendada",
+      "audiences": ["Público 1", "Público 2"],
+      "creative_types": ["Tipo de criativo 1", "Tipo de criativo 2"],
+      "budget_percentage": 60,
+      "expected_cpl": "Estimativa de CPL"
+    },
+    "complementary_strategies": [
+      {
+        "channel": "Nome do canal complementar",
+        "role": "Papel deste canal na estratégia",
+        "integration": "Como integra com o Meta Ads",
+        "budget_percentage": 25
+      }
+    ],
+    "acquisition_funnel": {
+      "tofu": {
+        "objective": "Objetivo do topo",
+        "channels": ["Canal 1", "Canal 2"],
+        "message": "Mensagem principal"
+      },
+      "mofu": {
+        "objective": "Objetivo do meio",
+        "channels": ["Canal 1", "Canal 2"],
+        "message": "Mensagem principal"
+      },
+      "bofu": {
+        "objective": "Objetivo do fundo",
+        "channels": ["Canal 1", "Canal 2"],
+        "message": "Mensagem principal"
+      }
+    },
+    "channel_synergies": [
+      "Sinergia 1: como um canal alimenta outro",
+      "Sinergia 2: sequência recomendada"
+    ],
+    "implementation_timeline": {
+      "week_1_2": "O que fazer nas semanas 1-2",
+      "week_3_4": "O que fazer nas semanas 3-4",
+      "week_5_8": "O que fazer nas semanas 5-8"
+    }
+  }
+}
+
+REGRAS:
+1. SEMPRE priorize Facebook/Meta Ads como canal principal (60%+ do budget)
+2. Escolha 2-3 canais complementares que façam sentido para ESTE negócio específico
+3. Mostre sinergias CONCRETAS entre canais
+4. O plano deve ser PRÁTICO e ACIONÁVEL, não genérico
+5. Use os dados do ICP e dores para personalizar as mensagens
+
+Responda APENAS com o JSON válido, sem markdown.`;
         break;
 
       case "lp":
@@ -204,6 +245,20 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('AI API error:', errorText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       throw new Error(`AI API error: ${aiResponse.status}`);
     }
 
@@ -237,7 +292,7 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
 
     switch (type) {
       case "offer":
-        // Insert new offer (don't delete existing - allow multiple offers per client)
+        // Insert new offer with demand plan
         const { error: offerError } = await supabase.from('offers_hormozi').insert({
           client_id: clientId,
           icp_id: icpId || null,
@@ -248,11 +303,11 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
           risk_reversal: parsedContent.risk_reversal,
           value_stack: parsedContent.value_stack,
           main_cta: parsedContent.main_cta,
-          demand_generation_channels: demandChannels || [],
-          demand_generation_strategies: parsedContent.demand_strategies || null,
+          demand_generation_channels: null, // No longer manually selected
+          demand_generation_strategies: parsedContent.demand_plan || null,
         });
         if (offerError) throw offerError;
-        console.log('Offer saved successfully');
+        console.log('Offer with demand plan saved successfully');
         break;
 
       case "lp":
@@ -330,6 +385,13 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
 
 function buildContext(pppData: PPPData): string {
   const parts: string[] = [];
+
+  // Niche info
+  if (pppData.niche) {
+    parts.push('## NICHO');
+    parts.push(pppData.niche);
+    parts.push('');
+  }
 
   // Product info
   if (pppData.profile) {

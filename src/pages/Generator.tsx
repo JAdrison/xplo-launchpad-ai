@@ -24,13 +24,6 @@ import {
   Users,
   AlertCircle,
   ArrowRight,
-  Megaphone,
-  Share2,
-  Search,
-  Smartphone,
-  UserPlus,
-  Globe,
-  Mail,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -51,17 +44,6 @@ interface ClientWithPPP {
 
 type GenerationType = "offer" | "lp" | "ads";
 
-const DEMAND_CHANNELS = [
-  { id: "meta_ads", label: "Meta Ads (Facebook/Instagram)", icon: Share2 },
-  { id: "google_ads", label: "Google Ads", icon: Search },
-  { id: "tiktok_ads", label: "TikTok Ads", icon: Smartphone },
-  { id: "referral", label: "Programa de Indicação", icon: UserPlus },
-  { id: "influencers", label: "Parceria com Influenciadores", icon: Users },
-  { id: "outbound", label: "Outbound (Prospecção ativa)", icon: Megaphone },
-  { id: "content_marketing", label: "Marketing de Conteúdo", icon: Globe },
-  { id: "email_marketing", label: "Email Marketing", icon: Mail },
-];
-
 export default function Generator() {
   const [searchParams] = useSearchParams();
   const clientIdParam = searchParams.get("client");
@@ -77,7 +59,6 @@ export default function Generator() {
   const [selectedTypes, setSelectedTypes] = useState<Set<GenerationType>>(
     typeParam ? new Set([typeParam]) : new Set()
   );
-  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
   const [generationResults, setGenerationResults] = useState<{
     offer?: boolean;
     lp?: boolean;
@@ -179,16 +160,6 @@ export default function Generator() {
     setSelectedTypes(newSet);
   };
 
-  const toggleChannel = (channelId: string) => {
-    const newSet = new Set(selectedChannels);
-    if (newSet.has(channelId)) {
-      newSet.delete(channelId);
-    } else {
-      newSet.add(channelId);
-    }
-    setSelectedChannels(newSet);
-  };
-
   const handleGenerate = async () => {
     if (!selectedClientId || selectedTypes.size === 0) {
       toast.error("Selecione um cliente e pelo menos um tipo de geração");
@@ -198,12 +169,6 @@ export default function Generator() {
     // Validate ICP selection for offer generation
     if (selectedTypes.has("offer") && !selectedIcpId) {
       toast.error("Selecione um ICP para gerar a oferta");
-      return;
-    }
-
-    // Validate channels for offer generation
-    if (selectedTypes.has("offer") && selectedChannels.size === 0) {
-      toast.error("Selecione pelo menos um canal de geração de demanda");
       return;
     }
 
@@ -218,11 +183,12 @@ export default function Generator() {
 
     try {
       // Fetch PPP data for the client
-      const [profileRes, icpsRes, painsRes, promiseRes] = await Promise.all([
+      const [profileRes, icpsRes, painsRes, promiseRes, clientRes] = await Promise.all([
         supabase.from("client_profile").select("*").eq("client_id", selectedClientId).maybeSingle(),
         supabase.from("icps").select("*").eq("client_id", selectedClientId).order("sort_order"),
         supabase.from("icp_pains").select("*, icps(name)").eq("icps.client_id", selectedClientId),
         supabase.from("client_promise").select("*").eq("client_id", selectedClientId).maybeSingle(),
+        supabase.from("clients").select("niche").eq("id", selectedClientId).maybeSingle(),
       ]);
 
       // Filter to selected ICP if generating offer
@@ -239,6 +205,7 @@ export default function Generator() {
         icps: filteredIcps,
         pains: filteredPains,
         promise: promiseRes.data,
+        niche: clientRes.data?.niche || null,
       };
 
       const results: typeof generationResults = {};
@@ -252,10 +219,9 @@ export default function Generator() {
             pppData,
           };
 
-          // Add ICP and demand channels for offer generation
+          // Add ICP for offer generation (AI will decide channels automatically)
           if (type === "offer") {
             body.icpId = selectedIcpId;
-            body.demandChannels = Array.from(selectedChannels);
           }
 
           // Add offer ID for ads generation
@@ -308,7 +274,6 @@ export default function Generator() {
   };
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
-  const selectedIcp = selectedClient?.icps.find(icp => icp.id === selectedIcpId);
 
   if (isLoading) {
     return (
@@ -488,7 +453,8 @@ export default function Generator() {
                     )}
                   </Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Gera uma oferta irresistível com promessa, mecanismo único, garantia, prova social, pilha de valor e estratégias de demanda
+                    Gera uma oferta irresistível com promessa, mecanismo único, garantia, prova social, pilha de valor 
+                    e <strong>plano estratégico de demanda automático</strong> (Facebook/Meta Ads como foco principal)
                   </p>
                   {!selectedIcpId && selectedTypes.has("offer") && (
                     <p className="text-sm text-destructive mt-1">
@@ -577,69 +543,6 @@ export default function Generator() {
                 </div>
               </div>
             </div>
-
-            {/* Demand Generation Channels - Only show when offer is selected */}
-            {selectedTypes.has("offer") && selectedIcpId && (
-              <>
-                <Separator />
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label className="flex items-center gap-2 text-base font-medium">
-                      <Megaphone className="h-4 w-4" />
-                      Oportunidades de Geração de Demanda
-                    </Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Selecione os canais que você pretende usar. A IA irá sugerir estratégias específicas para cada um.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {DEMAND_CHANNELS.map((channel) => {
-                      const Icon = channel.icon;
-                      const isSelected = selectedChannels.has(channel.id);
-
-                      return (
-                        <div
-                          key={channel.id}
-                          className={`flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                            isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                          }`}
-                          onClick={() => toggleChannel(channel.id)}
-                        >
-                          <Checkbox
-                            id={channel.id}
-                            checked={isSelected}
-                            onCheckedChange={() => toggleChannel(channel.id)}
-                          />
-                          <Label
-                            htmlFor={channel.id}
-                            className="flex items-center gap-2 cursor-pointer flex-1"
-                          >
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{channel.label}</span>
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {selectedChannels.size > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-sm text-muted-foreground">Selecionados:</span>
-                      {Array.from(selectedChannels).map((channelId) => {
-                        const channel = DEMAND_CHANNELS.find((c) => c.id === channelId);
-                        return (
-                          <Badge key={channelId} variant="secondary">
-                            {channel?.label}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
 
             <Separator />
 
