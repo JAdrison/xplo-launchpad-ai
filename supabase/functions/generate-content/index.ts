@@ -34,7 +34,21 @@ interface RequestBody {
   type: "offer" | "lp" | "ads";
   clientId: string;
   pppData: PPPData;
+  icpId?: string;
+  offerId?: string;
+  demandChannels?: string[];
 }
+
+const CHANNEL_LABELS: Record<string, string> = {
+  meta_ads: "Meta Ads (Facebook/Instagram)",
+  google_ads: "Google Ads",
+  tiktok_ads: "TikTok Ads",
+  referral: "Programa de Indicação",
+  influencers: "Parceria com Influenciadores",
+  outbound: "Outbound (Prospecção ativa)",
+  content_marketing: "Marketing de Conteúdo",
+  email_marketing: "Email Marketing",
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -43,9 +57,9 @@ serve(async (req) => {
   }
 
   try {
-    const { type, clientId, pppData } = await req.json() as RequestBody;
+    const { type, clientId, pppData, icpId, offerId, demandChannels } = await req.json() as RequestBody;
 
-    console.log(`Generating ${type} for client ${clientId}`);
+    console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}`);
 
     // Build context from PPP data
     const context = buildContext(pppData);
@@ -62,11 +76,16 @@ serve(async (req) => {
 
     switch (type) {
       case "offer":
+        const channelsList = demandChannels?.map(c => CHANNEL_LABELS[c] || c).join(", ") || "Não especificado";
+        
         systemPrompt = `Você é um especialista em marketing direto e criação de ofertas irresistíveis usando a metodologia do Alex Hormozi.
-Sua tarefa é criar uma oferta estruturada com base nos dados de discovery (PPP) fornecidos.`;
+Sua tarefa é criar uma oferta estruturada com base nos dados de discovery (PPP) fornecidos.
+A oferta deve ser direcionada para um ICP específico e incluir estratégias de geração de demanda para os canais selecionados.`;
         prompt = `Com base nos seguintes dados de discovery:
 
 ${context}
+
+**Canais de Geração de Demanda selecionados:** ${channelsList}
 
 Crie uma Oferta Hormozi completa com:
 1. **Promessa Principal**: Uma frase impactante que resume a transformação
@@ -76,8 +95,21 @@ Crie uma Oferta Hormozi completa com:
 5. **Reversão de Risco**: Como você remove o risco do cliente
 6. **Pilha de Valor**: Lista de bônus e entregáveis com valores percebidos
 7. **CTA Principal**: Call-to-action principal
+8. **Estratégias de Geração de Demanda**: Para CADA canal selecionado, sugira:
+   - Abordagem específica para esse canal
+   - Tipo de conteúdo/anúncio ideal
+   - Ângulos de comunicação que funcionam
+   - Métricas de sucesso esperadas
 
-Responda em formato JSON com as chaves: promise, unique_mechanism, guarantee, proof, risk_reversal, value_stack (array de objetos com name e perceived_value), main_cta`;
+Responda em formato JSON com as chaves: 
+- promise (string)
+- unique_mechanism (string)
+- guarantee (string)
+- proof (string)
+- risk_reversal (string)
+- value_stack (array de objetos com name e perceived_value)
+- main_cta (string)
+- demand_strategies (objeto com uma chave para cada canal selecionado, contendo: approach, content_type, angles, metrics)`;
         break;
 
       case "lp":
@@ -101,13 +133,42 @@ Responda em formato JSON com um objeto contendo 3 chaves (direct, consultive, ag
         break;
 
       case "ads":
+        // If offerId is provided, fetch the offer data
+        let offerContext = "";
+        if (offerId) {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+          const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          
+          const { data: offerData } = await supabase
+            .from('offers_hormozi')
+            .select('*')
+            .eq('id', offerId)
+            .maybeSingle();
+          
+          if (offerData) {
+            offerContext = `
+## OFERTA BASE PARA OS ANÚNCIOS
+
+**Promessa:** ${offerData.promise || 'Não definida'}
+**Mecanismo Único:** ${offerData.unique_mechanism || 'Não definido'}
+**Garantia:** ${offerData.guarantee || 'Não definida'}
+**CTA Principal:** ${offerData.main_cta || 'Não definido'}
+**Prova Social:** ${offerData.proof || 'Não definida'}
+
+`;
+          }
+        }
+
         systemPrompt = `Você é um especialista em anúncios para redes sociais, criando tanto anúncios estáticos quanto scripts de vídeo.
-Sua tarefa é criar anúncios com base nos dados de discovery fornecidos.`;
-        prompt = `Com base nos seguintes dados de discovery:
+Sua tarefa é criar anúncios com base na oferta e dados de discovery fornecidos.
+Os anúncios devem ser coerentes com a oferta criada anteriormente.`;
+        prompt = `Com base nos seguintes dados:
 
-${context}
+${offerContext}${context}
 
-Crie os seguintes anúncios:
+Crie os seguintes anúncios baseados na oferta acima:
 
 **2 Anúncios Estáticos:**
 Para cada um, inclua: headline, body_text, cta, ad_angle (ângulo/abordagem)
@@ -176,12 +237,10 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
 
     switch (type) {
       case "offer":
-        // Delete existing offers for this client
-        await supabase.from('offers_hormozi').delete().eq('client_id', clientId);
-        
-        // Insert new offer
+        // Insert new offer (don't delete existing - allow multiple offers per client)
         const { error: offerError } = await supabase.from('offers_hormozi').insert({
           client_id: clientId,
+          icp_id: icpId || null,
           promise: parsedContent.promise,
           unique_mechanism: parsedContent.unique_mechanism,
           guarantee: parsedContent.guarantee,
@@ -189,6 +248,8 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
           risk_reversal: parsedContent.risk_reversal,
           value_stack: parsedContent.value_stack,
           main_cta: parsedContent.main_cta,
+          demand_generation_channels: demandChannels || [],
+          demand_generation_strategies: parsedContent.demand_strategies || null,
         });
         if (offerError) throw offerError;
         console.log('Offer saved successfully');
@@ -212,13 +273,18 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
         break;
 
       case "ads":
-        // Delete existing ads for this client
-        await supabase.from('ads').delete().eq('client_id', clientId);
+        // Delete existing ads for this client (or just for this offer)
+        if (offerId) {
+          await supabase.from('ads').delete().eq('offer_id', offerId);
+        } else {
+          await supabase.from('ads').delete().eq('client_id', clientId);
+        }
         
         // Insert static ads
         for (const ad of parsedContent.static_ads || []) {
           const { error: adError } = await supabase.from('ads').insert({
             client_id: clientId,
+            offer_id: offerId || null,
             asset_type: 'static_ad',
             headline: ad.headline,
             body_text: ad.body_text,
@@ -235,6 +301,7 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
           if (script) {
             const { error: videoError } = await supabase.from('ads').insert({
               client_id: clientId,
+              offer_id: offerId || null,
               asset_type: 'video_ad',
               ad_angle: videoType,
               script: script,
@@ -281,7 +348,7 @@ function buildContext(pppData: PPPData): string {
 
   // ICPs
   if (pppData.icps?.length) {
-    parts.push('## PERFIS DE CLIENTE IDEAL (ICPs)');
+    parts.push('## PERFIL DE CLIENTE IDEAL (ICP)');
     for (const icp of pppData.icps) {
       parts.push(`### ${icp.name}`);
       if (icp.segment) parts.push(`Segmento: ${icp.segment}`);

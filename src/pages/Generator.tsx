@@ -24,6 +24,13 @@ import {
   Users,
   AlertCircle,
   ArrowRight,
+  Megaphone,
+  Share2,
+  Search,
+  Smartphone,
+  UserPlus,
+  Globe,
+  Mail,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,6 +38,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { GeneratedContentViewer } from "@/components/generator/GeneratedContentViewer";
 
 type Client = Tables<"clients">;
+type Offer = Tables<"offers_hormozi">;
 
 interface ClientWithPPP {
   id: string;
@@ -38,10 +46,21 @@ interface ClientWithPPP {
   status: Client["status"];
   hasProfile: boolean;
   hasPromise: boolean;
-  icpCount: number;
+  icps: { id: string; name: string }[];
 }
 
 type GenerationType = "offer" | "lp" | "ads";
+
+const DEMAND_CHANNELS = [
+  { id: "meta_ads", label: "Meta Ads (Facebook/Instagram)", icon: Share2 },
+  { id: "google_ads", label: "Google Ads", icon: Search },
+  { id: "tiktok_ads", label: "TikTok Ads", icon: Smartphone },
+  { id: "referral", label: "Programa de Indicação", icon: UserPlus },
+  { id: "influencers", label: "Parceria com Influenciadores", icon: Users },
+  { id: "outbound", label: "Outbound (Prospecção ativa)", icon: Megaphone },
+  { id: "content_marketing", label: "Marketing de Conteúdo", icon: Globe },
+  { id: "email_marketing", label: "Email Marketing", icon: Mail },
+];
 
 export default function Generator() {
   const [searchParams] = useSearchParams();
@@ -52,9 +71,13 @@ export default function Generator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [clients, setClients] = useState<ClientWithPPP[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientIdParam);
+  const [selectedIcpId, setSelectedIcpId] = useState<string | null>(null);
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<GenerationType>>(
     typeParam ? new Set([typeParam]) : new Set()
   );
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
   const [generationResults, setGenerationResults] = useState<{
     offer?: boolean;
     lp?: boolean;
@@ -71,6 +94,15 @@ export default function Generator() {
       setSelectedClientId(clientIdParam);
     }
   }, [clientIdParam]);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      fetchOffersForClient(selectedClientId);
+      // Reset ICP selection when client changes
+      setSelectedIcpId(null);
+      setSelectedOfferId(null);
+    }
+  }, [selectedClientId]);
 
   const fetchEligibleClients = async () => {
     setIsLoading(true);
@@ -101,14 +133,17 @@ export default function Generator() {
     const [profilesRes, promisesRes, icpsRes] = await Promise.all([
       supabase.from("client_profile").select("client_id").in("client_id", clientIds),
       supabase.from("client_promise").select("client_id").in("client_id", clientIds),
-      supabase.from("icps").select("client_id").in("client_id", clientIds),
+      supabase.from("icps").select("id, name, client_id").in("client_id", clientIds),
     ]);
 
     const profileSet = new Set(profilesRes.data?.map((p) => p.client_id) || []);
     const promiseSet = new Set(promisesRes.data?.map((p) => p.client_id) || []);
-    const icpCountMap = new Map<string, number>();
+    const icpsMap = new Map<string, { id: string; name: string }[]>();
     icpsRes.data?.forEach((icp) => {
-      icpCountMap.set(icp.client_id, (icpCountMap.get(icp.client_id) || 0) + 1);
+      if (!icpsMap.has(icp.client_id)) {
+        icpsMap.set(icp.client_id, []);
+      }
+      icpsMap.get(icp.client_id)!.push({ id: icp.id, name: icp.name });
     });
 
     const clientsWithPPP = clientsData.map((client) => ({
@@ -117,11 +152,21 @@ export default function Generator() {
       status: client.status,
       hasProfile: profileSet.has(client.id),
       hasPromise: promiseSet.has(client.id),
-      icpCount: icpCountMap.get(client.id) || 0,
+      icps: icpsMap.get(client.id) || [],
     }));
 
     setClients(clientsWithPPP);
     setIsLoading(false);
+  };
+
+  const fetchOffersForClient = async (clientId: string) => {
+    const { data } = await supabase
+      .from("offers_hormozi")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false });
+    
+    setOffers(data || []);
   };
 
   const toggleType = (type: GenerationType) => {
@@ -134,9 +179,37 @@ export default function Generator() {
     setSelectedTypes(newSet);
   };
 
+  const toggleChannel = (channelId: string) => {
+    const newSet = new Set(selectedChannels);
+    if (newSet.has(channelId)) {
+      newSet.delete(channelId);
+    } else {
+      newSet.add(channelId);
+    }
+    setSelectedChannels(newSet);
+  };
+
   const handleGenerate = async () => {
     if (!selectedClientId || selectedTypes.size === 0) {
       toast.error("Selecione um cliente e pelo menos um tipo de geração");
+      return;
+    }
+
+    // Validate ICP selection for offer generation
+    if (selectedTypes.has("offer") && !selectedIcpId) {
+      toast.error("Selecione um ICP para gerar a oferta");
+      return;
+    }
+
+    // Validate channels for offer generation
+    if (selectedTypes.has("offer") && selectedChannels.size === 0) {
+      toast.error("Selecione pelo menos um canal de geração de demanda");
+      return;
+    }
+
+    // Validate offer selection for ads generation
+    if (selectedTypes.has("ads") && !selectedOfferId && offers.length > 0) {
+      toast.error("Selecione uma oferta para gerar os anúncios");
       return;
     }
 
@@ -144,7 +217,7 @@ export default function Generator() {
     setGenerationResults({});
 
     try {
-      // Fetch all PPP data for the client
+      // Fetch PPP data for the client
       const [profileRes, icpsRes, painsRes, promiseRes] = await Promise.all([
         supabase.from("client_profile").select("*").eq("client_id", selectedClientId).maybeSingle(),
         supabase.from("icps").select("*").eq("client_id", selectedClientId).order("sort_order"),
@@ -152,10 +225,19 @@ export default function Generator() {
         supabase.from("client_promise").select("*").eq("client_id", selectedClientId).maybeSingle(),
       ]);
 
+      // Filter to selected ICP if generating offer
+      const filteredIcps = selectedIcpId 
+        ? (icpsRes.data || []).filter(icp => icp.id === selectedIcpId)
+        : icpsRes.data || [];
+
+      const filteredPains = selectedIcpId
+        ? (painsRes.data || []).filter(pain => pain.icp_id === selectedIcpId)
+        : painsRes.data || [];
+
       const pppData = {
         profile: profileRes.data,
-        icps: icpsRes.data || [],
-        pains: painsRes.data || [],
+        icps: filteredIcps,
+        pains: filteredPains,
         promise: promiseRes.data,
       };
 
@@ -164,12 +246,25 @@ export default function Generator() {
       // Generate each selected type
       for (const type of selectedTypes) {
         try {
+          const body: Record<string, unknown> = {
+            type,
+            clientId: selectedClientId,
+            pppData,
+          };
+
+          // Add ICP and demand channels for offer generation
+          if (type === "offer") {
+            body.icpId = selectedIcpId;
+            body.demandChannels = Array.from(selectedChannels);
+          }
+
+          // Add offer ID for ads generation
+          if (type === "ads" && selectedOfferId) {
+            body.offerId = selectedOfferId;
+          }
+
           const { data, error } = await supabase.functions.invoke("generate-content", {
-            body: {
-              type,
-              clientId: selectedClientId,
-              pppData,
-            },
+            body,
           });
 
           if (error) {
@@ -198,8 +293,11 @@ export default function Generator() {
             .update({ status: "offer_generated" })
             .eq("id", selectedClientId);
         }
-        // Trigger refresh of generated content viewer
+        // Trigger refresh of generated content viewer and offers
         setRefreshTrigger(prev => prev + 1);
+        if (results.offer) {
+          fetchOffersForClient(selectedClientId);
+        }
       }
     } catch (error) {
       console.error("Error in generation:", error);
@@ -210,6 +308,7 @@ export default function Generator() {
   };
 
   const selectedClient = clients.find((c) => c.id === selectedClientId);
+  const selectedIcp = selectedClient?.icps.find(icp => icp.id === selectedIcpId);
 
   if (isLoading) {
     return (
@@ -244,11 +343,11 @@ export default function Generator() {
             </div>
             <h3 className="mt-4 text-lg font-semibold">Nenhum cliente pronto para geração</h3>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Complete o Onboarding PPP de um cliente para poder gerar ofertas, LPs e anúncios com IA.
+              Complete o Onboarding X1 de um cliente para poder gerar ofertas, LPs e anúncios com IA.
             </p>
             <Button asChild className="mt-6 gap-2">
               <Link to="/onboarding">
-                Ir para Onboarding PPP
+                Ir para Onboarding X1
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -270,10 +369,10 @@ export default function Generator() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Selecione um cliente
+            1. Selecione um cliente
           </CardTitle>
           <CardDescription>
-            Apenas clientes com PPP concluído estão disponíveis
+            Apenas clientes com Onboarding X1 concluído estão disponíveis
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -290,7 +389,7 @@ export default function Generator() {
                   <div className="flex items-center gap-2">
                     <span>{client.name}</span>
                     <Badge variant="secondary" className="text-xs">
-                      {client.icpCount} ICP{client.icpCount > 1 ? "s" : ""}
+                      {client.icps.length} ICP{client.icps.length > 1 ? "s" : ""}
                     </Badge>
                   </div>
                 </SelectItem>
@@ -314,12 +413,44 @@ export default function Generator() {
               )}
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 text-primary" />
-                {selectedClient.icpCount} ICP{selectedClient.icpCount > 1 ? "s" : ""}
+                {selectedClient.icps.length} ICP{selectedClient.icps.length > 1 ? "s" : ""}
               </span>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* ICP Selection */}
+      {selectedClientId && selectedClient && selectedClient.icps.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              2. Selecione um ICP
+            </CardTitle>
+            <CardDescription>
+              A oferta será gerada especificamente para este perfil de cliente ideal
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={selectedIcpId || ""}
+              onValueChange={(value) => setSelectedIcpId(value || null)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione um ICP..." />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedClient.icps.map((icp) => (
+                  <SelectItem key={icp.id} value={icp.id}>
+                    {icp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Generation Options */}
       {selectedClientId && (
@@ -327,7 +458,7 @@ export default function Generator() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
-              O que deseja gerar?
+              3. O que deseja gerar?
             </CardTitle>
             <CardDescription>
               Selecione os tipos de conteúdo que deseja gerar
@@ -357,8 +488,13 @@ export default function Generator() {
                     )}
                   </Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Gera uma oferta irresistível com promessa, mecanismo único, garantia, prova social e pilha de valor
+                    Gera uma oferta irresistível com promessa, mecanismo único, garantia, prova social, pilha de valor e estratégias de demanda
                   </p>
+                  {!selectedIcpId && selectedTypes.has("offer") && (
+                    <p className="text-sm text-destructive mt-1">
+                      ⚠️ Selecione um ICP acima para gerar a oferta
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -395,11 +531,12 @@ export default function Generator() {
                   id="ads"
                   checked={selectedTypes.has("ads")}
                   onCheckedChange={() => toggleType("ads")}
+                  disabled={offers.length === 0}
                 />
                 <div className="flex-1">
                   <Label
                     htmlFor="ads"
-                    className="flex items-center gap-2 font-medium cursor-pointer"
+                    className={`flex items-center gap-2 font-medium cursor-pointer ${offers.length === 0 ? "text-muted-foreground" : ""}`}
                   >
                     <Video className="h-4 w-4 text-muted-foreground" />
                     Anúncios
@@ -413,9 +550,96 @@ export default function Generator() {
                   <p className="text-sm text-muted-foreground mt-1">
                     Gera 2 anúncios estáticos + 3 scripts de vídeo (Direto, Educacional, Caixinha de Perguntas)
                   </p>
+                  {offers.length === 0 ? (
+                    <p className="text-sm text-destructive mt-2">
+                      ⚠️ Gere uma oferta primeiro para criar anúncios
+                    </p>
+                  ) : selectedTypes.has("ads") && (
+                    <div className="mt-3">
+                      <Label className="text-xs text-muted-foreground">Selecione a oferta base:</Label>
+                      <Select
+                        value={selectedOfferId || ""}
+                        onValueChange={(value) => setSelectedOfferId(value || null)}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione uma oferta..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {offers.map((offer) => (
+                            <SelectItem key={offer.id} value={offer.id}>
+                              {offer.promise?.substring(0, 50)}...
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Demand Generation Channels - Only show when offer is selected */}
+            {selectedTypes.has("offer") && selectedIcpId && (
+              <>
+                <Separator />
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label className="flex items-center gap-2 text-base font-medium">
+                      <Megaphone className="h-4 w-4" />
+                      Oportunidades de Geração de Demanda
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Selecione os canais que você pretende usar. A IA irá sugerir estratégias específicas para cada um.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {DEMAND_CHANNELS.map((channel) => {
+                      const Icon = channel.icon;
+                      const isSelected = selectedChannels.has(channel.id);
+
+                      return (
+                        <div
+                          key={channel.id}
+                          className={`flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                            isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => toggleChannel(channel.id)}
+                        >
+                          <Checkbox
+                            id={channel.id}
+                            checked={isSelected}
+                            onCheckedChange={() => toggleChannel(channel.id)}
+                          />
+                          <Label
+                            htmlFor={channel.id}
+                            className="flex items-center gap-2 cursor-pointer flex-1"
+                          >
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{channel.label}</span>
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {selectedChannels.size > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground">Selecionados:</span>
+                      {Array.from(selectedChannels).map((channelId) => {
+                        const channel = DEMAND_CHANNELS.find((c) => c.id === channelId);
+                        return (
+                          <Badge key={channelId} variant="secondary">
+                            {channel?.label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             <Separator />
 

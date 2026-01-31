@@ -32,7 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { OnboardingPPPSection } from "@/components/client/OnboardingPPPSection";
+import { OnboardingX1Section } from "@/components/client/OnboardingX1Section";
 import { AIGenerationSection } from "@/components/client/AIGenerationSection";
 
 type Client = Tables<"clients">;
@@ -347,8 +347,8 @@ export default function ClientDetails() {
         </CardContent>
       </Card>
 
-      {/* Seção de Onboarding PPP */}
-      <OnboardingPPPSection client={client} onStatusChange={handleRefreshClient} />
+      {/* Seção de Onboarding X1 */}
+      <OnboardingX1Section client={client} onStatusChange={handleRefreshClient} />
 
       {/* Seção de Geração com IA */}
       <AIGenerationSection client={client} onGenerated={handleRefreshClient} />
