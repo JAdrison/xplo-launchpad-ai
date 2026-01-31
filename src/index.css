@@ -38,14 +38,19 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    --sidebar-background: 262 83% 58%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 262 83% 58%;
-    --sidebar-accent: 262 70% 65%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 262 70% 50%;
-    --sidebar-ring: 0 0% 100%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 260 10% 20%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 262 60% 95%;
+    --sidebar-accent-foreground: 262 83% 50%;
+    --sidebar-border: 260 15% 90%;
+    --sidebar-ring: 262 83% 58%;
+
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 10%;
   }
 
   .dark {
@@ -81,10 +86,15 @@ All colors MUST be HSL.
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 260 15% 18%;
-    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-accent: 262 40% 20%;
+    --sidebar-accent-foreground: 262 83% 70%;
     --sidebar-border: 260 15% 18%;
     --sidebar-ring: 262 83% 58%;
+
+    --success: 142 70% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 90% 50%;
+    --warning-foreground: 0 0% 10%;
   }
 }
 

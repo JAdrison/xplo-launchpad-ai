@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import logoXplo from "@/assets/logo-xplo.png";
 
 interface AppSidebarProps {
   open: boolean;
@@ -41,17 +42,15 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-300 md:static md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-transform duration-300 md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo area */}
         <div className="flex h-16 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2" onClick={onClose}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-lg">
-              X
-            </div>
-            <span className="text-xl font-bold">XPLO Starter</span>
+          <Link to="/" className="flex items-center gap-3" onClick={onClose}>
+            <img src={logoXplo} alt="XPLO" className="h-8 w-auto" />
+            <span className="text-lg font-semibold text-sidebar-foreground">Starter</span>
           </Link>
           <Button
             variant="ghost"
