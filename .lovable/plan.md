@@ -1,154 +1,232 @@
 
+# Refatoracao Completa do Onboarding X1 e Gerador IA
 
-# Correção da Aba Onboarding PPP e Gerador IA
+## Resumo das Mudancas Solicitadas
 
-## Problemas Identificados
-
-### 1. Aba Onboarding PPP Vazia
-A página `/onboarding` só mostra um card pedindo para selecionar cliente quando acessada diretamente pelo menu. Não existe uma listagem dos onboardings.
-
-### 2. Gerador IA Não Funcional
-A página `/generator` apenas exibe um card estático que redireciona para configurações. Não há funcionalidade real de geração.
-
-### 3. Falta de Geração com IA nos Detalhes do Cliente
-Após concluir o PPP, não há como gerar ofertas/LPs/anúncios a partir dos dados coletados.
+1. **Oferta baseada em 1 ICP**: Adicionar selecao de ICP especifico para gerar ofertas
+2. **Anuncios criados a partir de oferta**: Anuncios devem usar dados da oferta, nao do PPP
+3. **Etapa 6 opcional no onboarding**: Gerar oferta ao final (nao obrigatorio)
+4. **Oportunidades de geracao de demanda**: Adicionar secao com canais de aquisicao na oferta
+5. **Renomear para Onboarding X1**: Substituir "Onboarding PPP" em todos os locais
+6. **Explicar PPP no inicio**: Publico, Problema, Promessa - comunicacao no inicio do wizard
 
 ---
 
-## Solução Proposta
+## Parte 1: Renomear Onboarding PPP para Onboarding X1
 
-### Parte 1: Refatorar Página de Onboarding PPP
+### Arquivos a Modificar
 
-Transformar `/onboarding` em uma listagem de todos os clientes com seus status de onboarding:
+| Arquivo | Acao |
+|---------|------|
+| `src/components/layout/AppSidebar.tsx` | Alterar nome do menu |
+| `src/pages/Onboarding.tsx` | Alterar titulos e textos |
+| `src/components/onboarding/OnboardingDashboard.tsx` | Alterar titulos e textos |
+| `src/components/client/OnboardingPPPSection.tsx` | Renomear componente e textos |
+| `src/pages/ClientDetails.tsx` | Atualizar import do componente |
+| `src/pages/Generator.tsx` | Atualizar referencias |
+| `src/pages/Assets.tsx` | Atualizar referencias |
+
+---
+
+## Parte 2: Adicionar Comunicacao PPP no Inicio do Onboarding
+
+No inicio do wizard (antes da etapa 1 ou como introducao), adicionar:
 
 ```text
 +----------------------------------------------------------+
-|  Onboarding PPP                                           |
-|  Acompanhe o processo de discovery dos seus clientes      |
+|  Onboarding X1                                            |
+|  [Cliente: XPLO Solar]                                    |
 |----------------------------------------------------------|
 |                                                           |
-|  [Tabs: Todos | Em andamento | Concluídos | Pendentes]    |
+|  +-----------------------------------------------------+  |
+|  |  O que e o PPP?                                     |  |
+|  |-----------------------------------------------------|  |
+|  |  O PPP e a metodologia que usamos para entender     |  |
+|  |  profundamente seu negocio:                         |  |
+|  |                                                      |  |
+|  |  P - PUBLICO: Quem sao seus clientes ideais (ICPs)  |  |
+|  |  P - PROBLEMA: Quais dores eles enfrentam           |  |
+|  |  P - PROMESSA: O que voce promete resolver          |  |
+|  |                                                      |  |
+|  |  Essas informacoes serao usadas para gerar          |  |
+|  |  ofertas, landing pages e anuncios personalizados.  |  |
+|  +-----------------------------------------------------+  |
 |                                                           |
-|  +-----------------------------------------------------+  |
-|  | XPLO SOLAR LTDA                    [PPP Concluído]  |  |
-|  | Produto: Assinatura de energia                      |  |
-|  | ICPs: 1 | Promessa: Definida                        |  |
-|  | [Ver Detalhes] [Editar PPP] [Gerar com IA]          |  |
-|  +-----------------------------------------------------+  |
-|                                                           |
-|  +-----------------------------------------------------+  |
-|  | Adrison Magalhaes                  [Em andamento]   |  |
-|  | Progresso: 40% (2 de 5 etapas)                      |  |
-|  | [Continuar Onboarding]                              |  |
-|  +-----------------------------------------------------+  |
-|                                                           |
+|  [Iniciar]                                                |
 +----------------------------------------------------------+
 ```
 
-### Parte 2: Refatorar Página Gerador IA
+---
 
-Transformar `/generator` em uma ferramenta de geração baseada em clientes que concluíram o PPP:
+## Parte 3: Adicionar Etapa 6 Opcional - Geracao de Oferta
+
+Modificar o wizard para ter 6 etapas:
+
+| Etapa | Nome | Descricao |
+|-------|------|-----------|
+| 1 | Produto | Descreva seu produto/servico |
+| 2 | ICPs (Publico) | Defina seus clientes ideais |
+| 3 | Dores (Problema) | Mapeie as dores de cada ICP |
+| 4 | Promessa | Crie sua promessa principal |
+| 5 | Revisao | Revise e finalize |
+| 6 | Gerar Oferta (opcional) | Gere ofertas com IA para seus ICPs |
+
+Na etapa 5, o botao sera "Concluir" ou "Concluir e Gerar Oferta".
+Na etapa 6, o usuario pode selecionar um ICP e gerar a oferta.
+
+---
+
+## Parte 4: Oferta Baseada em 1 ICP + Oportunidades de Demanda
+
+### Alteracoes no Gerador
+
+1. Apos selecionar cliente, mostrar dropdown de ICPs
+2. Usuario escolhe 1 ICP especifico para a oferta
+3. A geracao usa apenas os dados daquele ICP
+
+### Novo Campo na Oferta: Oportunidades de Geracao de Demanda
+
+Adicionar secao com checkboxes para canais:
+
+```text
++----------------------------------------------------------+
+|  Oportunidades de Geracao de Demanda                      |
+|----------------------------------------------------------|
+|  Selecione os canais relevantes para sua estrategia:     |
+|                                                           |
+|  [ ] Trafego Pago - TikTok Ads                           |
+|  [ ] Trafego Pago - Google Ads                           |
+|  [ ] Trafego Pago - Meta Ads (Facebook/Instagram)        |
+|  [ ] Programa de Indicacao                               |
+|  [ ] Parceria com Influenciadores                        |
+|  [ ] Outbound (Prospecao ativa)                          |
+|  [ ] Marketing de Conteudo                               |
+|  [ ] Email Marketing                                     |
+|                                                           |
+|  A IA vai sugerir estrategias baseadas no seu nicho      |
+|  e nas informacoes do onboarding.                        |
++----------------------------------------------------------+
+```
+
+A IA gerara estrategias personalizadas para cada canal selecionado.
+
+### Alteracoes no Banco de Dados
+
+Adicionar nova coluna na tabela `offers_hormozi`:
+- `icp_id` (uuid): Referencia ao ICP usado na geracao
+- `demand_generation_channels` (text[]): Canais selecionados
+- `demand_generation_strategies` (jsonb): Estrategias geradas pela IA
+
+---
+
+## Parte 5: Anuncios Criados a partir de Oferta
+
+### Fluxo Atual (Errado)
+```
+PPP Data -> generate-content(ads) -> ads
+```
+
+### Novo Fluxo (Correto)
+```
+PPP Data -> generate-content(offer) -> offers_hormozi
+                                              |
+                                              v
+                    Oferta selecionada -> generate-content(ads) -> ads
+```
+
+### Alteracoes no Gerador
+
+1. Para gerar anuncios, primeiro deve existir uma oferta
+2. Usuario seleciona qual oferta usar como base
+3. A geracao de ads usa dados da oferta (nao do PPP)
+
+---
+
+## Arquivos a Criar/Modificar
+
+### Criar
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/components/onboarding/PPPIntroCard.tsx` | Card explicando PPP no inicio |
+| `src/components/onboarding/StepGenerateOffer.tsx` | Etapa 6 do wizard |
+
+### Modificar
+| Arquivo | Acao |
+|---------|------|
+| `src/pages/Onboarding.tsx` | Adicionar etapa 6, intro PPP, renomear textos |
+| `src/pages/Generator.tsx` | Adicionar selecao de ICP, vincular ads a oferta |
+| `supabase/functions/generate-content/index.ts` | Alterar logica para ICP unico e demanda |
+| `src/components/generator/GeneratedContentViewer.tsx` | Mostrar oportunidades de demanda |
+| `src/components/client/OnboardingPPPSection.tsx` | Renomear para OnboardingX1Section |
+| `src/components/onboarding/OnboardingDashboard.tsx` | Renomear textos |
+| `src/components/layout/AppSidebar.tsx` | Renomear menu |
+
+### Migracoes de Banco de Dados
+```sql
+-- Adicionar colunas na tabela offers_hormozi
+ALTER TABLE offers_hormozi ADD COLUMN icp_id uuid REFERENCES icps(id);
+ALTER TABLE offers_hormozi ADD COLUMN demand_generation_channels text[];
+ALTER TABLE offers_hormozi ADD COLUMN demand_generation_strategies jsonb;
+
+-- Adicionar referencia a oferta na tabela ads
+ALTER TABLE ads ADD COLUMN offer_id uuid REFERENCES offers_hormozi(id);
+```
+
+---
+
+## Interface do Gerador Atualizada
 
 ```text
 +----------------------------------------------------------+
 |  Gerador IA                                               |
-|  Gere ofertas, LPs e anúncios com IA                      |
 |----------------------------------------------------------|
 |                                                           |
-|  Selecione um cliente:                                    |
-|  [Dropdown: Clientes com PPP concluído]                   |
+|  1. Selecione um cliente:                                |
+|  [Dropdown: XPLO Solar]                                  |
 |                                                           |
-|  +-----------------------------------------------------+  |
-|  | O que deseja gerar?                                 |  |
-|  |-----------------------------------------------------|  |
-|  |  [ ] Oferta Hormozi                                 |  |
-|  |  [ ] Landing Page                                   |  |
-|  |  [ ] Anúncios (Scripts + Headlines)                 |  |
-|  |                                                      |  |
-|  |  [Gerar com IA]                                     |  |
-|  +-----------------------------------------------------+  |
+|  2. Selecione um ICP:                                    |
+|  [Dropdown: Empresas de energia renovavel]               |
+|                                                           |
+|  3. O que deseja gerar?                                  |
+|                                                           |
+|  [x] Oferta Hormozi                                      |
+|      -> Inclui selecao de canais de demanda              |
+|                                                           |
+|  [ ] Landing Page                                        |
+|      -> Baseada na oferta selecionada                    |
+|                                                           |
+|  [ ] Anuncios                                            |
+|      -> Requer uma oferta existente                      |
+|      [Dropdown: Selecione a oferta]                      |
+|                                                           |
+|  Canais de Geracao de Demanda:                           |
+|  [x] Meta Ads  [x] TikTok Ads  [ ] Google Ads            |
+|  [ ] Indicacao  [ ] Influenciadores  [x] Outbound        |
+|                                                           |
+|  [Gerar com IA]                                          |
 |                                                           |
 +----------------------------------------------------------+
 ```
 
-### Parte 3: Adicionar Ações de IA nos Detalhes do Cliente
+---
 
-Para clientes com `ppp_completed`:
-- Botão "Gerar Oferta com IA"
-- Botão "Gerar LP com IA"
-- Botão "Gerar Anúncios com IA"
+## Etapas de Implementacao
+
+1. **Migracao do banco**: Adicionar novas colunas
+2. **Renomear textos**: PPP -> X1 em todos os arquivos
+3. **Intro PPP**: Criar card explicativo
+4. **Etapa 6**: Adicionar geracao opcional no wizard
+5. **Selecao de ICP**: Modificar gerador para filtrar por ICP
+6. **Canais de demanda**: Adicionar selecao e geracao
+7. **Vincular ads a oferta**: Modificar fluxo de geracao
 
 ---
 
-## Arquivos a Modificar
+## Beneficios
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/Onboarding.tsx` | Refatorar para exibir listagem de onboardings quando sem parâmetro `client` |
-| `src/pages/Generator.tsx` | Implementar seleção de cliente e opções de geração |
-| `src/pages/ClientDetails.tsx` | Adicionar seção de geração IA para clientes com PPP concluído |
-
----
-
-## Detalhamento Técnico
-
-### Onboarding.tsx - Nova Estrutura
-
-Quando acessado SEM parâmetro `client`:
-1. Buscar todos os clientes com dados de onboarding (join com `client_profile`, `icps`, `client_promise`)
-2. Exibir cards com progresso de cada cliente
-3. Filtros por status (tabs)
-4. Ações contextuais por status
-
-Quando acessado COM parâmetro `client`:
-- Manter o wizard atual de 5 etapas
-
-### Generator.tsx - Nova Funcionalidade
-
-1. Dropdown para selecionar cliente (apenas os com `ppp_completed` ou superior)
-2. Checkboxes para tipo de geração
-3. Botão de gerar que chama a API de IA (usando Lovable AI)
-4. Exibir resultado e salvar nas tabelas correspondentes
-
-### ClientDetails.tsx - Seção de Geração
-
-Para clientes com `ppp_completed`:
-- Card "Gerar com IA"
-- Botões para cada tipo de geração
-- Indicador se já foi gerado
-
----
-
-## Fluxo de Dados para Geração com IA
-
-```text
-client_profile + icps + icp_pains + client_promise
-                    |
-                    v
-            [Edge Function: generate-offer]
-                    |
-                    v
-              offers_hormozi (salvar)
-                    |
-                    v
-            [Edge Function: generate-lp]
-                    |
-                    v
-              landing_pages (salvar)
-                    |
-                    v
-            [Edge Function: generate-ads]
-                    |
-                    v
-                 ads (salvar)
-```
-
----
-
-## Benefícios
-
-- Visibilidade completa de todos os onboardings em andamento
-- Fluxo direto para gerar conteúdo após PPP concluído
-- Múltiplos pontos de acesso para geração (menu Gerador IA ou detalhes do cliente)
-- Integração com Lovable AI (sem necessidade de API key externa)
-
+- Ofertas mais direcionadas para cada publico (1 ICP)
+- Anuncios coerentes com a oferta criada
+- Estrategias de demanda personalizadas
+- Fluxo mais claro com explicacao do PPP
+- Opcao de gerar oferta direto no onboarding
+- Nomenclatura consistente (Onboarding X1)
