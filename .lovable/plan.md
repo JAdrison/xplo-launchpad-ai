@@ -1,115 +1,110 @@
 
 
-# XPLO STARTER - Plano de Implementação
+# Atualização do Design System - XPLO STARTER
 
-## Visão Geral
-Ferramenta interna para onboarding de clientes da XPLO com fluxo linear: **Cadastro → PPP → Oferta → LP & Anúncios**. Mobile-first, sem login, com IA própria (OpenAI/Gemini).
-
----
-
-## Fase 1: Fundação e Layout
-
-### 1.1 Estrutura Base
-- Layout responsivo com sidebar (drawer no mobile)
-- Tema claro como padrão + toggle para escuro
-- Cores XPLO: Roxo (#8B5CF6) como primária
-- Logo XPLO na sidebar
-
-### 1.2 Navegação
-- Dashboard
-- Clientes
-- Onboarding PPP
-- Gerador IA
-- Ativos
-- Configurações
-
-### 1.3 Banco de Dados (Lovable Cloud)
-Tabelas: clients, client_profile, icps, icp_pains, offers_hormozi, landing_pages, ads, versions
+## Objetivo
+Atualizar o sistema de cores para seguir o padrão do XPLO Metricas: fundo branco limpo, sidebar clara com destaques roxos nos pontos-chave, e cores de apoio (verde, vermelho, amarelo) para status.
 
 ---
 
-## Fase 2: Gestão de Clientes
+## Mudanças no Design
 
-### Lista de Clientes
-- Tabela desktop / Cards mobile
-- Nome, nicho, status, datas
-- Ações: abrir, duplicar, arquivar
+### Paleta de Cores
 
-### Perfil do Cliente
-- Abas: Resumo, Cadastro, PPP, ICPs, Oferta, LP, Anúncios, Histórico
-- "Próximo passo sugerido" no topo
-- Botões: Gerar com IA, Exportar, Duplicar
+| Elemento | Atual | Novo |
+|----------|-------|------|
+| Sidebar | Roxa sólida | Branca/clara |
+| Item ativo sidebar | Roxo claro | Roxo suave com texto roxo |
+| Background geral | Cinza claro | Branco/cinza muito claro |
+| Botoes primarios | Roxo | Roxo (mantido) |
+| Sucesso | - | Verde vivo |
+| Alerta | - | Amarelo |
+| Erro | Vermelho | Vermelho (ajustado) |
 
----
-
-## Fase 3: Wizard de Onboarding PPP
-
-### 5 Etapas com progresso visual
-
-**1. Produto** - Nome, descrição, ticket, modelo de venda, diferenciais
-
-**2. Público (ICP)** - Até 3 ICPs com nome, segmento, consciência, situação
-
-**3. Problema** - Dor principal, impactos, consequências por ICP
-
-**4. Promessa** - Campo manual + "Gerar com IA"
-
-**5. Revisão** - Resumo + checklist + "Concluir PPP"
+### Novas Cores de Apoio (HSL)
+- **Success:** Verde vivo - `142 76% 45%`
+- **Warning:** Amarelo - `45 93% 47%`
+- **Destructive:** Vermelho - `0 84% 60%` (manter)
 
 ---
 
-## Fase 4: Gerador IA
+## Arquivos a Modificar
 
-### Configuração
-- Input para API Key (OpenAI/Gemini)
-- Salvar em localStorage ou sessão
+### 1. src/index.css
+Atualizar variáveis CSS para:
+- Sidebar com fundo branco
+- Adicionar cores success e warning
+- Manter roxo como cor primaria para acentos
 
-### Módulos
-- Gerar Oferta Hormozi (promessa, mecanismo, prova, garantia, stack, CTA)
-- Gerar LP Hormozi (3 variantes: Direta, Consultiva, Agressiva)
-- Gerar Anúncios Ladeira (2 estáticos + 3 vídeos de 30s)
+### 2. tailwind.config.ts
+Adicionar cores:
+- `success` e `success-foreground`
+- `warning` e `warning-foreground`
 
-### Funcionalidades
-- Botões de refinamento: "Mais direto", "Mais premium", "Gerar variações"
-- Editor rico para editar outputs
-- "Salvar no Perfil"
+### 3. src/components/layout/AppSidebar.tsx
+- Usar logo XPLO oficial (copiar imagem para o projeto)
+- Estilizar sidebar com fundo branco
+- Item ativo com fundo roxo claro e texto roxo
 
----
-
-## Fase 5: Dashboard
-
-- Cards: Total clientes, Em onboarding, PPP concluído, Ativos gerados
-- Lista: Últimos clientes editados
-- Atalhos: Novo cliente, Iniciar PPP, Gerar Oferta
+### 4. Copiar Logo
+- Copiar `user-uploads://LOGO_ROXO_PNG-2.png` para `src/assets/logo-xplo.png`
+- Importar e usar na sidebar
 
 ---
 
-## Fase 6: Histórico e Versionamento
-
-- Toda geração IA cria versão
-- Aba "Histórico" no perfil
-- Restaurar versões anteriores
-
----
-
-## Fluxo do Usuário
+## Resultado Visual Esperado
 
 ```
-Criar Cliente → Wizard PPP (5 etapas) → Gerar Oferta → Gerar LP → Gerar Anúncios → Tudo no Perfil
++------------------+----------------------------------------+
+|  [LOGO XPLO]     |  Dashboard                             |
+|  Starter         |  Subtitulo da pagina                   |
+|------------------|----------------------------------------|
+|  Dashboard    <- |  +--------+ +--------+ +--------+      |
+|  Clientes        |  | Card 1 | | Card 2 | | Card 3 |      |
+|  Onboarding      |  +--------+ +--------+ +--------+      |
+|  Gerador IA      |                                        |
+|  Ativos          |  [Conteudo principal]                  |
+|  Configuracoes   |                                        |
++------------------+----------------------------------------+
+
+Legenda:
+- Sidebar: fundo branco, borda direita cinza sutil
+- Item ativo: fundo roxo claro, texto e icone roxo
+- Cards: brancos com sombra suave
+- Badges de status: verde/amarelo/vermelho
 ```
 
 ---
 
-## Entregáveis MVP
+## Detalhes Tecnicos
 
-✅ Layout responsivo mobile-first
-✅ Design XPLO (roxo, clean)
-✅ CRUD de clientes
-✅ Wizard PPP (5 etapas)
-✅ Até 3 ICPs por cliente
-✅ Oferta Hormozi via IA
-✅ LP Hormozi (3 variantes)
-✅ Anúncios Ladeira (2 estáticos + 3 vídeos)
-✅ Histórico de versões
-✅ Sem login, single-workspace
+### CSS Variables (Light Mode)
+```css
+/* Sidebar clara */
+--sidebar-background: 0 0% 100%;
+--sidebar-foreground: 260 10% 20%;
+--sidebar-primary: 262 83% 58%;
+--sidebar-primary-foreground: 0 0% 100%;
+--sidebar-accent: 262 60% 95%;
+--sidebar-accent-foreground: 262 83% 50%;
+--sidebar-border: 260 15% 90%;
+
+/* Cores de apoio */
+--success: 142 76% 45%;
+--success-foreground: 0 0% 100%;
+--warning: 45 93% 47%;
+--warning-foreground: 0 0% 10%;
+```
+
+### Tailwind Config
+```ts
+success: {
+  DEFAULT: "hsl(var(--success))",
+  foreground: "hsl(var(--success-foreground))",
+},
+warning: {
+  DEFAULT: "hsl(var(--warning))",
+  foreground: "hsl(var(--warning-foreground))",
+},
+```
 
