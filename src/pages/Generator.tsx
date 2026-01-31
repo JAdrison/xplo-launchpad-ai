@@ -28,6 +28,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { GeneratedContentViewer } from "@/components/generator/GeneratedContentViewer";
 
 type Client = Tables<"clients">;
 
@@ -59,6 +60,7 @@ export default function Generator() {
     lp?: boolean;
     ads?: boolean;
   }>({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     fetchEligibleClients();
@@ -196,6 +198,8 @@ export default function Generator() {
             .update({ status: "offer_generated" })
             .eq("id", selectedClientId);
         }
+        // Trigger refresh of generated content viewer
+        setRefreshTrigger(prev => prev + 1);
       }
     } catch (error) {
       console.error("Error in generation:", error);
@@ -435,6 +439,14 @@ export default function Generator() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Generated Content Viewer */}
+      {selectedClientId && (
+        <GeneratedContentViewer 
+          clientId={selectedClientId} 
+          refreshTrigger={refreshTrigger} 
+        />
       )}
     </div>
   );
