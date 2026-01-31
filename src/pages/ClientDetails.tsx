@@ -67,7 +67,13 @@ export default function ClientDetails() {
 
   const [formData, setFormData] = useState({
     name: "",
+    cnpj: "",
+    responsible_name: "",
+    responsible_cpf: "",
+    email: "",
+    phone: "",
     niche: "",
+    product_description: "",
     notes: "",
   });
 
@@ -92,7 +98,13 @@ export default function ClientDetails() {
         setClient(data);
         setFormData({
           name: data.name,
+          cnpj: data.cnpj || "",
+          responsible_name: data.responsible_name || "",
+          responsible_cpf: data.responsible_cpf || "",
+          email: data.email || "",
+          phone: data.phone || "",
           niche: data.niche || "",
+          product_description: data.product_description || "",
           notes: data.notes || "",
         });
       }
@@ -118,7 +130,13 @@ export default function ClientDetails() {
       .from("clients")
       .update({
         name: formData.name.trim(),
+        cnpj: formData.cnpj.trim() || null,
+        responsible_name: formData.responsible_name.trim() || null,
+        responsible_cpf: formData.responsible_cpf.trim() || null,
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
         niche: formData.niche.trim() || null,
+        product_description: formData.product_description.trim() || null,
         notes: formData.notes.trim() || null,
       })
       .eq("id", id);
@@ -136,7 +154,13 @@ export default function ClientDetails() {
           ? {
               ...prev,
               name: formData.name.trim(),
+              cnpj: formData.cnpj.trim() || null,
+              responsible_name: formData.responsible_name.trim() || null,
+              responsible_cpf: formData.responsible_cpf.trim() || null,
+              email: formData.email.trim() || null,
+              phone: formData.phone.trim() || null,
               niche: formData.niche.trim() || null,
+              product_description: formData.product_description.trim() || null,
               notes: formData.notes.trim() || null,
             }
           : null
@@ -255,20 +279,63 @@ export default function ClientDetails() {
         <CardHeader>
           <CardTitle>Informações do Cliente</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Dados da Empresa */}
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Dados da Empresa</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Nome</p>
+                <p className="text-foreground">{client.name}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">CNPJ</p>
+                <p className="text-foreground">{client.cnpj || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Nicho</p>
+                <p className="text-foreground">{client.niche || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <p className="text-foreground">{STATUS_LABELS[client.status]}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dados do Responsável */}
+          <div>
+            <h4 className="text-sm font-medium text-muted-foreground mb-3">Dados do Responsável</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Nome</p>
+                <p className="text-foreground">{client.responsible_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">CPF</p>
+                <p className="text-foreground">{client.responsible_cpf || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">E-mail</p>
+                <p className="text-foreground">{client.email || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Telefone</p>
+                <p className="text-foreground">{client.phone || "—"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Produto */}
+          {client.product_description && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Produto / Serviço</h4>
+              <p className="text-foreground whitespace-pre-wrap">{client.product_description}</p>
+            </div>
+          )}
+
+          {/* Informações Adicionais */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Nome</p>
-              <p className="text-foreground">{client.name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Nicho</p>
-              <p className="text-foreground">{client.niche || "—"}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Status</p>
-              <p className="text-foreground">{STATUS_LABELS[client.status]}</p>
-            </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Criado em</p>
               <p className="text-foreground">
@@ -278,6 +345,7 @@ export default function ClientDetails() {
               </p>
             </div>
           </div>
+
           {client.notes && (
             <div>
               <p className="text-sm font-medium text-muted-foreground">Notas</p>
@@ -335,29 +403,117 @@ export default function ClientDetails() {
                   Atualize as informações do cliente abaixo.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nome *</Label>
-                  <Input
-                    id="edit-name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="Nome do cliente"
-                  />
+              <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                {/* Dados da Empresa */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Dados da Empresa</h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nome *</Label>
+                      <Input
+                        id="edit-name"
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                        placeholder="Nome do cliente"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-cnpj">CNPJ</Label>
+                      <Input
+                        id="edit-cnpj"
+                        value={formData.cnpj}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, cnpj: e.target.value }))
+                        }
+                        placeholder="00.000.000/0000-00"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-niche">Nicho</Label>
+                    <Input
+                      id="edit-niche"
+                      value={formData.niche}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, niche: e.target.value }))
+                      }
+                      placeholder="Ex: Tecnologia, Saúde, Educação"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-niche">Nicho</Label>
-                  <Input
-                    id="edit-niche"
-                    value={formData.niche}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, niche: e.target.value }))
-                    }
-                    placeholder="Ex: Tecnologia, Saúde, Educação"
-                  />
+
+                {/* Dados do Responsável */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Dados do Responsável</h4>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-responsible_name">Nome</Label>
+                      <Input
+                        id="edit-responsible_name"
+                        value={formData.responsible_name}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, responsible_name: e.target.value }))
+                        }
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-responsible_cpf">CPF</Label>
+                      <Input
+                        id="edit-responsible_cpf"
+                        value={formData.responsible_cpf}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, responsible_cpf: e.target.value }))
+                        }
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">E-mail</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, email: e.target.value }))
+                        }
+                        placeholder="contato@empresa.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">Telefone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                        }
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                  </div>
                 </div>
+
+                {/* Produto */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Produto / Serviço</h4>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-product_description">Descrição do Produto</Label>
+                    <Textarea
+                      id="edit-product_description"
+                      value={formData.product_description}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, product_description: e.target.value }))
+                      }
+                      placeholder="Descreva o produto ou serviço principal"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                {/* Notas */}
                 <div className="space-y-2">
                   <Label htmlFor="edit-notes">Notas</Label>
                   <Textarea
@@ -367,7 +523,7 @@ export default function ClientDetails() {
                       setFormData((prev) => ({ ...prev, notes: e.target.value }))
                     }
                     placeholder="Observações sobre o cliente"
-                    rows={4}
+                    rows={3}
                   />
                 </div>
               </div>

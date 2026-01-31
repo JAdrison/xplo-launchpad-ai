@@ -158,29 +158,47 @@ export type Database = {
       }
       clients: {
         Row: {
+          cnpj: string | null
           created_at: string
+          email: string | null
           id: string
           name: string
           niche: string | null
           notes: string | null
+          phone: string | null
+          product_description: string | null
+          responsible_cpf: string | null
+          responsible_name: string | null
           status: Database["public"]["Enums"]["client_status"]
           updated_at: string
         }
         Insert: {
+          cnpj?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           name: string
           niche?: string | null
           notes?: string | null
+          phone?: string | null
+          product_description?: string | null
+          responsible_cpf?: string | null
+          responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
         }
         Update: {
+          cnpj?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           name?: string
           niche?: string | null
           notes?: string | null
+          phone?: string | null
+          product_description?: string | null
+          responsible_cpf?: string | null
+          responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
         }
