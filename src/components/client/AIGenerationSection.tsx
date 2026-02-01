@@ -11,6 +11,8 @@ import {
   Loader2,
   CheckCircle,
   ArrowRight,
+  Eye,
+  Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -26,6 +28,9 @@ interface GenerationStatus {
   hasOffer: boolean;
   hasLandingPage: boolean;
   hasAds: boolean;
+  offerCount: number;
+  lpCount: number;
+  adsCount: number;
 }
 
 export function AIGenerationSection({ client, onGenerated }: AIGenerationSectionProps) {
@@ -35,6 +40,9 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     hasOffer: false,
     hasLandingPage: false,
     hasAds: false,
+    offerCount: 0,
+    lpCount: 0,
+    adsCount: 0,
   });
 
   const isPPPCompleted = ["ppp_completed", "offer_generated", "assets_generated"].includes(client.status);
@@ -49,15 +57,18 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
 
   const fetchGenerationStatus = async () => {
     const [offersRes, lpsRes, adsRes] = await Promise.all([
-      supabase.from("offers_hormozi").select("id").eq("client_id", client.id).limit(1),
-      supabase.from("landing_pages").select("id").eq("client_id", client.id).limit(1),
-      supabase.from("ads").select("id").eq("client_id", client.id).limit(1),
+      supabase.from("offers_hormozi").select("id", { count: "exact" }).eq("client_id", client.id),
+      supabase.from("landing_pages").select("id", { count: "exact" }).eq("client_id", client.id),
+      supabase.from("ads").select("id", { count: "exact" }).eq("client_id", client.id),
     ]);
 
     setStatus({
-      hasOffer: (offersRes.data?.length || 0) > 0,
-      hasLandingPage: (lpsRes.data?.length || 0) > 0,
-      hasAds: (adsRes.data?.length || 0) > 0,
+      hasOffer: (offersRes.count || 0) > 0,
+      hasLandingPage: (lpsRes.count || 0) > 0,
+      hasAds: (adsRes.count || 0) > 0,
+      offerCount: offersRes.count || 0,
+      lpCount: lpsRes.count || 0,
+      adsCount: adsRes.count || 0,
     });
     setIsLoading(false);
   };
@@ -92,6 +103,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
       name: "Oferta Hormozi",
       description: "Gere uma oferta irresistível usando a metodologia Hormozi",
       generated: status.hasOffer,
+      count: status.offerCount,
     },
     {
       id: "lp" as const,
@@ -99,6 +111,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
       name: "Landing Page",
       description: "Crie seções de LP com variantes (Direta, Consultiva, Agressiva)",
       generated: status.hasLandingPage,
+      count: status.lpCount,
     },
     {
       id: "ads" as const,
@@ -106,11 +119,11 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
       name: "Anúncios",
       description: "Gere scripts de anúncio e headlines para suas campanhas",
       generated: status.hasAds,
+      count: status.adsCount,
     },
   ];
 
   const allGenerated = status.hasOffer && status.hasLandingPage && status.hasAds;
-  const someGenerated = status.hasOffer || status.hasLandingPage || status.hasAds;
 
   return (
     <Card>
@@ -119,7 +132,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
           <div>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
-              Gerar com IA
+              Geração com IA
             </CardTitle>
             <CardDescription>
               Use os dados do PPP para gerar ofertas, LPs e anúncios
@@ -148,7 +161,9 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
                     <span className="font-medium text-sm">{item.name}</span>
                   </div>
                   {item.generated && (
-                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <Badge variant="secondary" className="text-xs">
+                      {item.count}
+                    </Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">{item.description}</p>
@@ -158,26 +173,22 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
                   onClick={() => handleGoToGenerator(item.id)}
                   className="mt-auto gap-2"
                 >
-                  {item.generated ? "Regenerar" : "Gerar"}
-                  <ArrowRight className="h-3 w-3" />
+                  {item.generated ? (
+                    <>
+                      <Eye className="h-3 w-3" />
+                      Ver Gerados
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-3 w-3" />
+                      Gerar
+                    </>
+                  )}
                 </Button>
               </div>
             );
           })}
         </div>
-
-        {someGenerated && (
-          <div className="pt-2 border-t">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => handleGoToGenerator()}
-            >
-              <Sparkles className="h-4 w-4" />
-              Abrir Gerador Completo
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
