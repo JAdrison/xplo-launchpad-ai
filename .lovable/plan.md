@@ -1,196 +1,120 @@
 
+# Implementacao: Sistema de 2 Opcoes + Refazer + Editar Manual + Ativos
 
-# Sistema de Seleção de Opções + Refazer + Editar Manual + Ativos
+## Resumo da Implementacao
 
-## Resumo
-
-A IA vai gerar 2 opções para cada campo da Oferta Hormozi. O usuário pode selecionar UMA ou AMBAS as opções. Pode clicar em "Refazer" para gerar novas opções automaticamente, ou usar a "canetinha" para editar o texto manualmente.
-
----
-
-## Parte 1: Sistema de 2 Opções com Seleção Múltipla
-
-### Campos com 2 Opções
-
-| Campo | Descrição |
-|-------|-----------|
-| promise | 2 versões da promessa principal |
-| unique_mechanism | 2 versões do mecanismo único |
-| guarantee | 2 tipos de garantia |
-| proof | 2 sugestões de prova social |
-| risk_reversal | 2 versões de reversão de risco |
-| main_cta | 2 versões do CTA |
-
-### Interface de Seleção
-
-```text
-+----------------------------------------------------------+
-| Promessa Principal                    [Refazer] [Salvar] |
-|----------------------------------------------------------|
-|                                                          |
-| [x] +------------------------------------------------+   |
-|     | Economize até 30% na conta de luz sem          | [✎]
-|     | instalar nada na sua casa                      |   |
-|     +------------------------------------------------+   |
-|                       Card verde quando selecionado      |
-|                                                          |
-| [x] +------------------------------------------------+   |
-|     | Reduza sua fatura de energia e contribua       | [✎]
-|     | para um planeta mais sustentável               |   |
-|     +------------------------------------------------+   |
-|                                                          |
-+----------------------------------------------------------+
-
-[x] = Checkbox para selecionar (pode marcar 1 ou 2)
-[✎] = Ícone de canetinha para editar manualmente
-```
+Este plano implementa o sistema completo de geracao de ofertas com 2 opcoes por campo, permitindo selecao multipla, edicao manual e regeneracao automatica.
 
 ---
 
-## Parte 2: Botão Refazer (Simples, sem prompt)
+## 1. Migracao do Banco de Dados
 
-### Comportamento
-
-- Usuário clica em "Refazer"
-- IA gera automaticamente 2 novas opções para aquele campo
-- Substitui as opções anteriores
-- SEM caixa de diálogo ou prompt customizado
-
-```text
-Clique em "Refazer"
-        |
-        v
-[Loading: Gerando novas opções...]
-        |
-        v
-Novas 2 opções aparecem automaticamente
-```
-
----
-
-## Parte 3: Edição Manual com Canetinha
-
-### Comportamento
-
-- Cada opção tem um ícone de "canetinha" (Pencil)
-- Ao clicar, o texto vira editável (textarea)
-- Usuário edita manualmente
-- Clica fora ou pressiona Enter para salvar
-- SEM uso de IA
-
-```text
-Estado normal:
-+------------------------------------------------+
-| Economize até 30% na conta de luz sem          | [✎]
-| instalar nada na sua casa                      |
-+------------------------------------------------+
-
-Após clicar na canetinha:
-+------------------------------------------------+
-| [Textarea editável com o texto]                | [✓]
-| ______________________________________________ |
-+------------------------------------------------+
-
-Após salvar:
-+------------------------------------------------+
-| Texto editado pelo usuário                     | [✎]
-+------------------------------------------------+
-```
-
----
-
-## Parte 4: Página de Ativos
-
-A página de Ativos exibirá todos os conteúdos gerados agrupados por cliente:
-
-```text
-+----------------------------------------------------------+
-| Ativos                                                    |
-|----------------------------------------------------------|
-|                                                          |
-| Filtrar: [Todos os clientes ▼]                           |
-|                                                          |
-| +------------------------------------------------------+ |
-| | XPLO Solar                                           | |
-| |------------------------------------------------------| |
-| | Ofertas (1) | Landing Pages (3) | Anúncios (5)       | |
-| +------------------------------------------------------+ |
-+----------------------------------------------------------+
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/generate-content/index.ts` | Alterar prompt para gerar 2 opções por campo |
-| `src/components/generator/GeneratedContentViewer.tsx` | Interface de seleção + refazer + editar |
-| `src/components/generator/OfferOptionsSelector.tsx` | Novo componente para cards de opções |
-| `src/components/generator/EditableOptionCard.tsx` | Novo componente para card editável |
-| `src/pages/Assets.tsx` | Implementar listagem de todos os ativos |
-
-### Migração de Banco de Dados
+Adicionar colunas para armazenar opcoes geradas e selecionadas:
 
 ```sql
-ALTER TABLE offers_hormozi ADD COLUMN generated_options jsonb;
-ALTER TABLE offers_hormozi ADD COLUMN selected_options jsonb;
+ALTER TABLE offers_hormozi ADD COLUMN IF NOT EXISTS generated_options jsonb;
+ALTER TABLE offers_hormozi ADD COLUMN IF NOT EXISTS selected_options jsonb;
 ```
 
 ---
 
-## Detalhes Técnicos
+## 2. Atualizar Edge Function (generate-content)
 
-### 1. Componente EditableOptionCard
+**Arquivo:** `supabase/functions/generate-content/index.ts`
 
-```text
-Props:
-- text: string
-- isSelected: boolean
-- onSelect: () => void
-- onEdit: (newText: string) => void
+**Alteracoes:**
+- Modificar o prompt para gerar 2 opcoes para cada campo da oferta
+- Adicionar handler para `type: "refresh-field"` para regenerar um campo especifico
+- Novo schema de resposta com objeto `options`
 
-Estados:
-- isEditing: boolean (modo visualização ou edição)
-
-UI:
-- Checkbox para seleção
-- Texto da opção
-- Ícone de canetinha (Pencil) para editar
-- Quando editando: textarea + ícone de check (salvar)
-- Card selecionado: border-primary + bg-primary/10
-```
-
-### 2. Botão Refazer por Campo
-
-Cada seção (Promessa, Mecanismo, etc) terá seu próprio botão "Refazer" que:
-- Chama a Edge Function com `type: "refresh-field"`
-- Passa o campo específico (ex: `field: "promise"`)
-- Retorna 2 novas opções apenas para aquele campo
-- Loading state enquanto regenera
-
-### 3. Fluxo Completo
-
-```text
-1. Gerar Oferta
-   └── IA retorna 2 opções para cada campo
-
-2. Para cada campo, usuário pode:
-   ├── Selecionar opção 1, 2, ou ambas (checkbox)
-   ├── Clicar "Refazer" → IA gera 2 novas opções
-   └── Clicar "✎" → Edita texto manualmente
-
-3. Clicar "Salvar Seleções"
-   └── Campos selecionados vão para o documento final
+**Novo formato de resposta:**
+```json
+{
+  "options": {
+    "promise": ["Opcao 1...", "Opcao 2..."],
+    "unique_mechanism": ["Opcao 1...", "Opcao 2..."],
+    "guarantee": ["Opcao 1...", "Opcao 2..."],
+    "proof": ["Opcao 1...", "Opcao 2..."],
+    "risk_reversal": ["Opcao 1...", "Opcao 2..."],
+    "main_cta": ["Opcao 1...", "Opcao 2..."]
+  },
+  "value_stack": [...],
+  "demand_plan": {...}
+}
 ```
 
 ---
 
-## Benefícios
+## 3. Criar Componente EditableOptionCard
 
-- Refazer é simples: um clique gera novas opções
-- Edição manual dá controle total sem depender da IA
-- Seleção múltipla permite combinar opções
-- Interface clara e intuitiva
-- Página de Ativos centraliza toda a produção
+**Arquivo:** `src/components/generator/EditableOptionCard.tsx`
+
+**Funcionalidades:**
+- Card com checkbox para selecao
+- Icone de canetinha (Pencil) para ativar modo edicao
+- Textarea inline quando em modo edicao
+- Icone de check para salvar edicao
+- Estilo verde (border-primary + bg-primary/10) quando selecionado
+
+---
+
+## 4. Criar Componente OfferOptionsSelector
+
+**Arquivo:** `src/components/generator/OfferOptionsSelector.tsx`
+
+**Funcionalidades:**
+- Renderiza secoes para cada campo (Promessa, Mecanismo, etc)
+- Cada secao tem botao "Refazer" e "Salvar"
+- Mostra 2 cards EditableOptionCard por campo
+- Gerencia estado de selecao (pode selecionar 1 ou 2)
+- Botao Refazer chama Edge Function para regenerar campo especifico
+
+---
+
+## 5. Atualizar GeneratedContentViewer
+
+**Arquivo:** `src/components/generator/GeneratedContentViewer.tsx`
+
+**Alteracoes:**
+- Integrar OfferOptionsSelector na visualizacao de ofertas
+- Passar opcoes geradas e callback de selecao
+- Manter visualizacao do Plano de Demanda (Parte 2)
+- Adicionar logica para salvar selecoes no banco
+
+---
+
+## 6. Implementar Pagina de Ativos
+
+**Arquivo:** `src/pages/Assets.tsx`
+
+**Funcionalidades:**
+- Buscar todos os clientes com seus assets
+- Contar ofertas, landing pages e anuncios por cliente
+- Filtro por cliente (Select dropdown)
+- Cards agrupados por cliente com contadores
+- Links para visualizar cada tipo de asset
+
+---
+
+## Ordem de Implementacao
+
+1. Executar migracao do banco de dados
+2. Atualizar Edge Function com novo prompt e handler de refresh
+3. Criar EditableOptionCard.tsx
+4. Criar OfferOptionsSelector.tsx
+5. Atualizar GeneratedContentViewer.tsx
+6. Implementar Assets.tsx
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| Migracao SQL | Adicionar colunas generated_options e selected_options |
+| `supabase/functions/generate-content/index.ts` | Modificar prompt + adicionar refresh-field |
+| `src/components/generator/EditableOptionCard.tsx` | CRIAR - Card editavel com selecao |
+| `src/components/generator/OfferOptionsSelector.tsx` | CRIAR - Seletor de opcoes por campo |
+| `src/components/generator/GeneratedContentViewer.tsx` | MODIFICAR - Integrar novos componentes |
+| `src/pages/Assets.tsx` | MODIFICAR - Implementar listagem completa |
 
