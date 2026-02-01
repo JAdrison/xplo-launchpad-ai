@@ -347,6 +347,7 @@ export type Database = {
           created_at: string
           demand_generation_channels: string[] | null
           demand_generation_strategies: Json | null
+          generated_options: Json | null
           guarantee: string | null
           icp_id: string | null
           id: string
@@ -355,6 +356,7 @@ export type Database = {
           promise: string | null
           proof: string | null
           risk_reversal: string | null
+          selected_options: Json | null
           unique_mechanism: string | null
           updated_at: string
           value_stack: Json | null
@@ -364,6 +366,7 @@ export type Database = {
           created_at?: string
           demand_generation_channels?: string[] | null
           demand_generation_strategies?: Json | null
+          generated_options?: Json | null
           guarantee?: string | null
           icp_id?: string | null
           id?: string
@@ -372,6 +375,7 @@ export type Database = {
           promise?: string | null
           proof?: string | null
           risk_reversal?: string | null
+          selected_options?: Json | null
           unique_mechanism?: string | null
           updated_at?: string
           value_stack?: Json | null
@@ -381,6 +385,7 @@ export type Database = {
           created_at?: string
           demand_generation_channels?: string[] | null
           demand_generation_strategies?: Json | null
+          generated_options?: Json | null
           guarantee?: string | null
           icp_id?: string | null
           id?: string
@@ -389,6 +394,7 @@ export type Database = {
           promise?: string | null
           proof?: string | null
           risk_reversal?: string | null
+          selected_options?: Json | null
           unique_mechanism?: string | null
           updated_at?: string
           value_stack?: Json | null
