@@ -1,170 +1,134 @@
 
-# Corrigir Quebra de Paginas no PDF da Landing Page
+# Corrigir Margens Entre Páginas no PDF
 
 ## Problema Identificado
 
-O PDF gerado esta cortando texto entre paginas porque:
-1. O `react-to-pdf` nao tem controle nativo de quebra de pagina
-2. O HTML e renderizado como imagem e dividido em fatias fixas
-3. Elementos ficam "cortados" no meio quando caem na transicao de pagina
+O `react-to-pdf` usa `html2canvas` que renderiza o HTML como uma **imagem única** e depois divide em páginas. As propriedades CSS `pageBreakInside: avoid` não funcionam bem porque:
 
-### Evidencias do Problema
-
-- "Totalmente Digital" aparece como "Iotalmente Digital" (letra cortada)
-- Linhas de texto separadas pela metade
-- Secoes divididas de forma abrupta
+1. O conteúdo é tratado como uma imagem contínua
+2. A divisão acontece em intervalos fixos de altura
+3. Não há margem entre o final de uma página e início da próxima
 
 ---
 
-## Solucao Proposta
+## Solução
 
-### Abordagem 1: CSS Page Break (Recomendada)
+### Abordagem 1: Adicionar Margem via Opções do react-to-pdf
 
-Usar propriedades CSS de controle de quebra de pagina em cada secao:
-
-```css
-page-break-inside: avoid;
-break-inside: avoid;
-page-break-before: auto;
-page-break-after: auto;
-```
-
-Isso instrui o renderizador a:
-- Evitar quebrar uma secao no meio
-- Mover secao inteira para proxima pagina se nao couber
-
-### Implementacao
-
-Modificar o estilo de cada secao no template:
+O `react-to-pdf` suporta margens em todas as páginas através da opção `Margin`:
 
 ```typescript
-const sectionStyle = {
-  marginBottom: "20px",
-  pageBreakInside: "avoid" as const,
-  breakInside: "avoid" as const,
-};
+import { usePDF, Margin } from "react-to-pdf";
+
+const { toPDF, targetRef } = usePDF({
+  filename,
+  page: {
+    margin: Margin.MEDIUM, // ou valor numérico em MM
+    format: "A4",
+    orientation: "portrait"
+  }
+});
 ```
+
+### Abordagem 2: Dividir Conteúdo em Páginas Virtuais
+
+Criar um componente que divide o conteúdo em blocos de altura fixa (considerando a altura de uma página A4 menos margens):
+
+- Altura útil de uma página A4: ~247mm (297mm - 50mm de margens)
+- Cada "página virtual" terá altura máxima definida
+- Adicionar margem inferior em cada página virtual
 
 ---
 
-## Alteracoes no LandingPagePDFTemplate.tsx
+## Alterações Necessárias
 
-### 1. Estilo Base de Secao
+### 1. PDFExportButton.tsx
 
-```typescript
-const sectionStyle = {
-  marginBottom: "20px",
-  pageBreakInside: "avoid",
-  breakInside: "avoid",
-};
-```
-
-### 2. Elementos Grandes (Testimonials, FAQ)
-
-Para elementos que podem ser grandes individualmente:
+Adicionar margem nas opções do PDF:
 
 ```typescript
-// Cada testimonial individual
-<div style={{ 
-  pageBreakInside: "avoid",
-  breakInside: "avoid",
-  marginBottom: "8px"
-}}>
+import { usePDF, Margin } from "react-to-pdf";
+
+const { toPDF, targetRef } = usePDF({
+  filename,
+  page: {
+    margin: Margin.MEDIUM, // 20mm de margem
+    format: "A4",
+    orientation: "portrait"
+  }
+});
 ```
 
-### 3. Container Principal
+### 2. LandingPagePDFTemplate.tsx
 
-Adicionar estilos de impressao no container:
+Ajustar o container principal para considerar as margens:
 
 ```typescript
 <div style={{ 
-  width: "210mm", 
-  minHeight: "297mm", 
-  padding: "15mm",
-  // ... outros estilos
+  width: "210mm",
+  // Remover padding interno (a margem será adicionada pelo PDF)
+  padding: "0",
+  backgroundColor: "#ffffff",
+  // ...
 }}>
-```
-
----
-
-## Mapeamento de Alteracoes
-
-| Secao | Alteracao |
-|-------|-----------|
-| Hero | `pageBreakInside: avoid` |
-| Problemas e Dores | `pageBreakInside: avoid` |
-| Solucao | `pageBreakInside: avoid` |
-| Beneficios | `pageBreakInside: avoid` em cada item |
-| Como Funciona | `pageBreakInside: avoid` |
-| Prova Social | `pageBreakInside: avoid` em cada testimonial |
-| Garantia | `pageBreakInside: avoid` |
-| Pilha de Valor | `pageBreakInside: avoid` |
-| FAQ | `pageBreakInside: avoid` em cada pergunta |
-| Final CTA | `pageBreakInside: avoid` |
-
----
-
-## Codigo Atualizado
-
-### sectionStyle atualizado
-
-```typescript
-const sectionStyle = {
-  marginBottom: "20px",
-  pageBreakInside: "avoid" as const,
-  breakInside: "avoid" as const,
-};
-```
-
-### Elementos individuais (testimonials, FAQ items)
-
-```typescript
-{complete.social_proof.testimonials?.map((t, i) => (
-  <div key={i} style={{ 
-    border: "1px solid #e5e7eb", 
-    padding: "10px", 
-    borderRadius: "4px",
-    marginBottom: "8px",
+  {/* Cada seção como bloco independente */}
+  <div style={{
+    padding: "10mm",
+    marginBottom: "5mm",
     pageBreakInside: "avoid",
     breakInside: "avoid",
   }}>
+    {/* Conteúdo da seção */}
+  </div>
+</div>
 ```
 
-### Boxes com destaque (CTA, Mecanismo Unico)
+### 3. Criar Componente de Página (Opcional)
+
+Para controle mais preciso, criar um wrapper de página:
 
 ```typescript
-<div style={{ 
-  backgroundColor: "#f5f3ff", 
-  padding: "10px", 
-  borderRadius: "4px",
-  marginTop: "8px",
-  pageBreakInside: "avoid",
-  breakInside: "avoid",
-}}>
+const PDFPage = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    minHeight: "247mm", // Altura útil de A4 - margens
+    pageBreakAfter: "always",
+    pageBreakInside: "avoid",
+    padding: "10mm 0",
+  }}>
+    {children}
+  </div>
+);
 ```
 
 ---
 
-## Arquivo a Modificar
+## Arquivos a Modificar
 
-| Arquivo | Acao |
-|---------|------|
-| `src/components/export/LandingPagePDFTemplate.tsx` | Adicionar `pageBreakInside: avoid` em todas as secoes e elementos individuais |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/export/PDFExportButton.tsx` | Adicionar `Margin.MEDIUM` nas opções |
+| `src/components/export/LandingPagePDFTemplate.tsx` | Ajustar padding e estrutura |
+| `src/components/export/OfferPDFTemplate.tsx` | Ajustar padding e estrutura |
+
+---
+
+## Valores de Margin Disponíveis
+
+O `react-to-pdf` oferece:
+
+| Constante | Valor |
+|-----------|-------|
+| `Margin.NONE` | 0mm |
+| `Margin.SMALL` | 10mm |
+| `Margin.MEDIUM` | 20mm |
+| `Margin.LARGE` | 30mm |
 
 ---
 
 ## Resultado Esperado
 
-Apos a alteracao:
-- Secoes nao serao mais cortadas pela metade
-- Se uma secao nao couber no final da pagina, ela vai inteira para a proxima
-- Texto permanece legivel e integro
-- Layout profissional mantido
+- Margem de 20mm em todas as bordas de cada página
+- Conteúdo não será cortado nas transições de página
+- Espaço adequado entre final de uma página e início da próxima
+- Layout profissional e legível
 
----
-
-## Nota Tecnica
-
-O `pageBreakInside: avoid` funciona com `html2canvas` quando o PDF tem multiplas paginas. O renderizador respeita essas propriedades CSS ao calcular onde dividir o conteudo.
-
-Se ainda houver problemas com secoes muito grandes, podemos adicionar logica para dividir apenas em pontos seguros (entre itens de lista, por exemplo).
