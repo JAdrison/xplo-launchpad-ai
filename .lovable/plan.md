@@ -1,220 +1,170 @@
 
-# Formatacao de Texto e Exportacao PDF com Logo XPLO
+# Corrigir Quebra de Paginas no PDF da Landing Page
 
-## Resumo
+## Problema Identificado
 
-Implementar duas funcionalidades principais:
-1. **Formatacao de texto** nas secoes da LP
-2. **Exportacao PDF** para Ofertas e Landing Pages com a logo XPLO no canto do documento
+O PDF gerado esta cortando texto entre paginas porque:
+1. O `react-to-pdf` nao tem controle nativo de quebra de pagina
+2. O HTML e renderizado como imagem e dividido em fatias fixas
+3. Elementos ficam "cortados" no meio quando caem na transicao de pagina
 
----
+### Evidencias do Problema
 
-## 1. Arquivos a Criar
-
-### Novos Componentes
-
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/ui/text-editor.tsx` | Editor de texto simples com formatacao (negrito, italico, etc.) |
-| `src/components/export/PDFExportButton.tsx` | Botao que dispara exportacao PDF |
-| `src/components/export/OfferPDFTemplate.tsx` | Template visual do PDF da Oferta com logo XPLO |
-| `src/components/export/LandingPagePDFTemplate.tsx` | Template visual do PDF da LP com logo XPLO |
+- "Totalmente Digital" aparece como "Iotalmente Digital" (letra cortada)
+- Linhas de texto separadas pela metade
+- Secoes divididas de forma abrupta
 
 ---
 
-## 2. Template do PDF com Logo XPLO
+## Solucao Proposta
 
-A logo existente em `src/assets/logo-xplo.png` sera utilizada no canto superior esquerdo dos PDFs:
+### Abordagem 1: CSS Page Break (Recomendada)
 
-```text
-+----------------------------------------------------------+
-| [LOGO XPLO]                     Data: 01/02/2026         |
-| (pequeno, ~60px)                                         |
-|----------------------------------------------------------|
-|                                                          |
-|  TITULO DO DOCUMENTO                                     |
-|  Cliente: Nome do Cliente                                |
-|                                                          |
-|  ────────────────────────────────────────────            |
-|                                                          |
-|  CONTEUDO DO DOCUMENTO                                   |
-|  ...                                                     |
-|                                                          |
-+----------------------------------------------------------+
+Usar propriedades CSS de controle de quebra de pagina em cada secao:
+
+```css
+page-break-inside: avoid;
+break-inside: avoid;
+page-break-before: auto;
+page-break-after: auto;
 ```
 
----
+Isso instrui o renderizador a:
+- Evitar quebrar uma secao no meio
+- Mover secao inteira para proxima pagina se nao couber
 
-## 3. Dependencia Necessaria
+### Implementacao
 
-Instalar a biblioteca `react-to-pdf` para geracao de PDF:
-
-```json
-"react-to-pdf": "^1.0.1"
-```
-
----
-
-## 4. Componente TextEditor
-
-Editor de texto simples com barra de ferramentas:
-
-- Botao **Negrito** (B)
-- Botao **Italico** (I)  
-- Botao **Sublinhado** (U)
-- Botao **Lista com marcadores**
-
-O texto formatado sera salvo como HTML no banco de dados.
-
----
-
-## 5. Alteracoes em Arquivos Existentes
-
-| Arquivo | Acao |
-|---------|------|
-| `package.json` | Adicionar dependencia react-to-pdf |
-| `src/components/generator/LandingPageViewer.tsx` | Adicionar botao PDF no cabecalho |
-| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar botao PDF em ofertas e LPs |
-| `src/components/generator/GeneratedContentViewer.tsx` | Adicionar botao PDF |
-
----
-
-## 6. Estrutura do PDFExportButton
+Modificar o estilo de cada secao no template:
 
 ```typescript
-import { usePDF } from 'react-to-pdf';
-import logoXplo from "@/assets/logo-xplo.png";
-
-const PDFExportButton = ({ content, type, clientName }) => {
-  const { toPDF, targetRef } = usePDF({ 
-    filename: `${type}-${clientName}-${new Date().toLocaleDateString('pt-BR')}.pdf` 
-  });
-  
-  return (
-    <>
-      <Button onClick={() => toPDF()}>
-        <FileDown className="h-4 w-4 mr-1" />
-        PDF
-      </Button>
-      
-      {/* Template invisivel para geracao */}
-      <div ref={targetRef} className="absolute left-[-9999px]">
-        {type === 'offer' ? (
-          <OfferPDFTemplate content={content} logo={logoXplo} clientName={clientName} />
-        ) : (
-          <LandingPagePDFTemplate content={content} logo={logoXplo} clientName={clientName} />
-        )}
-      </div>
-    </>
-  );
+const sectionStyle = {
+  marginBottom: "20px",
+  pageBreakInside: "avoid" as const,
+  breakInside: "avoid" as const,
 };
 ```
 
 ---
 
-## 7. Template PDF da Oferta
+## Alteracoes no LandingPagePDFTemplate.tsx
 
-```text
-+----------------------------------------------------------+
-| [LOGO XPLO]                     01 de Fevereiro de 2026  |
-+----------------------------------------------------------+
-|                                                          |
-|              OFERTA IRRESISTIVEL                         |
-|              Cliente: XPLO Solar                         |
-|                                                          |
-|  ────────────────────────────────────────────            |
-|                                                          |
-|  PROMESSA PRINCIPAL                                      |
-|  [Conteudo formatado]                                    |
-|                                                          |
-|  MECANISMO UNICO                                         |
-|  [Conteudo formatado]                                    |
-|                                                          |
-|  GARANTIA                                                |
-|  [Conteudo formatado]                                    |
-|                                                          |
-|  PILHA DE VALOR                                          |
-|  • Item 1 ...................... R$ 997                  |
-|  • Item 2 ...................... R$ 497                  |
-|                                                          |
-|  CTA PRINCIPAL                                           |
-|  [Conteudo formatado]                                    |
-|                                                          |
-+----------------------------------------------------------+
+### 1. Estilo Base de Secao
+
+```typescript
+const sectionStyle = {
+  marginBottom: "20px",
+  pageBreakInside: "avoid",
+  breakInside: "avoid",
+};
+```
+
+### 2. Elementos Grandes (Testimonials, FAQ)
+
+Para elementos que podem ser grandes individualmente:
+
+```typescript
+// Cada testimonial individual
+<div style={{ 
+  pageBreakInside: "avoid",
+  breakInside: "avoid",
+  marginBottom: "8px"
+}}>
+```
+
+### 3. Container Principal
+
+Adicionar estilos de impressao no container:
+
+```typescript
+<div style={{ 
+  width: "210mm", 
+  minHeight: "297mm", 
+  padding: "15mm",
+  // ... outros estilos
+}}>
 ```
 
 ---
 
-## 8. Template PDF da Landing Page
+## Mapeamento de Alteracoes
 
-```text
-+----------------------------------------------------------+
-| [LOGO XPLO]                     01 de Fevereiro de 2026  |
-+----------------------------------------------------------+
-|                                                          |
-|              LANDING PAGE - CONSULTIVA                   |
-|              Cliente: Nome do Cliente                    |
-|                                                          |
-|  ────────────────────────────────────────────            |
-|                                                          |
-|  HERO                                                    |
-|  Headline: [texto]                                       |
-|  Subheadline: [texto]                                    |
-|                                                          |
-|  PROBLEMAS E DORES                                       |
-|  • Problema 1                                            |
-|  • Problema 2                                            |
-|                                                          |
-|  SOLUCAO                                                 |
-|  [Descricao]                                             |
-|                                                          |
-|  BENEFICIOS                                              |
-|  • Beneficio 1: descricao                                |
-|  • Beneficio 2: descricao                                |
-|                                                          |
-|  ... (demais 6 secoes)                                   |
-|                                                          |
-+----------------------------------------------------------+
+| Secao | Alteracao |
+|-------|-----------|
+| Hero | `pageBreakInside: avoid` |
+| Problemas e Dores | `pageBreakInside: avoid` |
+| Solucao | `pageBreakInside: avoid` |
+| Beneficios | `pageBreakInside: avoid` em cada item |
+| Como Funciona | `pageBreakInside: avoid` |
+| Prova Social | `pageBreakInside: avoid` em cada testimonial |
+| Garantia | `pageBreakInside: avoid` |
+| Pilha de Valor | `pageBreakInside: avoid` |
+| FAQ | `pageBreakInside: avoid` em cada pergunta |
+| Final CTA | `pageBreakInside: avoid` |
+
+---
+
+## Codigo Atualizado
+
+### sectionStyle atualizado
+
+```typescript
+const sectionStyle = {
+  marginBottom: "20px",
+  pageBreakInside: "avoid" as const,
+  breakInside: "avoid" as const,
+};
+```
+
+### Elementos individuais (testimonials, FAQ items)
+
+```typescript
+{complete.social_proof.testimonials?.map((t, i) => (
+  <div key={i} style={{ 
+    border: "1px solid #e5e7eb", 
+    padding: "10px", 
+    borderRadius: "4px",
+    marginBottom: "8px",
+    pageBreakInside: "avoid",
+    breakInside: "avoid",
+  }}>
+```
+
+### Boxes com destaque (CTA, Mecanismo Unico)
+
+```typescript
+<div style={{ 
+  backgroundColor: "#f5f3ff", 
+  padding: "10px", 
+  borderRadius: "4px",
+  marginTop: "8px",
+  pageBreakInside: "avoid",
+  breakInside: "avoid",
+}}>
 ```
 
 ---
 
-## 9. Interface do Botao PDF
+## Arquivo a Modificar
 
-O botao sera adicionado ao lado do botao de excluir:
-
-```text
-+----------------------------------------------------------+
-| LP Consultiva             [Data] [📋] [📄 PDF] [🗑️]      |
-|----------------------------------------------------------|
-| Hero                                                      |
-| ...                                                       |
-+----------------------------------------------------------+
-```
+| Arquivo | Acao |
+|---------|------|
+| `src/components/export/LandingPagePDFTemplate.tsx` | Adicionar `pageBreakInside: avoid` em todas as secoes e elementos individuais |
 
 ---
 
-## 10. Fluxo do Usuario
+## Resultado Esperado
 
-### Exportacao PDF
-1. Usuario visualiza uma Oferta ou LP
-2. Clica no botao "PDF" ao lado do documento
-3. PDF e gerado com a logo XPLO no canto superior esquerdo
-4. Download inicia automaticamente
-   - Nome do arquivo: `oferta-nome-cliente-01-02-2026.pdf`
-   - ou `landing-page-nome-cliente-01-02-2026.pdf`
-
-### Formatacao de Texto (futuro)
-1. Usuario clica em "Editar" em uma secao
-2. Editor aparece com barra de formatacao
-3. Usuario formata o texto
-4. Salva as alteracoes no banco
+Apos a alteracao:
+- Secoes nao serao mais cortadas pela metade
+- Se uma secao nao couber no final da pagina, ela vai inteira para a proxima
+- Texto permanece legivel e integro
+- Layout profissional mantido
 
 ---
 
-## Beneficios
+## Nota Tecnica
 
-- Logo XPLO presente em todos os PDFs gerados
-- Documentos profissionais para compartilhar com clientes
-- Formatacao persistida no banco de dados
-- Facil exportacao com um clique
+O `pageBreakInside: avoid` funciona com `html2canvas` quando o PDF tem multiplas paginas. O renderizador respeita essas propriedades CSS ao calcular onde dividir o conteudo.
+
+Se ainda houver problemas com secoes muito grandes, podemos adicionar logica para dividir apenas em pontos seguros (entre itens de lista, por exemplo).
