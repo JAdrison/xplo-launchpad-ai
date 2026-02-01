@@ -30,6 +30,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables, Json } from "@/integrations/supabase/types";
+import { OfferOptionsSelector } from "./OfferOptionsSelector";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -38,6 +39,7 @@ type Ad = Tables<"ads">;
 interface GeneratedContentViewerProps {
   clientId: string;
   refreshTrigger?: number;
+  pppData?: any;
 }
 
 interface ValueStackItem {
@@ -95,7 +97,25 @@ interface DemandPlan {
   };
 }
 
-export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedContentViewerProps) {
+interface GeneratedOptions {
+  promise?: string[];
+  unique_mechanism?: string[];
+  guarantee?: string[];
+  proof?: string[];
+  risk_reversal?: string[];
+  main_cta?: string[];
+}
+
+interface SelectedOptions {
+  promise?: number[];
+  unique_mechanism?: number[];
+  guarantee?: number[];
+  proof?: number[];
+  risk_reversal?: number[];
+  main_cta?: number[];
+}
+
+export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: GeneratedContentViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
@@ -118,6 +138,16 @@ export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedCo
     setLandingPages(lpsRes.data || []);
     setAds(adsRes.data || []);
     setIsLoading(false);
+  };
+
+  const handleOptionsUpdate = (offerId: string, options: GeneratedOptions, selected: SelectedOptions) => {
+    setOffers((prev) =>
+      prev.map((offer) =>
+        offer.id === offerId
+          ? { ...offer, generated_options: options as unknown as Json, selected_options: selected as unknown as Json }
+          : offer
+      )
+    );
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -177,6 +207,9 @@ export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedCo
               <AccordionContent className="space-y-6 pt-4">
                 {offers.map((offer, offerIdx) => {
                   const demandPlan = (offer as any).demand_generation_strategies as DemandPlan | null;
+                  const generatedOptions = (offer.generated_options as GeneratedOptions) || {};
+                  const selectedOptions = (offer.selected_options as SelectedOptions) || {};
+                  const hasOptions = Object.keys(generatedOptions).length > 0;
                   
                   return (
                     <div key={offer.id} className="border rounded-lg p-4 space-y-4">
@@ -187,52 +220,83 @@ export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedCo
                         </span>
                       </div>
 
-                      {/* Promessa */}
-                      {offer.promise && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium flex items-center gap-2">
-                              <Target className="h-4 w-4 text-primary" />
-                              Promessa Principal
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.promise!, "Promessa")}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p className="text-sm bg-muted p-3 rounded-lg">{offer.promise}</p>
-                        </div>
-                      )}
+                      {/* Options Selector - New UI */}
+                      {hasOptions ? (
+                        <OfferOptionsSelector
+                          offerId={offer.id}
+                          clientId={clientId}
+                          generatedOptions={generatedOptions}
+                          selectedOptions={selectedOptions}
+                          onOptionsUpdate={(opts, sel) => handleOptionsUpdate(offer.id, opts, sel)}
+                          pppData={pppData}
+                        />
+                      ) : (
+                        <>
+                          {/* Legacy display for old offers without options */}
+                          {/* Promessa */}
+                          {offer.promise && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium flex items-center gap-2">
+                                  <Target className="h-4 w-4 text-primary" />
+                                  Promessa Principal
+                                </h4>
+                                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.promise!, "Promessa")}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <p className="text-sm bg-muted p-3 rounded-lg">{offer.promise}</p>
+                            </div>
+                          )}
 
-                      {/* Mecanismo Único */}
-                      {offer.unique_mechanism && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                              Mecanismo Único
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.unique_mechanism!, "Mecanismo único")}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p className="text-sm bg-muted p-3 rounded-lg">{offer.unique_mechanism}</p>
-                        </div>
-                      )}
+                          {/* Mecanismo Único */}
+                          {offer.unique_mechanism && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium flex items-center gap-2">
+                                  <Sparkles className="h-4 w-4 text-primary" />
+                                  Mecanismo Único
+                                </h4>
+                                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.unique_mechanism!, "Mecanismo único")}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <p className="text-sm bg-muted p-3 rounded-lg">{offer.unique_mechanism}</p>
+                            </div>
+                          )}
 
-                      {/* Garantia */}
-                      {offer.guarantee && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-primary" />
-                              Garantia
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.guarantee!, "Garantia")}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p className="text-sm bg-muted p-3 rounded-lg">{offer.guarantee}</p>
-                        </div>
+                          {/* Garantia */}
+                          {offer.guarantee && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium flex items-center gap-2">
+                                  <Shield className="h-4 w-4 text-primary" />
+                                  Garantia
+                                </h4>
+                                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.guarantee!, "Garantia")}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <p className="text-sm bg-muted p-3 rounded-lg">{offer.guarantee}</p>
+                            </div>
+                          )}
+
+                          {/* CTA */}
+                          {offer.main_cta && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium flex items-center gap-2">
+                                  <MessageSquare className="h-4 w-4 text-primary" />
+                                  CTA Principal
+                                </h4>
+                                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.main_cta!, "CTA")}>
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <p className="text-sm bg-primary/10 p-3 rounded-lg font-medium">{offer.main_cta}</p>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {/* Pilha de Valor */}
@@ -250,22 +314,6 @@ export function GeneratedContentViewer({ clientId, refreshTrigger }: GeneratedCo
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
-
-                      {/* CTA */}
-                      {offer.main_cta && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium flex items-center gap-2">
-                              <MessageSquare className="h-4 w-4 text-primary" />
-                              CTA Principal
-                            </h4>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(offer.main_cta!, "CTA")}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p className="text-sm bg-primary/10 p-3 rounded-lg font-medium">{offer.main_cta}</p>
                         </div>
                       )}
 

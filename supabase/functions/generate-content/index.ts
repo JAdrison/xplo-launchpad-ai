@@ -32,11 +32,13 @@ interface PPPData {
 }
 
 interface RequestBody {
-  type: "offer" | "lp" | "ads";
+  type: "offer" | "lp" | "ads" | "refresh-field";
   clientId: string;
-  pppData: PPPData;
+  pppData?: PPPData;
   icpId?: string;
   offerId?: string;
+  field?: string;
+  currentOptions?: string[];
 }
 
 serve(async (req) => {
@@ -46,18 +48,24 @@ serve(async (req) => {
   }
 
   try {
-    const { type, clientId, pppData, icpId, offerId } = await req.json() as RequestBody;
+    const body = await req.json() as RequestBody;
+    const { type, clientId, pppData, icpId, offerId, field, currentOptions } = body;
 
-    console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}`);
-
-    // Build context from PPP data
-    const context = buildContext(pppData);
+    console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}, field: ${field || 'all'}`);
 
     // Get the Lovable API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
+
+    // Handle refresh-field type - regenerate 2 options for a specific field
+    if (type === "refresh-field" && field && offerId) {
+      return await handleRefreshField(field, offerId, pppData, LOVABLE_API_KEY);
+    }
+
+    // Build context from PPP data
+    const context = pppData ? buildContext(pppData) : '';
 
     // Generate content based on type
     let prompt = "";
@@ -68,7 +76,7 @@ serve(async (req) => {
         systemPrompt = `Você é um estrategista de marketing digital especializado em aquisição de clientes via tráfego pago, especialmente Facebook/Meta Ads. Você também é expert na metodologia de ofertas irresistíveis do Alex Hormozi.
 
 Sua tarefa é:
-1. Criar uma Oferta Hormozi completa
+1. Criar uma Oferta Hormozi completa com 2 OPÇÕES para cada campo
 2. Criar um PLANO ESTRATÉGICO DE GERAÇÃO DE DEMANDA integrado e acionável
 
 IMPORTANTE: Facebook/Meta Ads é nosso canal principal e mais forte. Sempre priorize este canal.`;
@@ -79,14 +87,24 @@ ${context}
 
 Crie uma resposta em JSON com DUAS partes:
 
-## PARTE 1: OFERTA HORMOZI
-- promise: Promessa principal impactante
-- unique_mechanism: O que diferencia seu método/produto
-- guarantee: Tipo de garantia oferecida
-- proof: Sugestões de provas sociais
-- risk_reversal: Como você remove o risco do cliente
-- value_stack: Array de objetos com {name, perceived_value}
-- main_cta: Call-to-action principal
+## PARTE 1: OFERTA HORMOZI (com 2 opções para cada campo)
+Para cada campo, gere 2 opções diferentes e criativas:
+
+{
+  "options": {
+    "promise": ["Opção 1 da promessa principal", "Opção 2 da promessa principal"],
+    "unique_mechanism": ["Opção 1 do mecanismo único", "Opção 2 do mecanismo único"],
+    "guarantee": ["Opção 1 da garantia", "Opção 2 da garantia"],
+    "proof": ["Opção 1 de prova social", "Opção 2 de prova social"],
+    "risk_reversal": ["Opção 1 de reversão de risco", "Opção 2 de reversão de risco"],
+    "main_cta": ["Opção 1 do CTA", "Opção 2 do CTA"]
+  },
+  "value_stack": [
+    {"name": "Item 1", "perceived_value": "R$ X.XXX"},
+    {"name": "Item 2", "perceived_value": "R$ X.XXX"}
+  ],
+  "demand_plan": {...}
+}
 
 ## PARTE 2: PLANO DE GERAÇÃO DE DEMANDA (demand_plan)
 Analise o contexto do negócio e crie um plano PRÁTICO e ACIONÁVEL:
@@ -145,8 +163,8 @@ Analise o contexto do negócio e crie um plano PRÁTICO e ACIONÁVEL:
 
 REGRAS:
 1. SEMPRE priorize Facebook/Meta Ads como canal principal (60%+ do budget)
-2. Escolha 2-3 canais complementares que façam sentido para ESTE negócio específico
-3. Mostre sinergias CONCRETAS entre canais
+2. Gere 2 opções DIFERENTES e CRIATIVAS para cada campo da oferta
+3. As opções devem ter abordagens distintas (ex: uma mais emocional, outra mais racional)
 4. O plano deve ser PRÁTICO e ACIONÁVEL, não genérico
 5. Use os dados do ICP e dores para personalizar as mensagens
 
@@ -292,23 +310,41 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
 
     switch (type) {
       case "offer":
-        // Insert new offer with demand plan
-        const { error: offerError } = await supabase.from('offers_hormozi').insert({
+        // Insert new offer with options format
+        const options = parsedContent.options || {};
+        const { data: insertedOffer, error: offerError } = await supabase.from('offers_hormozi').insert({
           client_id: clientId,
           icp_id: icpId || null,
-          promise: parsedContent.promise,
-          unique_mechanism: parsedContent.unique_mechanism,
-          guarantee: parsedContent.guarantee,
-          proof: parsedContent.proof,
-          risk_reversal: parsedContent.risk_reversal,
+          // Store first option as main value for backwards compatibility
+          promise: options.promise?.[0] || parsedContent.promise || null,
+          unique_mechanism: options.unique_mechanism?.[0] || parsedContent.unique_mechanism || null,
+          guarantee: options.guarantee?.[0] || parsedContent.guarantee || null,
+          proof: options.proof?.[0] || parsedContent.proof || null,
+          risk_reversal: options.risk_reversal?.[0] || parsedContent.risk_reversal || null,
+          main_cta: options.main_cta?.[0] || parsedContent.main_cta || null,
           value_stack: parsedContent.value_stack,
-          main_cta: parsedContent.main_cta,
-          demand_generation_channels: null, // No longer manually selected
           demand_generation_strategies: parsedContent.demand_plan || null,
-        });
+          // Store all generated options
+          generated_options: options,
+          // Initialize selected_options with first options selected
+          selected_options: {
+            promise: [0],
+            unique_mechanism: [0],
+            guarantee: [0],
+            proof: [0],
+            risk_reversal: [0],
+            main_cta: [0],
+          },
+        }).select().single();
+        
         if (offerError) throw offerError;
-        console.log('Offer with demand plan saved successfully');
-        break;
+        console.log('Offer with options saved successfully');
+        
+        // Return the created offer with options
+        return new Response(
+          JSON.stringify({ success: true, data: parsedContent, offer: insertedOffer }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
 
       case "lp":
         // Delete existing landing pages for this client
@@ -382,6 +418,132 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
     );
   }
 });
+
+// Handler for refreshing a specific field
+async function handleRefreshField(
+  field: string,
+  offerId: string,
+  pppData: PPPData | undefined,
+  apiKey: string
+) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Get current offer
+  const { data: offer, error: offerError } = await supabase
+    .from('offers_hormozi')
+    .select('*, clients(niche)')
+    .eq('id', offerId)
+    .single();
+
+  if (offerError || !offer) {
+    return new Response(
+      JSON.stringify({ error: 'Offer not found' }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const fieldLabels: Record<string, string> = {
+    promise: 'promessa principal',
+    unique_mechanism: 'mecanismo único',
+    guarantee: 'garantia',
+    proof: 'prova social',
+    risk_reversal: 'reversão de risco',
+    main_cta: 'call-to-action principal',
+  };
+
+  const fieldLabel = fieldLabels[field] || field;
+  const context = pppData ? buildContext(pppData) : '';
+
+  const prompt = `Com base no seguinte contexto de negócio:
+
+${context}
+
+Gere 2 novas opções criativas e diferentes para o campo "${fieldLabel}" de uma Oferta Hormozi.
+As opções devem ser impactantes, persuasivas e adequadas ao público-alvo.
+Uma opção pode ser mais emocional e outra mais racional/lógica.
+
+Responda APENAS com um JSON no formato:
+{
+  "options": ["Opção 1", "Opção 2"]
+}`;
+
+  const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        { role: 'system', content: 'Você é um especialista em copywriting e ofertas irresistíveis usando a metodologia Alex Hormozi.' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.8,
+    }),
+  });
+
+  if (!aiResponse.ok) {
+    if (aiResponse.status === 429) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (aiResponse.status === 402) {
+      return new Response(
+        JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    throw new Error('AI API error');
+  }
+
+  const aiData = await aiResponse.json();
+  const content = aiData.choices?.[0]?.message?.content;
+
+  let parsedContent;
+  try {
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : content;
+    parsedContent = JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('Failed to parse refresh field response:', content);
+    throw new Error('Failed to parse AI response');
+  }
+
+  const newOptions = parsedContent.options;
+  if (!Array.isArray(newOptions) || newOptions.length !== 2) {
+    throw new Error('Invalid options format from AI');
+  }
+
+  // Update the offer with new options for this field
+  const currentGeneratedOptions = (offer.generated_options as Record<string, string[]>) || {};
+  currentGeneratedOptions[field] = newOptions;
+
+  // Reset selection for this field to first option
+  const currentSelectedOptions = (offer.selected_options as Record<string, number[]>) || {};
+  currentSelectedOptions[field] = [0];
+
+  const { error: updateError } = await supabase
+    .from('offers_hormozi')
+    .update({
+      generated_options: currentGeneratedOptions,
+      selected_options: currentSelectedOptions,
+      [field]: newOptions[0], // Update main field with first option
+    })
+    .eq('id', offerId);
+
+  if (updateError) throw updateError;
+
+  return new Response(
+    JSON.stringify({ success: true, options: newOptions }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
 
 function buildContext(pppData: PPPData): string {
   const parts: string[] = [];
