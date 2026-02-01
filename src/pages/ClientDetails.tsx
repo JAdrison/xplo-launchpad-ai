@@ -34,6 +34,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OnboardingX1Section } from "@/components/client/OnboardingX1Section";
 import { AIGenerationSection } from "@/components/client/AIGenerationSection";
+import { GeneratedAssetsSection } from "@/components/client/GeneratedAssetsSection";
 
 type Client = Tables<"clients">;
 
@@ -352,6 +353,9 @@ export default function ClientDetails() {
 
       {/* Seção de Geração com IA */}
       <AIGenerationSection client={client} onGenerated={handleRefreshClient} />
+
+      {/* Seção de Conteúdos Gerados */}
+      <GeneratedAssetsSection clientId={client.id} />
 
 
       {/* Ações */}
