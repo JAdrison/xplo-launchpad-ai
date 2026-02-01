@@ -66,7 +66,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
     <div style={{ 
       width: "210mm", 
       minHeight: "297mm", 
-      padding: "20mm",
+      padding: "5mm",
       backgroundColor: "#ffffff",
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "12pt",

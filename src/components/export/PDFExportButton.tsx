@@ -1,4 +1,4 @@
-import { usePDF } from "react-to-pdf";
+import { usePDF, Margin } from "react-to-pdf";
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
 import { OfferPDFTemplate } from "./OfferPDFTemplate";
@@ -33,7 +33,7 @@ export function PDFExportButton({
   const { toPDF, targetRef } = usePDF({
     filename,
     page: {
-      margin: 0,
+      margin: Margin.MEDIUM,
       format: "A4",
       orientation: "portrait"
     }
