@@ -1,190 +1,220 @@
 
-# Adicionar Exclusao de Documentos Completos
+# Formatacao de Texto e Exportacao PDF com Logo XPLO
 
 ## Resumo
 
-Adicionar funcionalidade para excluir documentos completos (Ofertas, Landing Pages e Anuncios) em dois locais principais:
-1. Pagina de Detalhes do Cliente (GeneratedAssetsSection)
-2. Visualizador de Conteudo no Gerador (GeneratedContentViewer)
+Implementar duas funcionalidades principais:
+1. **Formatacao de texto** nas secoes da LP
+2. **Exportacao PDF** para Ofertas e Landing Pages com a logo XPLO no canto do documento
 
 ---
 
-## 1. Componentes a Adicionar
+## 1. Arquivos a Criar
 
-### Botao de Exclusao em Cada Documento
+### Novos Componentes
 
-Cada documento exibido tera um icone de lixeira (Trash2) ao lado do cabecalho, que ao ser clicado abre um AlertDialog de confirmacao.
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/components/ui/text-editor.tsx` | Editor de texto simples com formatacao (negrito, italico, etc.) |
+| `src/components/export/PDFExportButton.tsx` | Botao que dispara exportacao PDF |
+| `src/components/export/OfferPDFTemplate.tsx` | Template visual do PDF da Oferta com logo XPLO |
+| `src/components/export/LandingPagePDFTemplate.tsx` | Template visual do PDF da LP com logo XPLO |
+
+---
+
+## 2. Template do PDF com Logo XPLO
+
+A logo existente em `src/assets/logo-xplo.png` sera utilizada no canto superior esquerdo dos PDFs:
 
 ```text
 +----------------------------------------------------------+
-| Oferta 1                              [Data] [🗑️ Excluir] |
+| [LOGO XPLO]                     Data: 01/02/2026         |
+| (pequeno, ~60px)                                         |
 |----------------------------------------------------------|
-| Promessa Principal                                        |
+|                                                          |
+|  TITULO DO DOCUMENTO                                     |
+|  Cliente: Nome do Cliente                                |
+|                                                          |
+|  ────────────────────────────────────────────            |
+|                                                          |
+|  CONTEUDO DO DOCUMENTO                                   |
+|  ...                                                     |
+|                                                          |
++----------------------------------------------------------+
+```
+
+---
+
+## 3. Dependencia Necessaria
+
+Instalar a biblioteca `react-to-pdf` para geracao de PDF:
+
+```json
+"react-to-pdf": "^1.0.1"
+```
+
+---
+
+## 4. Componente TextEditor
+
+Editor de texto simples com barra de ferramentas:
+
+- Botao **Negrito** (B)
+- Botao **Italico** (I)  
+- Botao **Sublinhado** (U)
+- Botao **Lista com marcadores**
+
+O texto formatado sera salvo como HTML no banco de dados.
+
+---
+
+## 5. Alteracoes em Arquivos Existentes
+
+| Arquivo | Acao |
+|---------|------|
+| `package.json` | Adicionar dependencia react-to-pdf |
+| `src/components/generator/LandingPageViewer.tsx` | Adicionar botao PDF no cabecalho |
+| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar botao PDF em ofertas e LPs |
+| `src/components/generator/GeneratedContentViewer.tsx` | Adicionar botao PDF |
+
+---
+
+## 6. Estrutura do PDFExportButton
+
+```typescript
+import { usePDF } from 'react-to-pdf';
+import logoXplo from "@/assets/logo-xplo.png";
+
+const PDFExportButton = ({ content, type, clientName }) => {
+  const { toPDF, targetRef } = usePDF({ 
+    filename: `${type}-${clientName}-${new Date().toLocaleDateString('pt-BR')}.pdf` 
+  });
+  
+  return (
+    <>
+      <Button onClick={() => toPDF()}>
+        <FileDown className="h-4 w-4 mr-1" />
+        PDF
+      </Button>
+      
+      {/* Template invisivel para geracao */}
+      <div ref={targetRef} className="absolute left-[-9999px]">
+        {type === 'offer' ? (
+          <OfferPDFTemplate content={content} logo={logoXplo} clientName={clientName} />
+        ) : (
+          <LandingPagePDFTemplate content={content} logo={logoXplo} clientName={clientName} />
+        )}
+      </div>
+    </>
+  );
+};
+```
+
+---
+
+## 7. Template PDF da Oferta
+
+```text
++----------------------------------------------------------+
+| [LOGO XPLO]                     01 de Fevereiro de 2026  |
++----------------------------------------------------------+
+|                                                          |
+|              OFERTA IRRESISTIVEL                         |
+|              Cliente: XPLO Solar                         |
+|                                                          |
+|  ────────────────────────────────────────────            |
+|                                                          |
+|  PROMESSA PRINCIPAL                                      |
+|  [Conteudo formatado]                                    |
+|                                                          |
+|  MECANISMO UNICO                                         |
+|  [Conteudo formatado]                                    |
+|                                                          |
+|  GARANTIA                                                |
+|  [Conteudo formatado]                                    |
+|                                                          |
+|  PILHA DE VALOR                                          |
+|  • Item 1 ...................... R$ 997                  |
+|  • Item 2 ...................... R$ 497                  |
+|                                                          |
+|  CTA PRINCIPAL                                           |
+|  [Conteudo formatado]                                    |
+|                                                          |
++----------------------------------------------------------+
+```
+
+---
+
+## 8. Template PDF da Landing Page
+
+```text
++----------------------------------------------------------+
+| [LOGO XPLO]                     01 de Fevereiro de 2026  |
++----------------------------------------------------------+
+|                                                          |
+|              LANDING PAGE - CONSULTIVA                   |
+|              Cliente: Nome do Cliente                    |
+|                                                          |
+|  ────────────────────────────────────────────            |
+|                                                          |
+|  HERO                                                    |
+|  Headline: [texto]                                       |
+|  Subheadline: [texto]                                    |
+|                                                          |
+|  PROBLEMAS E DORES                                       |
+|  • Problema 1                                            |
+|  • Problema 2                                            |
+|                                                          |
+|  SOLUCAO                                                 |
+|  [Descricao]                                             |
+|                                                          |
+|  BENEFICIOS                                              |
+|  • Beneficio 1: descricao                                |
+|  • Beneficio 2: descricao                                |
+|                                                          |
+|  ... (demais 6 secoes)                                   |
+|                                                          |
++----------------------------------------------------------+
+```
+
+---
+
+## 9. Interface do Botao PDF
+
+O botao sera adicionado ao lado do botao de excluir:
+
+```text
++----------------------------------------------------------+
+| LP Consultiva             [Data] [📋] [📄 PDF] [🗑️]      |
+|----------------------------------------------------------|
+| Hero                                                      |
 | ...                                                       |
 +----------------------------------------------------------+
 ```
 
 ---
 
-## 2. Alteracoes em GeneratedAssetsSection.tsx
+## 10. Fluxo do Usuario
 
-**Arquivo:** `src/components/client/GeneratedAssetsSection.tsx`
+### Exportacao PDF
+1. Usuario visualiza uma Oferta ou LP
+2. Clica no botao "PDF" ao lado do documento
+3. PDF e gerado com a logo XPLO no canto superior esquerdo
+4. Download inicia automaticamente
+   - Nome do arquivo: `oferta-nome-cliente-01-02-2026.pdf`
+   - ou `landing-page-nome-cliente-01-02-2026.pdf`
 
-Adicionar:
-- Import do `AlertDialog` e `Trash2` do lucide
-- Funcao `handleDeleteOffer(offerId: string)`
-- Funcao `handleDeleteLandingPage(lpId: string)`
-- Funcao `handleDeleteAd(adId: string)`
-- AlertDialog de confirmacao para cada tipo
-- Botao de exclusao no cabecalho de cada documento
-- Atualizar estado local apos exclusao
-
-**Logica de exclusao:**
-```typescript
-const handleDeleteOffer = async (offerId: string) => {
-  const { error } = await supabase
-    .from("offers_hormozi")
-    .delete()
-    .eq("id", offerId);
-
-  if (error) {
-    toast.error("Erro ao excluir oferta");
-    return;
-  }
-
-  setOffers((prev) => prev.filter((o) => o.id !== offerId));
-  toast.success("Oferta excluída com sucesso!");
-};
-```
-
----
-
-## 3. Alteracoes em GeneratedContentViewer.tsx
-
-**Arquivo:** `src/components/generator/GeneratedContentViewer.tsx`
-
-Adicionar:
-- Mesma estrutura de exclusao do GeneratedAssetsSection
-- Import do AlertDialog e Trash2
-- Funcoes de delete para cada tipo de documento
-- Botao de exclusao no cabecalho de cada item
-- Atualizar estado local e notificar usuario
-
----
-
-## 4. Interface do AlertDialog
-
-Para cada documento, o dialogo de confirmacao:
-
-```text
-+------------------------------------------+
-| Confirmar exclusao                       |
-|------------------------------------------|
-| Tem certeza que deseja excluir este      |
-| documento? Esta acao nao pode ser        |
-| desfeita.                                |
-|                                          |
-|            [Cancelar] [Excluir]          |
-+------------------------------------------+
-```
-
----
-
-## 5. Arquivos a Modificar
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar exclusao de ofertas, LPs e anuncios |
-| `src/components/generator/GeneratedContentViewer.tsx` | Adicionar exclusao de ofertas, LPs e anuncios |
-
----
-
-## 6. Detalhes Tecnicos
-
-### Imports necessarios
-
-```typescript
-import { Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-```
-
-### Estrutura do botao de exclusao
-
-```tsx
-<AlertDialog>
-  <AlertDialogTrigger asChild>
-    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-      <Trash2 className="h-4 w-4" />
-    </Button>
-  </AlertDialogTrigger>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Confirmar exclusao</AlertDialogTitle>
-      <AlertDialogDescription>
-        Tem certeza que deseja excluir esta oferta? Esta acao nao pode ser desfeita.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-      <AlertDialogAction
-        onClick={() => handleDeleteOffer(offer.id)}
-        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-      >
-        Excluir
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
-```
-
----
-
-## 7. Estados de Loading
-
-Adicionar estado para controlar loading durante exclusao:
-
-```typescript
-const [deletingId, setDeletingId] = useState<string | null>(null);
-```
-
-E desabilitar botao durante a operacao:
-
-```tsx
-<AlertDialogAction
-  onClick={() => handleDeleteOffer(offer.id)}
-  disabled={deletingId === offer.id}
->
-  {deletingId === offer.id ? "Excluindo..." : "Excluir"}
-</AlertDialogAction>
-```
-
----
-
-## Fluxo de Usuario
-
-1. Usuario visualiza documentos gerados (ofertas, LPs, anuncios)
-2. Clica no icone de lixeira ao lado do documento
-3. AlertDialog aparece pedindo confirmacao
-4. Usuario confirma clicando em "Excluir"
-5. Documento e removido do banco de dados
-6. Lista atualiza automaticamente removendo o item
-7. Toast de sucesso aparece
+### Formatacao de Texto (futuro)
+1. Usuario clica em "Editar" em uma secao
+2. Editor aparece com barra de formatacao
+3. Usuario formata o texto
+4. Salva as alteracoes no banco
 
 ---
 
 ## Beneficios
 
-- Usuario pode remover documentos que nao deseja mais
-- Confirmacao previne exclusoes acidentais
-- Feedback visual durante e apos a operacao
-- Consistencia de UX em todos os locais de visualizacao
+- Logo XPLO presente em todos os PDFs gerados
+- Documentos profissionais para compartilhar com clientes
+- Formatacao persistida no banco de dados
+- Facil exportacao com um clique
