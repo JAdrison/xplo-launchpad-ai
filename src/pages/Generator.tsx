@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { GeneratedContentViewer } from "@/components/generator/GeneratedContentViewer";
+
+type LPVariant = "direct" | "consultive" | "aggressive";
 
 type Client = Tables<"clients">;
 type Offer = Tables<"offers_hormozi">;
@@ -55,6 +58,7 @@ export default function Generator() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientIdParam);
   const [selectedIcpId, setSelectedIcpId] = useState<string | null>(null);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [selectedLpVariant, setSelectedLpVariant] = useState<LPVariant>("direct");
   const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<GenerationType>>(
     typeParam ? new Set([typeParam]) : new Set()
@@ -222,6 +226,11 @@ export default function Generator() {
           // Add ICP for offer generation (AI will decide channels automatically)
           if (type === "offer") {
             body.icpId = selectedIcpId;
+          }
+
+          // Add LP variant for landing page generation
+          if (type === "lp") {
+            body.lpVariant = selectedLpVariant;
           }
 
           // Add offer ID for ads generation
@@ -471,7 +480,7 @@ export default function Generator() {
                   checked={selectedTypes.has("lp")}
                   onCheckedChange={() => toggleType("lp")}
                 />
-                <div className="flex-1">
+                <div className="flex-1 space-y-3">
                   <Label
                     htmlFor="lp"
                     className="flex items-center gap-2 font-medium cursor-pointer"
@@ -485,9 +494,48 @@ export default function Generator() {
                       </Badge>
                     )}
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Gera seções de LP com variantes (Direta, Consultiva, Agressiva) incluindo headline, subheadline, benefícios e CTA
+                  <p className="text-sm text-muted-foreground">
+                    Gera uma LP completa com 10 seções: Hero, Problemas, Solução, Benefícios, Como Funciona, Prova Social, Garantia, Pilha de Valor, FAQ e CTA Final
                   </p>
+
+                  {selectedTypes.has("lp") && (
+                    <div className="pt-2 border-t">
+                      <Label className="text-sm font-medium">Escolha o estilo da LP:</Label>
+                      <RadioGroup 
+                        value={selectedLpVariant} 
+                        onValueChange={(v) => setSelectedLpVariant(v as LPVariant)}
+                        className="mt-2 space-y-2"
+                      >
+                        <div className="flex items-start space-x-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="direct" id="lp-direct" className="mt-1" />
+                          <Label htmlFor="lp-direct" className="cursor-pointer flex-1">
+                            <span className="font-medium">Direta</span>
+                            <p className="text-xs text-muted-foreground font-normal">
+                              Copy objetiva, focada no resultado, vai direto ao ponto
+                            </p>
+                          </Label>
+                        </div>
+                        <div className="flex items-start space-x-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="consultive" id="lp-consultive" className="mt-1" />
+                          <Label htmlFor="lp-consultive" className="cursor-pointer flex-1">
+                            <span className="font-medium">Consultiva</span>
+                            <p className="text-xs text-muted-foreground font-normal">
+                              Copy educativa, explica o processo, gera confiança
+                            </p>
+                          </Label>
+                        </div>
+                        <div className="flex items-start space-x-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="aggressive" id="lp-aggressive" className="mt-1" />
+                          <Label htmlFor="lp-aggressive" className="cursor-pointer flex-1">
+                            <span className="font-medium">Agressiva</span>
+                            <p className="text-xs text-muted-foreground font-normal">
+                              Copy urgente, escassez, FOMO, gatilhos mentais fortes
+                            </p>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  )}
                 </div>
               </div>
 
