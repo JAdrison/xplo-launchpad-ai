@@ -11,6 +11,17 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   FileText,
   Layout,
   Video,
@@ -26,6 +37,7 @@ import {
   Calendar,
   Zap,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -120,6 +132,7 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
   const [offers, setOffers] = useState<Offer[]>([]);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -153,6 +166,48 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado para a área de transferência!`);
+  };
+
+  const handleDeleteOffer = async (offerId: string) => {
+    setDeletingId(offerId);
+    const { error } = await supabase.from("offers_hormozi").delete().eq("id", offerId);
+    setDeletingId(null);
+
+    if (error) {
+      toast.error("Erro ao excluir oferta");
+      return;
+    }
+
+    setOffers((prev) => prev.filter((o) => o.id !== offerId));
+    toast.success("Oferta excluída com sucesso!");
+  };
+
+  const handleDeleteLandingPage = async (lpId: string) => {
+    setDeletingId(lpId);
+    const { error } = await supabase.from("landing_pages").delete().eq("id", lpId);
+    setDeletingId(null);
+
+    if (error) {
+      toast.error("Erro ao excluir landing page");
+      return;
+    }
+
+    setLandingPages((prev) => prev.filter((lp) => lp.id !== lpId));
+    toast.success("Landing Page excluída com sucesso!");
+  };
+
+  const handleDeleteAd = async (adId: string) => {
+    setDeletingId(adId);
+    const { error } = await supabase.from("ads").delete().eq("id", adId);
+    setDeletingId(null);
+
+    if (error) {
+      toast.error("Erro ao excluir anúncio");
+      return;
+    }
+
+    setAds((prev) => prev.filter((a) => a.id !== adId));
+    toast.success("Anúncio excluído com sucesso!");
   };
 
   const hasContent = offers.length > 0 || landingPages.length > 0 || ads.length > 0;
@@ -215,9 +270,36 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                     <div key={offer.id} className="border rounded-lg p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <Badge variant="outline">Oferta {offerIdx + 1}</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(offer.created_at).toLocaleDateString("pt-BR")}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(offer.created_at).toLocaleDateString("pt-BR")}
+                          </span>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir esta oferta? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteOffer(offer.id)}
+                                  disabled={deletingId === offer.id}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {deletingId === offer.id ? "Excluindo..." : "Excluir"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
 
                       {/* Options Selector - New UI */}
@@ -556,14 +638,41 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                     <div key={lp.id} className="border rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <Badge variant="outline">{variantLabels[lp.variant] || lp.variant}</Badge>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => copyToClipboard(JSON.stringify(sections, null, 2), `LP ${lp.variant}`)}
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copiar tudo
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => copyToClipboard(JSON.stringify(sections, null, 2), `LP ${lp.variant}`)}
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copiar tudo
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir esta landing page? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteLandingPage(lp.id)}
+                                  disabled={deletingId === lp.id}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {deletingId === lp.id ? "Excluindo..." : "Excluir"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
                       {sections?.headline && (
                         <div>
@@ -620,13 +729,40 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                       <div key={ad.id} className="border rounded-lg p-4 space-y-2">
                         <div className="flex items-center justify-between">
                           <Badge variant="secondary">Anúncio {idx + 1}</Badge>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => copyToClipboard(`${ad.headline}\n\n${ad.body_text}\n\n${ad.cta}`, `Anúncio ${idx + 1}`)}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => copyToClipboard(`${ad.headline}\n\n${ad.body_text}\n\n${ad.cta}`, `Anúncio ${idx + 1}`)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteAd(ad.id)}
+                                    disabled={deletingId === ad.id}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {deletingId === ad.id ? "Excluindo..." : "Excluir"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </div>
                         {ad.headline && <p className="font-semibold">{ad.headline}</p>}
                         {ad.body_text && <p className="text-sm text-muted-foreground">{ad.body_text}</p>}
@@ -665,6 +801,31 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                               >
                                 <Copy className="h-3 w-3" />
                               </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir este script de vídeo? Esta ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteAd(ad.id)}
+                                      disabled={deletingId === ad.id}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      {deletingId === ad.id ? "Excluindo..." : "Excluir"}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                           {script?.hook && (
