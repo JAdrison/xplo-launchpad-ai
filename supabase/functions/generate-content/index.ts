@@ -39,6 +39,7 @@ interface RequestBody {
   offerId?: string;
   field?: string;
   currentOptions?: string[];
+  lpVariant?: "direct" | "consultive" | "aggressive";
 }
 
 serve(async (req) => {
@@ -49,7 +50,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as RequestBody;
-    const { type, clientId, pppData, icpId, offerId, field, currentOptions } = body;
+    const { type, clientId, pppData, icpId, offerId, field, currentOptions, lpVariant } = body;
+
+    console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}, field: ${field || 'all'}, lpVariant: ${lpVariant || 'none'}`);
 
     console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}, field: ${field || 'all'}`);
 
@@ -172,23 +175,112 @@ Responda APENAS com o JSON válido, sem markdown.`;
         break;
 
       case "lp":
-        systemPrompt = `Você é um copywriter especializado em landing pages de alta conversão.
-Sua tarefa é criar as seções de uma landing page com base nos dados de discovery fornecidos.`;
+        const variantLabels: Record<string, string> = {
+          direct: "Direta - Copy objetiva, focada no resultado, vai direto ao ponto",
+          consultive: "Consultiva - Copy educativa, explica o processo, gera confiança",
+          aggressive: "Agressiva - Copy urgente, escassez, FOMO, pressão para ação"
+        };
+        const selectedVariant = lpVariant || "direct";
+        const variantDescription = variantLabels[selectedVariant];
+
+        systemPrompt = `Você é um copywriter especializado em landing pages de alta conversão usando a metodologia Alex Hormozi e Russell Brunson.
+Sua tarefa é criar uma landing page COMPLETA e PROFISSIONAL com todas as seções necessárias para converter visitantes em leads/clientes.
+O estilo da LP será: ${variantDescription}`;
+
         prompt = `Com base nos seguintes dados de discovery:
 
 ${context}
 
-Crie as seções de uma Landing Page em 3 variantes (direct, consultive, aggressive).
-Para cada variante, inclua:
-1. **Headline**: Título principal chamativo
-2. **Subheadline**: Subtítulo que reforça a promessa
-3. **Hero Text**: Texto de abertura
-4. **Benefits**: Lista de 3-5 benefícios principais
-5. **Social Proof**: Sugestão de prova social
-6. **CTA Text**: Texto do botão de ação
-7. **CTA Subtext**: Texto abaixo do botão (urgência/escassez)
+Crie uma Landing Page COMPLETA no estilo "${selectedVariant.toUpperCase()}" (${variantDescription}).
 
-Responda em formato JSON com um objeto contendo 3 chaves (direct, consultive, aggressive), cada uma com as seções acima.`;
+A LP deve conter TODAS as 10 seções abaixo em formato JSON:
+
+{
+  "hero": {
+    "headline": "Título principal impactante (máx 10 palavras)",
+    "subheadline": "Subtítulo que reforça a promessa",
+    "hero_text": "Parágrafo de abertura emocional que conecta com a dor do leitor",
+    "cta_button": "Texto do botão principal",
+    "cta_subtext": "Texto abaixo do botão (ex: 'Vagas limitadas')"
+  },
+  "problem_agitation": {
+    "title": "Título da seção de problemas",
+    "problems": ["Problema/dor 1", "Problema/dor 2", "Problema/dor 3", "Problema/dor 4"],
+    "emotional_text": "Parágrafo que agita a dor e mostra que você entende o leitor"
+  },
+  "solution": {
+    "title": "Título apresentando a solução",
+    "description": "Como o produto/serviço resolve o problema",
+    "unique_mechanism": "O diferencial único que faz funcionar"
+  },
+  "benefits": [
+    {"icon": "check", "title": "Benefício 1", "description": "Explicação do benefício"},
+    {"icon": "star", "title": "Benefício 2", "description": "Explicação do benefício"},
+    {"icon": "zap", "title": "Benefício 3", "description": "Explicação do benefício"},
+    {"icon": "shield", "title": "Benefício 4", "description": "Explicação do benefício"},
+    {"icon": "trophy", "title": "Benefício 5", "description": "Explicação do benefício"}
+  ],
+  "how_it_works": {
+    "title": "Como funciona",
+    "steps": [
+      {"number": 1, "title": "Passo 1", "description": "O que acontece neste passo"},
+      {"number": 2, "title": "Passo 2", "description": "O que acontece neste passo"},
+      {"number": 3, "title": "Passo 3", "description": "O que acontece neste passo"}
+    ]
+  },
+  "social_proof": {
+    "title": "Quem já usa e aprova",
+    "testimonials": [
+      {"name": "Nome do cliente", "role": "Cargo/Empresa", "text": "Depoimento completo", "result": "Resultado alcançado"},
+      {"name": "Nome do cliente 2", "role": "Cargo/Empresa", "text": "Depoimento completo", "result": "Resultado alcançado"}
+    ],
+    "stats": [
+      {"number": "1.000+", "label": "Clientes atendidos"},
+      {"number": "98%", "label": "Taxa de satisfação"},
+      {"number": "R$ 10M+", "label": "Gerados para clientes"}
+    ]
+  },
+  "guarantee": {
+    "title": "Garantia Total",
+    "description": "Explicação completa da garantia oferecida",
+    "duration": "7 dias",
+    "conditions": "Sem perguntas, 100% do dinheiro de volta"
+  },
+  "value_stack": {
+    "title": "Tudo isso por apenas...",
+    "items": [
+      {"name": "Item/Bônus 1", "value": "R$ 997"},
+      {"name": "Item/Bônus 2", "value": "R$ 497"},
+      {"name": "Item/Bônus 3", "value": "R$ 297"}
+    ],
+    "total_value": "R$ 2.991",
+    "actual_price": "R$ 497",
+    "discount_text": "Economize mais de R$ 2.000"
+  },
+  "faq": [
+    {"question": "Pergunta frequente 1?", "answer": "Resposta completa e persuasiva"},
+    {"question": "Pergunta frequente 2?", "answer": "Resposta completa e persuasiva"},
+    {"question": "Pergunta frequente 3?", "answer": "Resposta completa e persuasiva"},
+    {"question": "Pergunta frequente 4?", "answer": "Resposta completa e persuasiva"},
+    {"question": "Pergunta frequente 5?", "answer": "Resposta completa e persuasiva"}
+  ],
+  "final_cta": {
+    "headline": "Não deixe essa oportunidade passar",
+    "subtext": "Últimas vagas com condição especial",
+    "button_text": "QUERO COMEÇAR AGORA",
+    "urgency_text": "Oferta válida apenas hoje"
+  }
+}
+
+REGRAS IMPORTANTES:
+1. Adapte o TOM de acordo com a variante "${selectedVariant}":
+   - DIRETA: Linguagem objetiva, foco em resultados concretos
+   - CONSULTIVA: Linguagem educativa, explicações detalhadas, construção de autoridade
+   - AGRESSIVA: Linguagem urgente, escassez, FOMO, gatilhos mentais fortes
+2. Use os dados do ICP e dores para personalizar TODO o conteúdo
+3. Os depoimentos devem parecer REAIS (use nomes brasileiros comuns)
+4. Os valores da pilha de valor devem ser COERENTES com o nicho
+5. Responda APENAS com o JSON válido, sem markdown`;
         break;
 
       case "ads":
@@ -355,20 +447,15 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
         );
 
       case "lp":
-        // Delete existing landing pages for this client
-        await supabase.from('landing_pages').delete().eq('client_id', clientId);
-        
-        // Insert landing pages for each variant
-        const variants = ['direct', 'consultive', 'aggressive'] as const;
-        for (const variant of variants) {
-          const { error: lpError } = await supabase.from('landing_pages').insert({
-            client_id: clientId,
-            variant,
-            sections: parsedContent[variant],
-          });
-          if (lpError) throw lpError;
-        }
-        console.log('Landing pages saved successfully');
+        // Insert single landing page with the selected variant (don't delete existing)
+        const lpVariantToSave = lpVariant || "direct";
+        const { error: lpError } = await supabase.from('landing_pages').insert({
+          client_id: clientId,
+          variant: lpVariantToSave,
+          sections: parsedContent,
+        });
+        if (lpError) throw lpError;
+        console.log(`Landing page (${lpVariantToSave}) saved successfully`);
         break;
 
       case "ads":

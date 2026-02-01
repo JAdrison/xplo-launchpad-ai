@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables, Json } from "@/integrations/supabase/types";
 import { OfferOptionsSelector } from "./OfferOptionsSelector";
+import { LandingPageViewer } from "./LandingPageViewer";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -637,69 +638,39 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                   return (
                     <div key={lp.id} className="border rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <Badge variant="outline">{variantLabels[lp.variant] || lp.variant}</Badge>
-                        <div className="flex items-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => copyToClipboard(JSON.stringify(sections, null, 2), `LP ${lp.variant}`)}
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copiar tudo
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir esta landing page? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteLandingPage(lp.id)}
-                                  disabled={deletingId === lp.id}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  {deletingId === lp.id ? "Excluindo..." : "Excluir"}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{variantLabels[lp.variant] || lp.variant}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(lp.created_at).toLocaleDateString("pt-BR")}
+                          </span>
                         </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir esta landing page? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteLandingPage(lp.id)}
+                                disabled={deletingId === lp.id}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deletingId === lp.id ? "Excluindo..." : "Excluir"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
-                      {sections?.headline && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Headline</p>
-                          <p className="font-semibold">{sections.headline}</p>
-                        </div>
-                      )}
-                      {sections?.subheadline && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Subheadline</p>
-                          <p className="text-sm">{sections.subheadline}</p>
-                        </div>
-                      )}
-                      {sections?.benefits && sections.benefits.length > 0 && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">Benefícios</p>
-                          <ul className="text-sm list-disc list-inside">
-                            {sections.benefits.map((b, i) => <li key={i}>{b}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                      {sections?.cta_text && (
-                        <div>
-                          <p className="text-xs text-muted-foreground">CTA</p>
-                          <p className="text-sm font-medium text-primary">{sections.cta_text}</p>
-                        </div>
-                      )}
+                      <LandingPageViewer sections={sections} variant={lp.variant} />
                     </div>
                   );
                 })}
