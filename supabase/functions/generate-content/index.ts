@@ -194,6 +194,8 @@ Responda em formato JSON com um objeto contendo 3 chaves (direct, consultive, ag
       case "ads":
         // If offerId is provided, fetch the offer data
         let offerContext = "";
+        let validOfferId: string | null = null;
+        
         if (offerId) {
           const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
           const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -207,6 +209,7 @@ Responda em formato JSON com um objeto contendo 3 chaves (direct, consultive, ag
             .maybeSingle();
           
           if (offerData) {
+            validOfferId = offerId;
             offerContext = `
 ## OFERTA BASE PARA OS ANÚNCIOS
 
@@ -217,6 +220,8 @@ Responda em formato JSON com um objeto contendo 3 chaves (direct, consultive, ag
 **Prova Social:** ${offerData.proof || 'Não definida'}
 
 `;
+          } else {
+            console.warn(`Offer ${offerId} not found, proceeding without offer context`);
           }
         }
 
@@ -240,6 +245,9 @@ Para cada um, inclua: headline, body_text, cta, ad_angle (ângulo/abordagem)
 Para cada script, inclua: hook (gancho inicial), body (desenvolvimento), cta (chamada para ação), duration (duração sugerida)
 
 Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (objeto com direct, educational, question_box)`;
+        
+        // Store validOfferId for use in save section
+        (body as any)._validOfferId = validOfferId;
         break;
     }
 
@@ -364,18 +372,22 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
         break;
 
       case "ads":
-        // Delete existing ads for this client (or just for this offer)
-        if (offerId) {
-          await supabase.from('ads').delete().eq('offer_id', offerId);
+        // Get the validated offer ID (or null if offer was deleted)
+        const validatedOfferId = (body as any)._validOfferId || null;
+        
+        // Delete existing ads for this client
+        if (validatedOfferId) {
+          await supabase.from('ads').delete().eq('offer_id', validatedOfferId);
         } else {
-          await supabase.from('ads').delete().eq('client_id', clientId);
+          // If no valid offer, just delete by client_id
+          await supabase.from('ads').delete().eq('client_id', clientId).is('offer_id', null);
         }
         
         // Insert static ads
         for (const ad of parsedContent.static_ads || []) {
           const { error: adError } = await supabase.from('ads').insert({
             client_id: clientId,
-            offer_id: offerId || null,
+            offer_id: validatedOfferId,
             asset_type: 'static_ad',
             headline: ad.headline,
             body_text: ad.body_text,
@@ -392,7 +404,7 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
           if (script) {
             const { error: videoError } = await supabase.from('ads').insert({
               client_id: clientId,
-              offer_id: offerId || null,
+              offer_id: validatedOfferId,
               asset_type: 'video_ad',
               ad_angle: videoType,
               script: script,
