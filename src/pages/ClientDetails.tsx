@@ -355,7 +355,7 @@ export default function ClientDetails() {
       <AIGenerationSection client={client} onGenerated={handleRefreshClient} />
 
       {/* Seção de Conteúdos Gerados */}
-      <GeneratedAssetsSection clientId={client.id} />
+      <GeneratedAssetsSection clientId={client.id} clientName={client.name} />
 
 
       {/* Ações */}

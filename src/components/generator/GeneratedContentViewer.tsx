@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import type { Tables, Json } from "@/integrations/supabase/types";
 import { OfferOptionsSelector } from "./OfferOptionsSelector";
 import { LandingPageViewer } from "./LandingPageViewer";
+import { PDFExportButton } from "@/components/export/PDFExportButton";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -51,6 +52,7 @@ type Ad = Tables<"ads">;
 
 interface GeneratedContentViewerProps {
   clientId: string;
+  clientName?: string;
   refreshTrigger?: number;
   pppData?: any;
 }
@@ -128,7 +130,7 @@ interface SelectedOptions {
   main_cta?: number[];
 }
 
-export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: GeneratedContentViewerProps) {
+export function GeneratedContentViewer({ clientId, clientName = "Cliente", refreshTrigger, pppData }: GeneratedContentViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
@@ -271,10 +273,15 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                     <div key={offer.id} className="border rounded-lg p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <Badge variant="outline">Oferta {offerIdx + 1}</Badge>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <span className="text-xs text-muted-foreground">
                             {new Date(offer.created_at).toLocaleDateString("pt-BR")}
                           </span>
+                          <PDFExportButton
+                            type="offer"
+                            clientName={clientName}
+                            content={offer}
+                          />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
@@ -644,33 +651,42 @@ export function GeneratedContentViewer({ clientId, refreshTrigger, pppData }: Ge
                             {new Date(lp.created_at).toLocaleDateString("pt-BR")}
                           </span>
                         </div>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir esta landing page? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteLandingPage(lp.id)}
-                                disabled={deletingId === lp.id}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                {deletingId === lp.id ? "Excluindo..." : "Excluir"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex items-center gap-1">
+                          <PDFExportButton
+                            type="landing-page"
+                            clientName={clientName}
+                            content={{ sections }}
+                            variant={lp.variant}
+                            createdAt={lp.created_at}
+                          />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir esta landing page? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteLandingPage(lp.id)}
+                                  disabled={deletingId === lp.id}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {deletingId === lp.id ? "Excluindo..." : "Excluir"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
-                      <LandingPageViewer sections={sections} variant={lp.variant} />
+                      <LandingPageViewer sections={sections} variant={lp.variant} clientName={clientName} createdAt={lp.created_at} showPDFButton={false} />
                     </div>
                   );
                 })}
