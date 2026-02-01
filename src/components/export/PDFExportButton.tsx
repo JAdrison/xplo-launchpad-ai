@@ -1,4 +1,4 @@
-import { usePDF, Margin, Resolution } from "react-to-pdf";
+import { usePDF, Margin } from "react-to-pdf";
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
 import { OfferPDFTemplate } from "./OfferPDFTemplate";
@@ -32,29 +32,11 @@ export function PDFExportButton({
 
   const { toPDF, targetRef } = usePDF({
     filename,
-    // Aumenta a resolução para reduzir artefatos de recorte (letras "comidas")
-    // causados pela rasterização e fatiamento do conteúdo em múltiplas páginas.
-    resolution: Resolution.HIGH,
     page: {
       margin: Margin.MEDIUM,
       format: "A4",
       orientation: "portrait"
-    },
-    // Prefere PNG para manter bordas do texto mais nítidas.
-    canvas: {
-      mimeType: "image/png",
-      qualityRatio: 1,
-    },
-    overrides: {
-      // Opções do html2canvas
-      canvas: {
-        scale: 2,
-      },
-      // Opções do jsPDF
-      pdf: {
-        compress: true,
-      },
-    },
+    }
   });
 
   return (
