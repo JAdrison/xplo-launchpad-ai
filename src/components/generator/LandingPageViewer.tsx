@@ -20,8 +20,10 @@ import {
   Star,
   CheckCircle,
   Trophy,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PDFExportButton } from "@/components/export/PDFExportButton";
 
 interface HeroSection {
   headline?: string;
@@ -138,6 +140,9 @@ type LPSections = CompleteLPSections | LegacySections;
 interface LandingPageViewerProps {
   sections: LPSections;
   variant: string;
+  clientName?: string;
+  createdAt?: string;
+  showPDFButton?: boolean;
 }
 
 const iconMap: Record<string, typeof CheckCircle> = {
@@ -150,7 +155,13 @@ const iconMap: Record<string, typeof CheckCircle> = {
   target: Target,
 };
 
-export function LandingPageViewer({ sections, variant }: LandingPageViewerProps) {
+export function LandingPageViewer({ 
+  sections, 
+  variant, 
+  clientName = "Cliente",
+  createdAt = new Date().toISOString(),
+  showPDFButton = false
+}: LandingPageViewerProps) {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado!`);
@@ -204,11 +215,20 @@ export function LandingPageViewer({ sections, variant }: LandingPageViewerProps)
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-1">
         <Button variant="ghost" size="sm" onClick={copyAllSections}>
           <Copy className="h-3 w-3 mr-1" />
           Copiar tudo
         </Button>
+        {showPDFButton && (
+          <PDFExportButton
+            type="landing-page"
+            clientName={clientName}
+            content={{ sections }}
+            variant={variant}
+            createdAt={createdAt}
+          />
+        )}
       </div>
 
       <Accordion type="multiple" className="w-full">

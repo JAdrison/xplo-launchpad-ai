@@ -620,6 +620,7 @@ export default function Generator() {
       {selectedClientId && (
         <GeneratedContentViewer 
           clientId={selectedClientId} 
+          clientName={clients.find(c => c.id === selectedClientId)?.name}
           refreshTrigger={refreshTrigger} 
         />
       )}
