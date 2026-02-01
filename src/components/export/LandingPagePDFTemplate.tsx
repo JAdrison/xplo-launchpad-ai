@@ -124,7 +124,9 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
   const complete = sections as CompleteLPSections;
 
   const sectionStyle = {
-    marginBottom: "20px"
+    marginBottom: "20px",
+    pageBreakInside: "avoid" as const,
+    breakInside: "avoid" as const,
   };
 
   const titleStyle = {
@@ -244,7 +246,9 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
                   backgroundColor: "#f5f3ff", 
                   padding: "10px", 
                   borderRadius: "4px",
-                  marginTop: "8px"
+                  marginTop: "8px",
+                  pageBreakInside: "avoid",
+                  breakInside: "avoid",
                 }}>
                   <strong>Mecanismo Único:</strong> {complete.solution.unique_mechanism}
                 </div>
@@ -291,7 +295,9 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
                   border: "1px solid #e5e7eb", 
                   padding: "10px", 
                   borderRadius: "4px",
-                  marginBottom: "8px"
+                  marginBottom: "8px",
+                  pageBreakInside: "avoid",
+                  breakInside: "avoid",
                 }}>
                   <p style={{ fontStyle: "italic" }}>"{t.text}"</p>
                   <p style={{ fontSize: "10pt", color: "#666", marginTop: "4px" }}>
@@ -349,7 +355,7 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
             <div style={sectionStyle}>
               <h2 style={titleStyle}>PERGUNTAS FREQUENTES</h2>
               {complete.faq.map((item, i) => (
-                <div key={i} style={{ marginBottom: "10px" }}>
+                <div key={i} style={{ marginBottom: "10px", pageBreakInside: "avoid", breakInside: "avoid" }}>
                   <p style={{ fontWeight: "600" }}>{item.question}</p>
                   <p style={{ color: "#666" }}>{item.answer}</p>
                 </div>
@@ -365,7 +371,9 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
               backgroundColor: "#f5f3ff",
               borderRadius: "8px",
               border: "1px solid #7c3aed",
-              textAlign: "center"
+              textAlign: "center",
+              pageBreakInside: "avoid",
+              breakInside: "avoid",
             }}>
               <h2 style={{ fontSize: "14pt", fontWeight: "bold", color: "#7c3aed" }}>
                 {complete.final_cta.headline}
