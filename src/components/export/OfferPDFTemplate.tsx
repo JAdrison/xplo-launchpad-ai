@@ -107,7 +107,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {/* Promessa */}
         {getSelectedText("promise") && (
-          <div>
+          <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 style={{ 
               fontSize: "14pt", 
               fontWeight: "600", 
@@ -124,7 +124,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
 
         {/* Mecanismo Único */}
         {getSelectedText("unique_mechanism") && (
-          <div>
+          <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 style={{ 
               fontSize: "14pt", 
               fontWeight: "600", 
@@ -141,7 +141,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
 
         {/* Garantia */}
         {getSelectedText("guarantee") && (
-          <div>
+          <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 style={{ 
               fontSize: "14pt", 
               fontWeight: "600", 
@@ -158,7 +158,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
 
         {/* Prova Social */}
         {getSelectedText("proof") && (
-          <div>
+          <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 style={{ 
               fontSize: "14pt", 
               fontWeight: "600", 
@@ -175,7 +175,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
 
         {/* Reversão de Risco */}
         {getSelectedText("risk_reversal") && (
-          <div>
+          <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 style={{ 
               fontSize: "14pt", 
               fontWeight: "600", 
@@ -192,7 +192,7 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
 
         {/* Pilha de Valor */}
         {valueStack.length > 0 && (
-          <div>
+          <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 style={{ 
               fontSize: "14pt", 
               fontWeight: "600", 
@@ -225,7 +225,9 @@ export function OfferPDFTemplate({ offer, clientName }: OfferPDFTemplateProps) {
             padding: "16px",
             backgroundColor: "#f5f3ff",
             borderRadius: "8px",
-            border: "1px solid #7c3aed"
+            border: "1px solid #7c3aed",
+            pageBreakInside: "avoid",
+            breakInside: "avoid",
           }}>
             <h2 style={{ 
               fontSize: "14pt", 
