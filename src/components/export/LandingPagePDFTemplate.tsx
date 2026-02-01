@@ -148,7 +148,7 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
     <div style={{ 
       width: "210mm", 
       minHeight: "297mm", 
-      padding: "15mm",
+      padding: "5mm",
       backgroundColor: "#ffffff",
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "11pt",
