@@ -1,120 +1,190 @@
 
-# Implementacao: Sistema de 2 Opcoes + Refazer + Editar Manual + Ativos
+# Adicionar Exclusao de Documentos Completos
 
-## Resumo da Implementacao
+## Resumo
 
-Este plano implementa o sistema completo de geracao de ofertas com 2 opcoes por campo, permitindo selecao multipla, edicao manual e regeneracao automatica.
+Adicionar funcionalidade para excluir documentos completos (Ofertas, Landing Pages e Anuncios) em dois locais principais:
+1. Pagina de Detalhes do Cliente (GeneratedAssetsSection)
+2. Visualizador de Conteudo no Gerador (GeneratedContentViewer)
 
 ---
 
-## 1. Migracao do Banco de Dados
+## 1. Componentes a Adicionar
 
-Adicionar colunas para armazenar opcoes geradas e selecionadas:
+### Botao de Exclusao em Cada Documento
 
-```sql
-ALTER TABLE offers_hormozi ADD COLUMN IF NOT EXISTS generated_options jsonb;
-ALTER TABLE offers_hormozi ADD COLUMN IF NOT EXISTS selected_options jsonb;
+Cada documento exibido tera um icone de lixeira (Trash2) ao lado do cabecalho, que ao ser clicado abre um AlertDialog de confirmacao.
+
+```text
++----------------------------------------------------------+
+| Oferta 1                              [Data] [🗑️ Excluir] |
+|----------------------------------------------------------|
+| Promessa Principal                                        |
+| ...                                                       |
++----------------------------------------------------------+
 ```
 
 ---
 
-## 2. Atualizar Edge Function (generate-content)
+## 2. Alteracoes em GeneratedAssetsSection.tsx
 
-**Arquivo:** `supabase/functions/generate-content/index.ts`
+**Arquivo:** `src/components/client/GeneratedAssetsSection.tsx`
 
-**Alteracoes:**
-- Modificar o prompt para gerar 2 opcoes para cada campo da oferta
-- Adicionar handler para `type: "refresh-field"` para regenerar um campo especifico
-- Novo schema de resposta com objeto `options`
+Adicionar:
+- Import do `AlertDialog` e `Trash2` do lucide
+- Funcao `handleDeleteOffer(offerId: string)`
+- Funcao `handleDeleteLandingPage(lpId: string)`
+- Funcao `handleDeleteAd(adId: string)`
+- AlertDialog de confirmacao para cada tipo
+- Botao de exclusao no cabecalho de cada documento
+- Atualizar estado local apos exclusao
 
-**Novo formato de resposta:**
-```json
-{
-  "options": {
-    "promise": ["Opcao 1...", "Opcao 2..."],
-    "unique_mechanism": ["Opcao 1...", "Opcao 2..."],
-    "guarantee": ["Opcao 1...", "Opcao 2..."],
-    "proof": ["Opcao 1...", "Opcao 2..."],
-    "risk_reversal": ["Opcao 1...", "Opcao 2..."],
-    "main_cta": ["Opcao 1...", "Opcao 2..."]
-  },
-  "value_stack": [...],
-  "demand_plan": {...}
-}
+**Logica de exclusao:**
+```typescript
+const handleDeleteOffer = async (offerId: string) => {
+  const { error } = await supabase
+    .from("offers_hormozi")
+    .delete()
+    .eq("id", offerId);
+
+  if (error) {
+    toast.error("Erro ao excluir oferta");
+    return;
+  }
+
+  setOffers((prev) => prev.filter((o) => o.id !== offerId));
+  toast.success("Oferta excluída com sucesso!");
+};
 ```
 
 ---
 
-## 3. Criar Componente EditableOptionCard
-
-**Arquivo:** `src/components/generator/EditableOptionCard.tsx`
-
-**Funcionalidades:**
-- Card com checkbox para selecao
-- Icone de canetinha (Pencil) para ativar modo edicao
-- Textarea inline quando em modo edicao
-- Icone de check para salvar edicao
-- Estilo verde (border-primary + bg-primary/10) quando selecionado
-
----
-
-## 4. Criar Componente OfferOptionsSelector
-
-**Arquivo:** `src/components/generator/OfferOptionsSelector.tsx`
-
-**Funcionalidades:**
-- Renderiza secoes para cada campo (Promessa, Mecanismo, etc)
-- Cada secao tem botao "Refazer" e "Salvar"
-- Mostra 2 cards EditableOptionCard por campo
-- Gerencia estado de selecao (pode selecionar 1 ou 2)
-- Botao Refazer chama Edge Function para regenerar campo especifico
-
----
-
-## 5. Atualizar GeneratedContentViewer
+## 3. Alteracoes em GeneratedContentViewer.tsx
 
 **Arquivo:** `src/components/generator/GeneratedContentViewer.tsx`
 
-**Alteracoes:**
-- Integrar OfferOptionsSelector na visualizacao de ofertas
-- Passar opcoes geradas e callback de selecao
-- Manter visualizacao do Plano de Demanda (Parte 2)
-- Adicionar logica para salvar selecoes no banco
+Adicionar:
+- Mesma estrutura de exclusao do GeneratedAssetsSection
+- Import do AlertDialog e Trash2
+- Funcoes de delete para cada tipo de documento
+- Botao de exclusao no cabecalho de cada item
+- Atualizar estado local e notificar usuario
 
 ---
 
-## 6. Implementar Pagina de Ativos
+## 4. Interface do AlertDialog
 
-**Arquivo:** `src/pages/Assets.tsx`
+Para cada documento, o dialogo de confirmacao:
 
-**Funcionalidades:**
-- Buscar todos os clientes com seus assets
-- Contar ofertas, landing pages e anuncios por cliente
-- Filtro por cliente (Select dropdown)
-- Cards agrupados por cliente com contadores
-- Links para visualizar cada tipo de asset
-
----
-
-## Ordem de Implementacao
-
-1. Executar migracao do banco de dados
-2. Atualizar Edge Function com novo prompt e handler de refresh
-3. Criar EditableOptionCard.tsx
-4. Criar OfferOptionsSelector.tsx
-5. Atualizar GeneratedContentViewer.tsx
-6. Implementar Assets.tsx
+```text
++------------------------------------------+
+| Confirmar exclusao                       |
+|------------------------------------------|
+| Tem certeza que deseja excluir este      |
+| documento? Esta acao nao pode ser        |
+| desfeita.                                |
+|                                          |
+|            [Cancelar] [Excluir]          |
++------------------------------------------+
+```
 
 ---
 
-## Arquivos a Criar/Modificar
+## 5. Arquivos a Modificar
 
 | Arquivo | Acao |
 |---------|------|
-| Migracao SQL | Adicionar colunas generated_options e selected_options |
-| `supabase/functions/generate-content/index.ts` | Modificar prompt + adicionar refresh-field |
-| `src/components/generator/EditableOptionCard.tsx` | CRIAR - Card editavel com selecao |
-| `src/components/generator/OfferOptionsSelector.tsx` | CRIAR - Seletor de opcoes por campo |
-| `src/components/generator/GeneratedContentViewer.tsx` | MODIFICAR - Integrar novos componentes |
-| `src/pages/Assets.tsx` | MODIFICAR - Implementar listagem completa |
+| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar exclusao de ofertas, LPs e anuncios |
+| `src/components/generator/GeneratedContentViewer.tsx` | Adicionar exclusao de ofertas, LPs e anuncios |
 
+---
+
+## 6. Detalhes Tecnicos
+
+### Imports necessarios
+
+```typescript
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+```
+
+### Estrutura do botao de exclusao
+
+```tsx
+<AlertDialog>
+  <AlertDialogTrigger asChild>
+    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  </AlertDialogTrigger>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Confirmar exclusao</AlertDialogTitle>
+      <AlertDialogDescription>
+        Tem certeza que deseja excluir esta oferta? Esta acao nao pode ser desfeita.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+      <AlertDialogAction
+        onClick={() => handleDeleteOffer(offer.id)}
+        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      >
+        Excluir
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+---
+
+## 7. Estados de Loading
+
+Adicionar estado para controlar loading durante exclusao:
+
+```typescript
+const [deletingId, setDeletingId] = useState<string | null>(null);
+```
+
+E desabilitar botao durante a operacao:
+
+```tsx
+<AlertDialogAction
+  onClick={() => handleDeleteOffer(offer.id)}
+  disabled={deletingId === offer.id}
+>
+  {deletingId === offer.id ? "Excluindo..." : "Excluir"}
+</AlertDialogAction>
+```
+
+---
+
+## Fluxo de Usuario
+
+1. Usuario visualiza documentos gerados (ofertas, LPs, anuncios)
+2. Clica no icone de lixeira ao lado do documento
+3. AlertDialog aparece pedindo confirmacao
+4. Usuario confirma clicando em "Excluir"
+5. Documento e removido do banco de dados
+6. Lista atualiza automaticamente removendo o item
+7. Toast de sucesso aparece
+
+---
+
+## Beneficios
+
+- Usuario pode remover documentos que nao deseja mais
+- Confirmacao previne exclusoes acidentais
+- Feedback visual durante e apos a operacao
+- Consistencia de UX em todos os locais de visualizacao
