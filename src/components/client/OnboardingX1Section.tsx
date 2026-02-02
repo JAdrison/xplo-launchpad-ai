@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { PDFExportButton } from "@/components/export/PDFExportButton";
 
 type Client = Tables<"clients">;
 type ClientProfile = Tables<"client_profile">;
@@ -189,6 +190,33 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     );
   }
 
+  // Prepare PDF content
+  const pdfContent = {
+    product: {
+      name: onboardingData.profile?.product_name || null,
+      description: onboardingData.profile?.product_description || null,
+      differentiators: onboardingData.profile?.differentiators || [],
+    },
+    icps: onboardingData.icps.map((icp) => ({
+      name: icp.name,
+      segment: icp.segment,
+      characteristics: icp.characteristics,
+      current_situation: icp.current_situation,
+    })),
+    pains: onboardingData.pains
+      .filter((pain) => pain.main_pain)
+      .map((pain) => {
+        const icp = onboardingData.icps.find((i) => i.id === pain.icp_id);
+        return {
+          icp_name: icp?.name || "ICP",
+          main_pain: pain.main_pain,
+          consequence: pain.consequence,
+          daily_impacts: pain.daily_impacts || [],
+        };
+      }),
+    promise: onboardingData.promise?.promise_text || null,
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -197,21 +225,32 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
             <Target className="h-5 w-5" />
             Onboarding X1
           </CardTitle>
-          {isCompleted && (
-            <Badge variant="default" className="gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Concluído
-            </Badge>
-          )}
-          {isInProgress && (
-            <Badge variant="outline" className="gap-1">
-              <Clock className="h-3 w-3" />
-              Em andamento
-            </Badge>
-          )}
-          {isDraft && !hasData && (
-            <Badge variant="secondary">Não iniciado</Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {hasData && (
+              <PDFExportButton
+                type="onboarding"
+                clientName={client.name}
+                content={pdfContent}
+                createdAt={client.created_at}
+                size="icon"
+              />
+            )}
+            {isCompleted && (
+              <Badge variant="default" className="gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Concluído
+              </Badge>
+            )}
+            {isInProgress && (
+              <Badge variant="outline" className="gap-1">
+                <Clock className="h-3 w-3" />
+                Em andamento
+              </Badge>
+            )}
+            {isDraft && !hasData && (
+              <Badge variant="secondary">Não iniciado</Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">

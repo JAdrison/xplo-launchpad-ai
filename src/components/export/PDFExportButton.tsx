@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
 import { OfferPDFTemplate } from "./OfferPDFTemplate";
 import { LandingPagePDFTemplate } from "./LandingPagePDFTemplate";
+import { OnboardingPDFTemplate } from "./OnboardingPDFTemplate";
 
 interface PDFExportButtonProps {
-  type: "offer" | "landing-page";
+  type: "offer" | "landing-page" | "onboarding";
   clientName: string;
   content: any;
   variant?: string;
@@ -28,7 +29,14 @@ export function PDFExportButton({
     .replace(/^-|-$/g, "");
   
   const dateStr = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
-  const filename = `${type === "offer" ? "oferta" : "landing-page"}-${sanitizedClientName}-${dateStr}.pdf`;
+  
+  const typeLabels = {
+    offer: "oferta",
+    "landing-page": "landing-page",
+    onboarding: "onboarding-x1",
+  };
+  
+  const filename = `${typeLabels[type]}-${sanitizedClientName}-${dateStr}.pdf`;
 
   const { toPDF, targetRef } = usePDF({
     filename,
@@ -60,17 +68,28 @@ export function PDFExportButton({
           top: 0
         }}
       >
-        {type === "offer" ? (
+        {type === "offer" && (
           <OfferPDFTemplate 
             offer={content} 
             clientName={clientName} 
           />
-        ) : (
+        )}
+        {type === "landing-page" && (
           <LandingPagePDFTemplate 
             sections={content.sections || content}
             variant={variant}
             clientName={clientName}
             createdAt={createdAt}
+          />
+        )}
+        {type === "onboarding" && (
+          <OnboardingPDFTemplate 
+            clientName={clientName}
+            createdAt={createdAt}
+            product={content.product}
+            icps={content.icps}
+            pains={content.pains}
+            promise={content.promise}
           />
         )}
       </div>
