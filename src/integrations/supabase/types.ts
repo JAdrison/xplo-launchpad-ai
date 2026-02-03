@@ -265,27 +265,36 @@ export type Database = {
           consequence: string | null
           created_at: string
           daily_impacts: string[] | null
+          desire_1: string | null
+          desire_2: string | null
           icp_id: string
           id: string
           main_pain: string | null
+          secondary_pain: string | null
           updated_at: string
         }
         Insert: {
           consequence?: string | null
           created_at?: string
           daily_impacts?: string[] | null
+          desire_1?: string | null
+          desire_2?: string | null
           icp_id: string
           id?: string
           main_pain?: string | null
+          secondary_pain?: string | null
           updated_at?: string
         }
         Update: {
           consequence?: string | null
           created_at?: string
           daily_impacts?: string[] | null
+          desire_1?: string | null
+          desire_2?: string | null
           icp_id?: string
           id?: string
           main_pain?: string | null
+          secondary_pain?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -300,18 +309,23 @@ export type Database = {
       }
       icps: {
         Row: {
+          age: string | null
           awareness_level: Database["public"]["Enums"]["awareness_level"] | null
           characteristics: string | null
           client_id: string
           created_at: string
           current_situation: string | null
+          gender: string | null
           id: string
           name: string
+          profession: string | null
+          reason_needs_solution: string | null
           segment: string | null
           sort_order: number
           updated_at: string
         }
         Insert: {
+          age?: string | null
           awareness_level?:
             | Database["public"]["Enums"]["awareness_level"]
             | null
@@ -319,13 +333,17 @@ export type Database = {
           client_id: string
           created_at?: string
           current_situation?: string | null
+          gender?: string | null
           id?: string
           name: string
+          profession?: string | null
+          reason_needs_solution?: string | null
           segment?: string | null
           sort_order?: number
           updated_at?: string
         }
         Update: {
+          age?: string | null
           awareness_level?:
             | Database["public"]["Enums"]["awareness_level"]
             | null
@@ -333,8 +351,11 @@ export type Database = {
           client_id?: string
           created_at?: string
           current_situation?: string | null
+          gender?: string | null
           id?: string
           name?: string
+          profession?: string | null
+          reason_needs_solution?: string | null
           segment?: string | null
           sort_order?: number
           updated_at?: string
