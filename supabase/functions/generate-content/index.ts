@@ -14,15 +14,22 @@ interface PPPData {
   icps: Array<{
     id: string;
     name: string;
-    segment: string | null;
-    characteristics: string | null;
-    current_situation: string | null;
+    profession?: string | null;
+    age?: string | null;
+    gender?: string | null;
+    reason_needs_solution?: string | null;
+    segment?: string | null;
+    characteristics?: string | null;
+    current_situation?: string | null;
   }>;
   pains: Array<{
     icp_id: string;
     main_pain: string | null;
-    consequence: string | null;
+    secondary_pain?: string | null;
+    consequence?: string | null;
     daily_impacts: string[] | null;
+    desire_1?: string | null;
+    desire_2?: string | null;
     icps: { name: string } | null;
   }>;
   promise: {
@@ -391,18 +398,42 @@ REGRAS CRÍTICAS:
         );
 
       case "generate-promise":
-        const promiseSystemPrompt = `Você é um estrategista de marketing especializado em criar promessas de valor irresistíveis.
+        const promiseSystemPrompt = `Você é um estrategista de marketing especializado em criar promessas de valor irresistíveis usando a METODOLOGIA ALEX HORMOZI.
 
-Uma boa promessa de valor:
-1. É específica sobre o resultado entregue
-2. Inclui um prazo ou métrica quando possível
-3. Foca na transformação, não nas características
-4. Usa a linguagem do cliente
-5. É memorável e diferenciadora`;
+## METODOLOGIA ALEX HORMOZI - VALUE EQUATION
 
-        const promisePrompt = `Analise os dados completos deste negócio e crie UMA promessa de valor impactante:
+Uma promessa irresistível maximiza:
+(Dream Outcome × Perceived Likelihood) ÷ (Time Delay × Effort Required)
 
-## DADOS DO NEGÓCIO
+Elementos da promessa perfeita:
+1. **Dream Outcome**: O desejo mais profundo do cliente (não o que ele PRECISA, mas o que ele QUER)
+2. **Perceived Likelihood**: Por que é provável que funcione para ele especificamente
+3. **Time Delay**: Em quanto tempo verá resultados (quanto menor, melhor)
+4. **Effort & Sacrifice**: O que ele NÃO precisa fazer/sofrer (quanto menos, melhor)
+
+FÓRMULA DA PROMESSA HORMOZI:
+"[QUEM] consegue [DESEJO REALIZADO] em [PRAZO] sem [MAIOR DOR/OBJEÇÃO]"`;
+
+        // Build pains and desires context
+        const painsContext = pppData?.pains?.map((pain, i) => {
+          const icpName = pain.icps?.name || `ICP ${i + 1}`;
+          return `
+**${icpName}:**
+- Dor Principal: ${pain.main_pain || 'Não informada'}
+- Dor Secundária: ${pain.secondary_pain || 'Não informada'}
+- Impactos no dia a dia: ${pain.daily_impacts?.join(', ') || 'Não informados'}
+- Desejo 1: ${pain.desire_1 || 'Não informado'}
+- Desejo 2: ${pain.desire_2 || 'Não informado'}`;
+        }).join('\n') || 'Nenhuma dor/desejo mapeado';
+
+        const icpsContext = pppData?.icps?.map((icp, i) => `
+**ICP ${i + 1}: ${icp.name}**
+- Profissão: ${icp.profession || icp.segment || 'Não informada'}
+- Idade: ${icp.age || 'Não informada'}
+- Por que precisa da solução: ${icp.reason_needs_solution || icp.current_situation || 'Não informado'}`
+        ).join('\n') || 'Nenhum ICP definido';
+
+        const promisePrompt = `## DADOS DO NEGÓCIO
 
 **Nicho:** ${pppData?.niche || 'Não informado'}
 
@@ -414,42 +445,37 @@ Uma boa promessa de valor:
 
 ## CLIENTES IDEAIS (ICPs)
 
-${pppData?.icps?.map((icp, i) => `
-**ICP ${i + 1}: ${icp.name}**
-- Segmento: ${icp.segment || 'Não informado'}
-- Características: ${icp.characteristics || 'Não informadas'}
-- Situação Atual: ${icp.current_situation || 'Não informada'}
-`).join('\n') || 'Nenhum ICP definido'}
+${icpsContext}
 
-## DORES MAPEADAS
+## DORES E DESEJOS DO PÚBLICO (CRÍTICO!)
 
-${pppData?.pains?.map((pain, i) => `
-**Dor ${i + 1}:** ${pain.main_pain || 'Não informada'}
-- Consequência: ${pain.consequence || 'Não informada'}
-- Impactos: ${pain.daily_impacts?.join(', ') || 'Não informados'}
-`).join('\n') || 'Nenhuma dor mapeada'}
+${painsContext}
 
-## INSTRUÇÕES
+## INSTRUÇÕES - METODOLOGIA HORMOZI
 
 Crie UMA promessa de valor que:
-1. Seja ESPECÍFICA para o nicho "${pppData?.niche || 'informado'}"
-2. Resolva as DORES identificadas
-3. Seja direcionada aos ICPs descritos
-4. Use linguagem clara e impactante
-5. Inclua resultado + prazo quando possível
+1. Transforme a DOR PRINCIPAL em DESEJO REALIZADO
+2. Minimize objeções (tempo, esforço, risco)
+3. Seja específica e mensurável quando possível
+4. Use a fórmula: "[QUEM] consegue [DESEJO] em [PRAZO] sem [DOR/OBJEÇÃO]"
+
+EXEMPLOS DE PROMESSAS HORMOZI:
+- "Donos de academia lotam suas unidades em 90 dias sem depender de indicações"
+- "Dentistas fecham 10 tratamentos de alto valor por semana sem precisar baixar preço"
+- "Infoprodutores faturam R$ 100k/mês sem aparecer nas redes sociais"
+- "Coaches conseguem 20 clientes novos por mês sem fazer prospecção ativa"
 
 Responda em JSON:
 {
-  "promise": "Sua promessa aqui..."
+  "promise": "Sua promessa aqui seguindo a fórmula Hormozi..."
 }
 
-Exemplo de boa promessa:
-"Ajudo [ICP] a [resultado específico] em [prazo] usando [mecanismo único]."
-
 REGRAS CRÍTICAS:
-1. Máximo de 2 frases
-2. Deve ser MEMORÁVEL e DIFERENCIADORA
-3. Responda APENAS com o JSON válido, sem markdown`;
+1. A promessa DEVE seguir a fórmula Hormozi: [QUEM] + [DESEJO] + [PRAZO] + sem [DOR]
+2. Use os DESEJOS mapeados (desire_1, desire_2) como base do resultado prometido
+3. Use as DORES mapeadas como base da objeção eliminada
+4. Máximo de 2 frases
+5. Responda APENAS com o JSON válido, sem markdown`;
 
         const promiseAiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
