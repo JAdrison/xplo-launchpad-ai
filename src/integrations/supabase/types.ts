@@ -80,17 +80,24 @@ export type Database = {
           benefits: string[] | null
           client_id: string
           created_at: string
+          current_revenue: string | null
+          daily_impacts: string[] | null
           demand_channels: string[] | null
+          desire_1: string | null
+          desire_2: string | null
           differentiators: string[] | null
           id: string
+          initial_traffic_investment: string | null
+          main_pain: string | null
           monthly_investment: string | null
           product_description: string | null
           product_name: string | null
           promotions: string | null
-          region: string | null
+          region: string[] | null
           revenue_goal: string | null
           sales_model: Database["public"]["Enums"]["sales_model"] | null
           sales_team_size: string | null
+          secondary_pain: string | null
           updated_at: string
         }
         Insert: {
@@ -98,17 +105,24 @@ export type Database = {
           benefits?: string[] | null
           client_id: string
           created_at?: string
+          current_revenue?: string | null
+          daily_impacts?: string[] | null
           demand_channels?: string[] | null
+          desire_1?: string | null
+          desire_2?: string | null
           differentiators?: string[] | null
           id?: string
+          initial_traffic_investment?: string | null
+          main_pain?: string | null
           monthly_investment?: string | null
           product_description?: string | null
           product_name?: string | null
           promotions?: string | null
-          region?: string | null
+          region?: string[] | null
           revenue_goal?: string | null
           sales_model?: Database["public"]["Enums"]["sales_model"] | null
           sales_team_size?: string | null
+          secondary_pain?: string | null
           updated_at?: string
         }
         Update: {
@@ -116,17 +130,24 @@ export type Database = {
           benefits?: string[] | null
           client_id?: string
           created_at?: string
+          current_revenue?: string | null
+          daily_impacts?: string[] | null
           demand_channels?: string[] | null
+          desire_1?: string | null
+          desire_2?: string | null
           differentiators?: string[] | null
           id?: string
+          initial_traffic_investment?: string | null
+          main_pain?: string | null
           monthly_investment?: string | null
           product_description?: string | null
           product_name?: string | null
           promotions?: string | null
-          region?: string | null
+          region?: string[] | null
           revenue_goal?: string | null
           sales_model?: Database["public"]["Enums"]["sales_model"] | null
           sales_team_size?: string | null
+          secondary_pain?: string | null
           updated_at?: string
         }
         Relationships: [

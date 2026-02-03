@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Building2, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Building2, Loader2, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -20,10 +21,11 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [newRegion, setNewRegion] = useState("");
   
   const [formData, setFormData] = useState({
     niche: "",
-    region: "",
+    regions: [] as string[],
   });
 
   useEffect(() => {
@@ -31,7 +33,6 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
   }, [clientId]);
 
   const fetchData = async () => {
-    // Fetch both client (for niche) and profile (for region)
     const [clientRes, profileRes] = await Promise.all([
       supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
       supabase.from("client_profile").select("region").eq("client_id", clientId).maybeSingle(),
@@ -39,7 +40,7 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
 
     setFormData({
       niche: clientRes.data?.niche || "",
-      region: profileRes.data?.region || "",
+      regions: profileRes.data?.region || [],
     });
 
     setIsLoading(false);
@@ -48,6 +49,23 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddRegion = () => {
+    if (newRegion.trim() && !formData.regions.includes(newRegion.trim())) {
+      setFormData((prev) => ({
+        ...prev,
+        regions: [...prev.regions, newRegion.trim()],
+      }));
+      setNewRegion("");
+    }
+  };
+
+  const handleRemoveRegion = (regionToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      regions: prev.regions.filter((r) => r !== regionToRemove),
+    }));
   };
 
   const handleSubmit = async () => {
@@ -79,12 +97,12 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
       if (existingProfile) {
         await supabase
           .from("client_profile")
-          .update({ region: formData.region.trim() || null })
+          .update({ region: formData.regions.length > 0 ? formData.regions : null })
           .eq("client_id", clientId);
       } else {
         await supabase
           .from("client_profile")
-          .insert({ client_id: clientId, region: formData.region.trim() || null });
+          .insert({ client_id: clientId, region: formData.regions.length > 0 ? formData.regions : null });
       }
 
       toast({
@@ -143,17 +161,48 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="region">Região de Atuação</Label>
-            <Input
-              id="region"
-              name="region"
-              placeholder="Ex: Brasil, São Paulo, Nacional, Global..."
-              value={formData.region}
-              onChange={handleChange}
-            />
+            <Label>Região de Atuação</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ex: Zona Sul de SP, Florianópolis, Santa Catarina..."
+                value={newRegion}
+                onChange={(e) => setNewRegion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddRegion();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddRegion}
+                disabled={!newRegion.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Onde você atende seus clientes?
+              Informe bairros, cidades ou estados onde você atua. Adicione uma região por vez.
             </p>
+            
+            {formData.regions.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formData.regions.map((region, index) => (
+                  <Badge key={index} variant="secondary" className="gap-1">
+                    {region}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRegion(region)}
+                      className="hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
