@@ -209,7 +209,7 @@ export function StepPains({ clientId, onNext, onPrevious }: StepPainsProps) {
         await supabase
           .from("client_profile")
           .update(profileData)
-          .eq("client_id", clientId);
+          .eq("id", existingProfile.id);
       } else {
         await supabase
           .from("client_profile")

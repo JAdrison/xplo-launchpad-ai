@@ -98,7 +98,7 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
         await supabase
           .from("client_profile")
           .update({ region: formData.regions.length > 0 ? formData.regions : null })
-          .eq("client_id", clientId);
+          .eq("id", existingProfile.id);
       } else {
         await supabase
           .from("client_profile")
