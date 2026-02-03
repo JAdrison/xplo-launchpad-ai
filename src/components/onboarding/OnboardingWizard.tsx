@@ -1,24 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  CheckCircle,
-  Loader2,
-  Save
-} from "lucide-react";
+import { CheckCircle, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
-// Import step components (to be created)
+// Import step components
+import { StepCompany } from "./steps/StepCompany";
 import { StepProduct } from "./steps/StepProduct";
 import { StepICPs } from "./steps/StepICPs";
 import { StepPains } from "./steps/StepPains";
+import { StepMarket } from "./steps/StepMarket";
 import { StepPromise } from "./steps/StepPromise";
 import { StepReview } from "./steps/StepReview";
 
@@ -31,12 +27,16 @@ interface OnboardingWizardProps {
 }
 
 const STEPS = [
-  { number: 1, name: "Produto", description: "Informações do seu produto/serviço" },
-  { number: 2, name: "ICPs", description: "Perfis de cliente ideal" },
-  { number: 3, name: "Dores", description: "Problemas que você resolve" },
-  { number: 4, name: "Promessa", description: "Sua promessa de valor" },
-  { number: 5, name: "Revisão", description: "Confirmar informações" },
+  { number: 1, name: "Empresa", description: "Nicho e região de atuação" },
+  { number: 2, name: "Produto", description: "O que você oferece" },
+  { number: 3, name: "Público", description: "Perfis de cliente ideal" },
+  { number: 4, name: "Dores", description: "Problemas que você resolve" },
+  { number: 5, name: "Mercado", description: "Canais e metas" },
+  { number: 6, name: "Promessa", description: "Sua promessa de valor" },
+  { number: 7, name: "Revisão", description: "Confirmar informações" },
 ];
+
+const TOTAL_STEPS = STEPS.length;
 
 export function OnboardingWizard({ clientId, isExternal = false, onComplete }: OnboardingWizardProps) {
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
     const stepParam = searchParams.get("step");
     if (stepParam) {
       const step = parseInt(stepParam, 10);
-      if (step >= 1 && step <= 5) {
+      if (step >= 1 && step <= TOTAL_STEPS) {
         setCurrentStep(step);
       }
     }
@@ -87,7 +87,7 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
   };
 
   const handleNext = () => {
-    if (currentStep < 5) {
+    if (currentStep < TOTAL_STEPS) {
       const newStep = currentStep + 1;
       setCurrentStep(newStep);
       if (!isExternal) {
@@ -164,19 +164,23 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
     return null;
   }
 
-  const progress = (currentStep / 5) * 100;
+  const progress = (currentStep / TOTAL_STEPS) * 100;
 
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <StepProduct clientId={clientId} onNext={handleNext} />;
+        return <StepCompany clientId={clientId} onNext={handleNext} />;
       case 2:
-        return <StepICPs clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+        return <StepProduct clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
       case 3:
-        return <StepPains clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+        return <StepICPs clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
       case 4:
-        return <StepPromise clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+        return <StepPains clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
       case 5:
+        return <StepMarket clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+      case 6:
+        return <StepPromise clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+      case 7:
         return (
           <StepReview 
             clientId={clientId} 
@@ -199,7 +203,7 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-semibold text-lg">
-                  Etapa {currentStep} de 5 - {STEPS[currentStep - 1].name}
+                  Etapa {currentStep} de {TOTAL_STEPS} - {STEPS[currentStep - 1].name}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {STEPS[currentStep - 1].description}
@@ -213,11 +217,11 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
               )}
             </div>
             <Progress value={progress} className="h-2" />
-            <div className="flex justify-between">
+            <div className="flex justify-between overflow-x-auto">
               {STEPS.map((step) => (
                 <div 
                   key={step.number}
-                  className={`flex items-center gap-1 text-xs ${
+                  className={`flex items-center gap-1 text-xs whitespace-nowrap ${
                     step.number < currentStep 
                       ? "text-primary" 
                       : step.number === currentStep 
