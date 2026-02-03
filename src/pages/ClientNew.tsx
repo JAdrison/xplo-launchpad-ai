@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Save, Loader2, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
 export default function ClientNew() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -97,6 +97,14 @@ export default function ClientNew() {
           <p className="text-muted-foreground">Cadastre um novo cliente para iniciar o onboarding</p>
         </div>
       </div>
+
+      {/* Privacy Notice */}
+      <Alert>
+        <Shield className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Privacidade dos Dados:</strong> Os dados pessoais coletados (CNPJ, CPF, e-mail, etc) serão utilizados exclusivamente para elaboração de contrato e cadastro na plataforma de envio de boletos.
+        </AlertDescription>
+      </Alert>
 
       {/* Form */}
       <Card>

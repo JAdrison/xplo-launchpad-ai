@@ -156,6 +156,44 @@ export type Database = {
           },
         ]
       }
+      client_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          type: Database["public"]["Enums"]["token_type"]
+          used_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          type?: Database["public"]["Enums"]["token_type"]
+          used_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          type?: Database["public"]["Enums"]["token_type"]
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           cnpj: string | null
@@ -473,6 +511,7 @@ export type Database = {
         | "archived"
       lp_variant: "direct" | "consultive" | "aggressive"
       sales_model: "b2b" | "b2c" | "recurring" | "project" | "hybrid"
+      token_type: "onboarding"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -612,6 +651,7 @@ export const Constants = {
       ],
       lp_variant: ["direct", "consultive", "aggressive"],
       sales_model: ["b2b", "b2c", "recurring", "project", "hybrid"],
+      token_type: ["onboarding"],
     },
   },
 } as const

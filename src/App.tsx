@@ -8,7 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import ClientNew from "./pages/ClientNew";
+import ClientRegister from "./pages/ClientRegister";
 import Onboarding from "./pages/Onboarding";
+import OnboardingExternal from "./pages/OnboardingExternal";
 import Generator from "./pages/Generator";
 import Assets from "./pages/Assets";
 import Settings from "./pages/Settings";
@@ -23,6 +25,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/* Public routes (no layout) */}
+          <Route path="/register" element={<ClientRegister />} />
+          <Route path="/onboarding/external/:token" element={<OnboardingExternal />} />
+
+          {/* Internal routes (with layout) */}
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/clients" element={<Clients />} />
