@@ -32,7 +32,7 @@ interface PPPData {
 }
 
 interface RequestBody {
-  type: "offer" | "lp" | "ads" | "refresh-field";
+  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps";
   clientId: string;
   pppData?: PPPData;
   icpId?: string;
@@ -282,6 +282,113 @@ REGRAS IMPORTANTES:
 4. Os valores da pilha de valor devem ser COERENTES com o nicho
 5. Responda APENAS com o JSON válido, sem markdown`;
         break;
+
+      case "generate-icps":
+        systemPrompt = `Você é um estrategista de marketing especializado em definição de ICP (Ideal Customer Profile).
+        
+Sua tarefa é analisar o NEGÓCIO ESPECÍFICO e identificar 3 perfis de cliente ideal que teriam MAIOR PROPENSÃO a comprar este produto/serviço.
+
+IMPORTANTE: Os ICPs devem ser REALISTAS e ESPECÍFICOS para o negócio informado. 
+Não invente perfis genéricos. Analise o nicho, o produto e os diferenciais.`;
+
+        prompt = `Analise este negócio e identifique 3 perfis de cliente ideal:
+
+## DADOS DO NEGÓCIO
+
+**Nicho de Atuação:** ${pppData?.niche || 'Não informado'}
+
+## PRODUTO/SERVIÇO
+
+**Nome:** ${pppData?.profile?.product_name || 'Não informado'}
+**Descrição:** ${pppData?.profile?.product_description || 'Não informado'}
+**Diferenciais:** ${pppData?.profile?.differentiators?.join(', ') || 'Não informados'}
+
+## INSTRUÇÕES
+
+Com base ESPECIFICAMENTE neste negócio, gere 3 perfis de cliente ideal DIFERENTES e COMPLEMENTARES.
+
+Para cada ICP:
+- name: Nome/persona brasileiro (ex: "Empresário Carlos", "Dona Maria")
+- segment: Segmento específico que esse perfil representa
+- characteristics: Características comportamentais e situacionais (2-3 frases)
+- current_situation: Situação atual que o leva a precisar deste produto (2-3 frases)
+
+Responda em JSON:
+{
+  "icps": [
+    { "name": "...", "segment": "...", "characteristics": "...", "current_situation": "..." },
+    { "name": "...", "segment": "...", "characteristics": "...", "current_situation": "..." },
+    { "name": "...", "segment": "...", "characteristics": "...", "current_situation": "..." }
+  ]
+}
+
+REGRAS CRÍTICAS:
+1. Os ICPs devem ser COERENTES com o nicho "${pppData?.niche || 'informado'}"
+2. Os ICPs devem ser pessoas que REALMENTE comprariam "${pppData?.profile?.product_name || 'o produto'}"
+3. Use exemplos CONCRETOS e ESPECÍFICOS, não genéricos
+4. Cada ICP deve representar um TIPO DIFERENTE de comprador
+5. Responda APENAS com o JSON válido, sem markdown`;
+
+        // For generate-icps, we just return the result without saving
+        const icpAiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.8,
+          }),
+        });
+
+        if (!icpAiResponse.ok) {
+          const errorText = await icpAiResponse.text();
+          console.error('AI API error:', errorText);
+          
+          if (icpAiResponse.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          if (icpAiResponse.status === 402) {
+            return new Response(
+              JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          throw new Error(`AI API error: ${icpAiResponse.status}`);
+        }
+
+        const icpAiData = await icpAiResponse.json();
+        const icpContent = icpAiData.choices?.[0]?.message?.content;
+
+        if (!icpContent) {
+          throw new Error('No content generated from AI');
+        }
+
+        console.log('ICP generation response received, parsing...');
+
+        let parsedIcps;
+        try {
+          const jsonMatch = icpContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          const jsonStr = jsonMatch ? jsonMatch[1] : icpContent;
+          parsedIcps = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error('Failed to parse AI response as JSON:', icpContent);
+          throw new Error('Failed to parse AI response');
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, icps: parsedIcps.icps }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
 
       case "ads":
         // If offerId is provided, fetch the offer data

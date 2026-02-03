@@ -19,8 +19,10 @@ import {
   Sparkles, 
   FileCheck,
   Plus,
-  Trash2
+  Trash2,
+  RefreshCw
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -475,7 +477,7 @@ export default function Onboarding() {
 
           {/* Step 2: ICPs */}
           {currentStep === 2 && (
-            <StepICPs formData={formData} setFormData={setFormData} />
+            <StepICPs formData={formData} setFormData={setFormData} client={client} />
           )}
 
           {/* Step 3: Dores */}
@@ -634,8 +636,16 @@ function StepProduct({ formData, setFormData }: { formData: FormData; setFormDat
   );
 }
 
-// Step 2: ICPs
-function StepICPs({ formData, setFormData }: { formData: FormData; setFormData: React.Dispatch<React.SetStateAction<FormData>> }) {
+// Step 2: ICPs with AI generation
+function StepICPs({ formData, setFormData, client }: { 
+  formData: FormData; 
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  client?: Client | null;
+}) {
+  const [icpMode, setIcpMode] = useState<"choice" | "manual" | "generating" | "suggestions">("choice");
+  const [aiSuggestions, setAiSuggestions] = useState<ICP[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<number[]>([]);
+
   const addICP = () => {
     if (formData.icps.length < 3) {
       setFormData(prev => ({
@@ -658,12 +668,227 @@ function StepICPs({ formData, setFormData }: { formData: FormData; setFormData: 
     }
   };
 
+  const handleGenerateICPs = async () => {
+    // Verificar se tem dados do produto
+    if (!formData.product.product_name && !formData.product.product_description) {
+      toast.error("Preencha as informações do produto primeiro (Etapa 1)");
+      return;
+    }
+
+    setIcpMode("generating");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-content", {
+        body: {
+          type: "generate-icps",
+          clientId: "",
+          pppData: {
+            niche: client?.niche,
+            profile: {
+              product_name: formData.product.product_name,
+              product_description: formData.product.product_description,
+              differentiators: formData.product.differentiators.filter(d => d.trim()),
+            },
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.icps && Array.isArray(data.icps)) {
+        setAiSuggestions(data.icps);
+        setSelectedSuggestions([]);
+        setIcpMode("suggestions");
+      } else {
+        throw new Error("Resposta inválida da IA");
+      }
+    } catch (error) {
+      console.error("Erro ao gerar ICPs:", error);
+      toast.error("Erro ao gerar sugestões de ICP");
+      setIcpMode("choice");
+    }
+  };
+
+  const toggleSelection = (index: number) => {
+    setSelectedSuggestions(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      }
+      if (prev.length < 3) {
+        return [...prev, index];
+      }
+      return prev;
+    });
+  };
+
+  const handleUseSuggestions = () => {
+    const selectedIcps = selectedSuggestions.map(index => aiSuggestions[index]);
+    setFormData(prev => ({
+      ...prev,
+      icps: selectedIcps.map(icp => ({
+        name: icp.name,
+        segment: icp.segment,
+        characteristics: icp.characteristics,
+        current_situation: icp.current_situation,
+      })),
+    }));
+    setIcpMode("manual");
+  };
+
+  // Tela de Escolha Inicial
+  if (icpMode === "choice") {
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-medium">Você já conhece seu cliente ideal?</h3>
+          <p className="text-sm text-muted-foreground">
+            Sabe qual tipo de cliente mais compra de você?
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Opção: Já conheço */}
+          <Card 
+            className="cursor-pointer transition-all hover:border-primary hover:shadow-md" 
+            onClick={() => setIcpMode("manual")}
+          >
+            <CardContent className="pt-6 text-center space-y-3">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <h4 className="font-medium">Sim, já conheço</h4>
+              <p className="text-sm text-muted-foreground">
+                Sei quem são meus melhores clientes e vou cadastrar
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Opção: Preciso de ajuda */}
+          <Card 
+            className="cursor-pointer transition-all hover:border-violet-500 hover:shadow-md" 
+            onClick={handleGenerateICPs}
+          >
+            <CardContent className="pt-6 text-center space-y-3">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10">
+                <Sparkles className="h-6 w-6 text-violet-500" />
+              </div>
+              <h4 className="font-medium">Não, preciso de ajuda</h4>
+              <p className="text-sm text-muted-foreground">
+                A IA vai analisar meu produto e sugerir 3 perfis ideais
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de Loading
+  if (icpMode === "generating") {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-6">
+        <Loader2 className="h-12 w-12 animate-spin text-violet-500" />
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-medium">Analisando seu negócio...</h3>
+          <p className="text-sm text-muted-foreground">
+            Identificando os melhores perfis de cliente
+          </p>
+        </div>
+        <div className="text-center space-y-1 text-xs text-muted-foreground">
+          {client?.niche && <p>• Nicho: {client.niche}</p>}
+          {formData.product.product_name && <p>• Produto: {formData.product.product_name}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // Tela de Sugestões da IA
+  if (icpMode === "suggestions") {
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <Badge variant="outline" className="gap-1 border-violet-500/50 text-violet-600">
+            <Sparkles className="h-3 w-3" />
+            Gerado por IA
+          </Badge>
+          <h3 className="text-lg font-medium">Identificamos 3 possíveis perfis de cliente ideal</h3>
+          <p className="text-sm text-muted-foreground">
+            {formData.product.product_name && client?.niche 
+              ? `Com base no seu produto "${formData.product.product_name}" e no nicho "${client.niche}"`
+              : "Selecione os que mais se encaixam no seu negócio (1 a 3)"
+            }
+          </p>
+        </div>
+
+        {aiSuggestions.map((icp, index) => (
+          <Card 
+            key={index}
+            className={`cursor-pointer transition-all ${
+              selectedSuggestions.includes(index) 
+                ? "border-primary bg-primary/5 shadow-md" 
+                : "hover:border-muted-foreground/50"
+            }`}
+            onClick={() => toggleSelection(index)}
+          >
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-3">
+                <Checkbox 
+                  checked={selectedSuggestions.includes(index)} 
+                  className="mt-1"
+                />
+                <div className="flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-medium">{icp.name}</h4>
+                    <Badge variant="secondary" className="text-xs">{icp.segment}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{icp.characteristics}</p>
+                  <p className="text-sm text-muted-foreground italic">
+                    <span className="font-medium">Situação: </span>
+                    {icp.current_situation}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        <div className="flex flex-wrap gap-3 justify-center pt-4">
+          <Button variant="outline" onClick={() => setIcpMode("choice")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar
+          </Button>
+          <Button variant="outline" onClick={handleGenerateICPs}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Gerar Novos
+          </Button>
+          <Button onClick={handleUseSuggestions} disabled={selectedSuggestions.length === 0}>
+            <Check className="mr-2 h-4 w-4" />
+            Usar Selecionados ({selectedSuggestions.length})
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela Manual (formulário original)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Defina até 3 perfis de cliente ideal (ICP)
-        </p>
+        <div className="flex items-center gap-2">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIcpMode("choice")}
+            className="text-muted-foreground"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Voltar
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Defina até 3 perfis de cliente ideal (ICP)
+          </p>
+        </div>
         {formData.icps.length < 3 && (
           <Button type="button" variant="outline" size="sm" onClick={addICP}>
             <Plus className="mr-1 h-4 w-4" />
