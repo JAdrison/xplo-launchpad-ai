@@ -33,9 +33,9 @@ import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { OnboardingX1Section } from "@/components/client/OnboardingX1Section";
+import { OnboardingLinkSection } from "@/components/client/OnboardingLinkSection";
 import { AIGenerationSection } from "@/components/client/AIGenerationSection";
 import { GeneratedAssetsSection } from "@/components/client/GeneratedAssetsSection";
-
 type Client = Tables<"clients">;
 
 const STATUS_LABELS: Record<Client["status"], string> = {
@@ -350,6 +350,9 @@ export default function ClientDetails() {
 
       {/* Seção de Onboarding X1 */}
       <OnboardingX1Section client={client} onStatusChange={handleRefreshClient} />
+
+      {/* Link para Cliente preencher Onboarding */}
+      <OnboardingLinkSection clientId={client.id} clientName={client.name} />
 
       {/* Seção de Geração com IA */}
       <AIGenerationSection client={client} onGenerated={handleRefreshClient} />
