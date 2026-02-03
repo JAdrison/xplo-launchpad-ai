@@ -386,8 +386,10 @@ export default function Onboarding() {
     return <PPPIntroCard clientName={client.name} onStart={handleStartFromIntro} />;
   }
 
-  const progressPercent = (currentStep / 6) * 100;
-  const currentStepInfo = STEPS[currentStep - 1];
+  // Guard: If currentStep is 0 but intro is not shown, default to step 1
+  const safeStep = currentStep < 1 ? 1 : currentStep;
+  const progressPercent = (safeStep / 6) * 100;
+  const currentStepInfo = STEPS[safeStep - 1];
 
   return (
     <div className="space-y-6">
