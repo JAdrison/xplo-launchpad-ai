@@ -77,38 +77,56 @@ export type Database = {
       client_profile: {
         Row: {
           average_ticket: string | null
+          benefits: string[] | null
           client_id: string
           created_at: string
+          demand_channels: string[] | null
           differentiators: string[] | null
           id: string
+          monthly_investment: string | null
           product_description: string | null
           product_name: string | null
+          promotions: string | null
           region: string | null
+          revenue_goal: string | null
           sales_model: Database["public"]["Enums"]["sales_model"] | null
+          sales_team_size: string | null
           updated_at: string
         }
         Insert: {
           average_ticket?: string | null
+          benefits?: string[] | null
           client_id: string
           created_at?: string
+          demand_channels?: string[] | null
           differentiators?: string[] | null
           id?: string
+          monthly_investment?: string | null
           product_description?: string | null
           product_name?: string | null
+          promotions?: string | null
           region?: string | null
+          revenue_goal?: string | null
           sales_model?: Database["public"]["Enums"]["sales_model"] | null
+          sales_team_size?: string | null
           updated_at?: string
         }
         Update: {
           average_ticket?: string | null
+          benefits?: string[] | null
           client_id?: string
           created_at?: string
+          demand_channels?: string[] | null
           differentiators?: string[] | null
           id?: string
+          monthly_investment?: string | null
           product_description?: string | null
           product_name?: string | null
+          promotions?: string | null
           region?: string | null
+          revenue_goal?: string | null
           sales_model?: Database["public"]["Enums"]["sales_model"] | null
+          sales_team_size?: string | null
           updated_at?: string
         }
         Relationships: [

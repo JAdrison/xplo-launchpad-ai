@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, Loader2, Target } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Target, Lightbulb, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -20,6 +20,7 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [promise, setPromise] = useState<ClientPromise | null>(null);
   const [promiseText, setPromiseText] = useState("");
 
@@ -39,6 +40,63 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
       setPromiseText(data.promise_text || "");
     }
     setIsLoading(false);
+  };
+
+  const handleGenerateWithAI = async () => {
+    setIsGenerating(true);
+
+    try {
+      // Fetch all PPP data
+      const [clientRes, profileRes, icpsRes, painsRes] = await Promise.all([
+        supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
+        supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
+        supabase.from("icps").select("*").eq("client_id", clientId).order("sort_order"),
+        supabase.from("icp_pains").select("*, icps(name)").eq("icps.client_id", clientId),
+      ]);
+
+      const pppData = {
+        niche: clientRes.data?.niche || null,
+        profile: profileRes.data || null,
+        icps: icpsRes.data || [],
+        pains: painsRes.data || [],
+        promise: null,
+      };
+
+      const response = await supabase.functions.invoke("generate-content", {
+        body: {
+          type: "generate-promise",
+          clientId,
+          pppData,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.promise) {
+        // Append or set the promise
+        if (promiseText.trim()) {
+          setPromiseText((prev) => prev + "\n\n" + response.data.promise);
+        } else {
+          setPromiseText(response.data.promise);
+        }
+
+        toast({
+          title: "Sugestão gerada!",
+          description: "Uma promessa foi sugerida. Você pode editá-la.",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating promise:", error);
+      toast({
+        title: "Erro ao gerar sugestão",
+        description: "Tente novamente ou escreva manualmente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -133,6 +191,38 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
             <p className="text-xs text-muted-foreground">
               {promiseText.length}/500 caracteres
             </p>
+          </div>
+
+          {/* AI Suggestion Card */}
+          <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="space-y-2 flex-1">
+                <h4 className="text-sm font-medium">Precisa de inspiração?</h4>
+                <p className="text-sm text-muted-foreground">
+                  A IA pode sugerir uma promessa baseada em tudo que você preencheu até aqui.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateWithAI}
+                  disabled={isGenerating}
+                  className="gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Gerar Sugestão
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

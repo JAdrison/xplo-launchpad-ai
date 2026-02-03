@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users, Sparkles, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -29,6 +29,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [icps, setIcps] = useState<ICPForm[]>([]);
 
   useEffect(() => {
@@ -57,6 +58,63 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
       setIcps([{ name: "", segment: "", characteristics: "", current_situation: "" }]);
     }
     setIsLoading(false);
+  };
+
+  const handleGenerateWithAI = async () => {
+    setIsGenerating(true);
+
+    try {
+      // Fetch client and profile data
+      const [clientRes, profileRes] = await Promise.all([
+        supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
+        supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
+      ]);
+
+      const pppData = {
+        niche: clientRes.data?.niche || null,
+        profile: profileRes.data || null,
+        icps: [],
+        pains: [],
+        promise: null,
+      };
+
+      const response = await supabase.functions.invoke("generate-content", {
+        body: {
+          type: "generate-icps",
+          clientId,
+          pppData,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.icps && Array.isArray(response.data.icps)) {
+        setIcps(
+          response.data.icps.map((icp: any) => ({
+            name: icp.name || "",
+            segment: icp.segment || "",
+            characteristics: icp.characteristics || "",
+            current_situation: icp.current_situation || "",
+          }))
+        );
+
+        toast({
+          title: "ICPs gerados!",
+          description: "3 perfis de cliente foram sugeridos. Você pode editá-los.",
+        });
+      }
+    } catch (error) {
+      console.error("Error generating ICPs:", error);
+      toast({
+        title: "Erro ao gerar ICPs",
+        description: "Tente novamente ou preencha manualmente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleAddICP = () => {
@@ -125,6 +183,9 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     }
   };
 
+  // Check if ICPs are empty (only one empty ICP)
+  const areICPsEmpty = icps.length === 1 && !icps[0].name.trim();
+
   if (isLoading) {
     return (
       <Card>
@@ -147,6 +208,41 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* AI Generation Card - Show only if ICPs are empty */}
+        {areICPsEmpty && (
+          <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="space-y-2 flex-1">
+                <h4 className="text-sm font-medium">Você conhece bem seu cliente ideal?</h4>
+                <p className="text-sm text-muted-foreground">
+                  Se você ainda não tem clareza sobre quem é seu cliente ideal, podemos sugerir 3 perfis baseados nas informações do seu negócio.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateWithAI}
+                  disabled={isGenerating}
+                  className="gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Gerar Sugestões com IA
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ICP Forms */}
         {icps.map((icp, index) => (
           <div key={index} className="p-4 border rounded-lg space-y-4">
             <div className="flex items-center justify-between">

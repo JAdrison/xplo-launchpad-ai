@@ -32,7 +32,7 @@ interface PPPData {
 }
 
 interface RequestBody {
-  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps";
+  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-promise";
   clientId: string;
   pppData?: PPPData;
   icpId?: string;
@@ -387,6 +387,127 @@ REGRAS CRÍTICAS:
 
         return new Response(
           JSON.stringify({ success: true, icps: parsedIcps.icps }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case "generate-promise":
+        const promiseSystemPrompt = `Você é um estrategista de marketing especializado em criar promessas de valor irresistíveis.
+
+Uma boa promessa de valor:
+1. É específica sobre o resultado entregue
+2. Inclui um prazo ou métrica quando possível
+3. Foca na transformação, não nas características
+4. Usa a linguagem do cliente
+5. É memorável e diferenciadora`;
+
+        const promisePrompt = `Analise os dados completos deste negócio e crie UMA promessa de valor impactante:
+
+## DADOS DO NEGÓCIO
+
+**Nicho:** ${pppData?.niche || 'Não informado'}
+
+## PRODUTO/SERVIÇO
+
+**Nome:** ${pppData?.profile?.product_name || 'Não informado'}
+**Descrição:** ${pppData?.profile?.product_description || 'Não informada'}
+**Diferenciais:** ${pppData?.profile?.differentiators?.join(', ') || 'Não informados'}
+
+## CLIENTES IDEAIS (ICPs)
+
+${pppData?.icps?.map((icp, i) => `
+**ICP ${i + 1}: ${icp.name}**
+- Segmento: ${icp.segment || 'Não informado'}
+- Características: ${icp.characteristics || 'Não informadas'}
+- Situação Atual: ${icp.current_situation || 'Não informada'}
+`).join('\n') || 'Nenhum ICP definido'}
+
+## DORES MAPEADAS
+
+${pppData?.pains?.map((pain, i) => `
+**Dor ${i + 1}:** ${pain.main_pain || 'Não informada'}
+- Consequência: ${pain.consequence || 'Não informada'}
+- Impactos: ${pain.daily_impacts?.join(', ') || 'Não informados'}
+`).join('\n') || 'Nenhuma dor mapeada'}
+
+## INSTRUÇÕES
+
+Crie UMA promessa de valor que:
+1. Seja ESPECÍFICA para o nicho "${pppData?.niche || 'informado'}"
+2. Resolva as DORES identificadas
+3. Seja direcionada aos ICPs descritos
+4. Use linguagem clara e impactante
+5. Inclua resultado + prazo quando possível
+
+Responda em JSON:
+{
+  "promise": "Sua promessa aqui..."
+}
+
+Exemplo de boa promessa:
+"Ajudo [ICP] a [resultado específico] em [prazo] usando [mecanismo único]."
+
+REGRAS CRÍTICAS:
+1. Máximo de 2 frases
+2. Deve ser MEMORÁVEL e DIFERENCIADORA
+3. Responda APENAS com o JSON válido, sem markdown`;
+
+        const promiseAiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: promiseSystemPrompt },
+              { role: 'user', content: promisePrompt },
+            ],
+            temperature: 0.8,
+          }),
+        });
+
+        if (!promiseAiResponse.ok) {
+          const errorText = await promiseAiResponse.text();
+          console.error('AI API error:', errorText);
+          
+          if (promiseAiResponse.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          if (promiseAiResponse.status === 402) {
+            return new Response(
+              JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          throw new Error(`AI API error: ${promiseAiResponse.status}`);
+        }
+
+        const promiseAiData = await promiseAiResponse.json();
+        const promiseContent = promiseAiData.choices?.[0]?.message?.content;
+
+        if (!promiseContent) {
+          throw new Error('No content generated from AI');
+        }
+
+        console.log('Promise generation response received, parsing...');
+
+        let parsedPromise;
+        try {
+          const jsonMatch = promiseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          const jsonStr = jsonMatch ? jsonMatch[1] : promiseContent;
+          parsedPromise = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error('Failed to parse AI response as JSON:', promiseContent);
+          throw new Error('Failed to parse AI response');
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, promise: parsedPromise.promise }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
