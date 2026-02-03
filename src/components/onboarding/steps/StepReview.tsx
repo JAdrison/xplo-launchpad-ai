@@ -236,11 +236,13 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
               {data.icps.map((icp) => (
                 <div key={icp.id} className="p-4 rounded-lg bg-muted/50 space-y-1">
                   <p className="font-medium">{icp.name}</p>
-                  {icp.segment && (
-                    <p className="text-sm text-muted-foreground">Segmento: {icp.segment}</p>
-                  )}
-                  {icp.characteristics && (
-                    <p className="text-sm text-muted-foreground">{icp.characteristics}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    {icp.profession && <span>Profissão: {icp.profession}</span>}
+                    {icp.age && <span>Idade: {icp.age}</span>}
+                    {icp.gender && <span>Sexo: {icp.gender}</span>}
+                  </div>
+                  {icp.reason_needs_solution && (
+                    <p className="text-sm text-muted-foreground mt-1">{icp.reason_needs_solution}</p>
                   )}
                 </div>
               ))}
@@ -252,11 +254,11 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
 
         <Separator />
 
-        {/* Dores */}
+        {/* Dores e Desejos */}
         <div>
           <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4" />
-            Dores Mapeadas
+            Dores e Desejos
           </h4>
           {data.pains.length > 0 ? (
             <div className="space-y-3">
@@ -265,23 +267,38 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
                 .map((pain) => {
                   const icp = data.icps.find((i) => i.id === pain.icp_id);
                   return (
-                    <div key={pain.id} className="p-4 rounded-lg bg-muted/50 space-y-1">
+                    <div key={pain.id} className="p-4 rounded-lg bg-muted/50 space-y-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
                           {icp?.name || "ICP"}
                         </Badge>
                       </div>
-                      <p className="font-medium text-sm">{pain.main_pain}</p>
-                      {pain.consequence && (
-                        <p className="text-sm text-muted-foreground">{pain.consequence}</p>
-                      )}
+                      <div className="space-y-1">
+                        <p className="font-medium text-sm">{pain.main_pain}</p>
+                        {pain.secondary_pain && (
+                          <p className="text-sm text-muted-foreground">{pain.secondary_pain}</p>
+                        )}
+                      </div>
                       {pain.daily_impacts && pain.daily_impacts.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1">
                           {pain.daily_impacts.map((impact, idx) => (
                             <Badge key={idx} variant="secondary" className="text-xs">
                               {impact}
                             </Badge>
                           ))}
+                        </div>
+                      )}
+                      {(pain.desire_1 || pain.desire_2) && (
+                        <div className="pt-2 border-t border-border/50 mt-2">
+                          <p className="text-xs text-muted-foreground mb-1">Desejos:</p>
+                          <div className="space-y-1">
+                            {pain.desire_1 && (
+                              <p className="text-sm italic">"{pain.desire_1}"</p>
+                            )}
+                            {pain.desire_2 && (
+                              <p className="text-sm italic">"{pain.desire_2}"</p>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

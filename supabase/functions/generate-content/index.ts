@@ -39,7 +39,7 @@ interface PPPData {
 }
 
 interface RequestBody {
-  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-promise";
+  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-pains" | "generate-promise";
   clientId: string;
   pppData?: PPPData;
   icpId?: string;
@@ -314,18 +314,19 @@ Não invente perfis genéricos. Analise o nicho, o produto e os diferenciais.`;
 
 Com base ESPECIFICAMENTE neste negócio, gere 3 perfis de cliente ideal DIFERENTES e COMPLEMENTARES.
 
-Para cada ICP:
-- name: Nome/persona brasileiro (ex: "Empresário Carlos", "Dona Maria")
-- segment: Segmento específico que esse perfil representa
-- characteristics: Características comportamentais e situacionais (2-3 frases)
-- current_situation: Situação atual que o leva a precisar deste produto (2-3 frases)
+Para cada ICP, use a NOVA estrutura simplificada:
+- name: Nome/persona brasileiro com identificação (ex: "Carlos, o Empresário", "Maria, a Nutricionista")
+- profession: Profissão ou cargo específico
+- age: Faixa etária típica (ex: "35-45 anos")
+- gender: "masculino", "feminino" ou "ambos"
+- reason_needs_solution: Por que essa pessoa precisa do produto/serviço (1-2 frases)
 
 Responda em JSON:
 {
   "icps": [
-    { "name": "...", "segment": "...", "characteristics": "...", "current_situation": "..." },
-    { "name": "...", "segment": "...", "characteristics": "...", "current_situation": "..." },
-    { "name": "...", "segment": "...", "characteristics": "...", "current_situation": "..." }
+    { "name": "...", "profession": "...", "age": "...", "gender": "...", "reason_needs_solution": "..." },
+    { "name": "...", "profession": "...", "age": "...", "gender": "...", "reason_needs_solution": "..." },
+    { "name": "...", "profession": "...", "age": "...", "gender": "...", "reason_needs_solution": "..." }
   ]
 }
 
@@ -394,6 +395,122 @@ REGRAS CRÍTICAS:
 
         return new Response(
           JSON.stringify({ success: true, icps: parsedIcps.icps }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case "generate-pains":
+        const painsSystemPrompt = `Você é um estrategista de marketing especializado em mapeamento de dores e desejos do público-alvo.
+
+Sua tarefa é identificar as DORES mais profundas e os DESEJOS mais intensos de cada perfil de cliente ideal (ICP).
+
+METODOLOGIA HORMOZI:
+- DORES: O que causa sofrimento, frustração, perda de tempo/dinheiro
+- DESEJOS: O que o cliente QUER (não o que precisa) - o sonho, o resultado ideal`;
+
+        const icpsForPains = pppData?.icps?.map((icp) => `
+**${icp.name}**
+- Profissão: ${icp.profession || 'Não informada'}
+- Idade: ${icp.age || 'Não informada'}
+- Por que precisa: ${icp.reason_needs_solution || icp.current_situation || 'Não informado'}`
+        ).join('\n') || 'Nenhum ICP definido';
+
+        const painsPrompt = `## DADOS DO NEGÓCIO
+
+**Nicho:** ${pppData?.niche || 'Não informado'}
+**Produto:** ${pppData?.profile?.product_name || 'Não informado'}
+**Descrição:** ${pppData?.profile?.product_description || 'Não informada'}
+
+## PERFIS DE CLIENTE IDEAL (ICPs)
+
+${icpsForPains}
+
+## INSTRUÇÕES
+
+Para CADA ICP listado acima, identifique:
+1. **main_pain**: A dor PRINCIPAL (maior problema/frustração)
+2. **secondary_pain**: Uma dor secundária relacionada
+3. **daily_impacts**: Até 3 impactos no dia a dia (como a dor afeta a rotina)
+4. **desire_1**: O desejo mais profundo (o que ele QUER conquistar)
+5. **desire_2**: Outro desejo importante
+
+Responda em JSON:
+{
+  "pains": [
+    {
+      "icp_name": "Nome do ICP 1",
+      "main_pain": "...",
+      "secondary_pain": "...",
+      "daily_impacts": ["...", "...", "..."],
+      "desire_1": "...",
+      "desire_2": "..."
+    }
+  ]
+}
+
+REGRAS:
+1. Seja ESPECÍFICO para o nicho "${pppData?.niche || 'informado'}"
+2. As dores devem ser EMOCIONAIS e REAIS, não genéricas
+3. Os desejos devem ser o que o cliente SONHA, não o que é racional
+4. Use linguagem que o próprio cliente usaria
+5. Responda APENAS com o JSON válido, sem markdown`;
+
+        const painsAiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: painsSystemPrompt },
+              { role: 'user', content: painsPrompt },
+            ],
+            temperature: 0.8,
+          }),
+        });
+
+        if (!painsAiResponse.ok) {
+          const errorText = await painsAiResponse.text();
+          console.error('AI API error:', errorText);
+          
+          if (painsAiResponse.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          if (painsAiResponse.status === 402) {
+            return new Response(
+              JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          throw new Error(`AI API error: ${painsAiResponse.status}`);
+        }
+
+        const painsAiData = await painsAiResponse.json();
+        const painsContent = painsAiData.choices?.[0]?.message?.content;
+
+        if (!painsContent) {
+          throw new Error('No content generated from AI');
+        }
+
+        console.log('Pains generation response received, parsing...');
+
+        let parsedPains;
+        try {
+          const jsonMatch = painsContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          const jsonStr = jsonMatch ? jsonMatch[1] : painsContent;
+          parsedPains = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error('Failed to parse AI response as JSON:', painsContent);
+          throw new Error('Failed to parse AI response');
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, pains: parsedPains.pains }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 

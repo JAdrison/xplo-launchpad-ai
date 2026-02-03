@@ -4,12 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users, Sparkles, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
-
-type ICP = Tables<"icps">;
 
 interface StepICPsProps {
   clientId: string;
@@ -20,9 +18,10 @@ interface StepICPsProps {
 interface ICPForm {
   id?: string;
   name: string;
-  segment: string;
-  characteristics: string;
-  current_situation: string;
+  profession: string;
+  age: string;
+  gender: string;
+  reason_needs_solution: string;
 }
 
 export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
@@ -48,14 +47,14 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         data.map((icp) => ({
           id: icp.id,
           name: icp.name,
-          segment: icp.segment || "",
-          characteristics: icp.characteristics || "",
-          current_situation: icp.current_situation || "",
+          profession: icp.profession || "",
+          age: icp.age || "",
+          gender: icp.gender || "",
+          reason_needs_solution: icp.reason_needs_solution || "",
         }))
       );
     } else {
-      // Start with one empty ICP
-      setIcps([{ name: "", segment: "", characteristics: "", current_situation: "" }]);
+      setIcps([{ name: "", profession: "", age: "", gender: "", reason_needs_solution: "" }]);
     }
     setIsLoading(false);
   };
@@ -64,7 +63,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     setIsGenerating(true);
 
     try {
-      // Fetch client and profile data
       const [clientRes, profileRes] = await Promise.all([
         supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
         supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
@@ -94,9 +92,10 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         setIcps(
           response.data.icps.map((icp: any) => ({
             name: icp.name || "",
-            segment: icp.segment || "",
-            characteristics: icp.characteristics || "",
-            current_situation: icp.current_situation || "",
+            profession: icp.profession || "",
+            age: icp.age || "",
+            gender: icp.gender || "",
+            reason_needs_solution: icp.reason_needs_solution || "",
           }))
         );
 
@@ -119,7 +118,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
 
   const handleAddICP = () => {
     if (icps.length < 3) {
-      setIcps([...icps, { name: "", segment: "", characteristics: "", current_situation: "" }]);
+      setIcps([...icps, { name: "", profession: "", age: "", gender: "", reason_needs_solution: "" }]);
     }
   };
 
@@ -136,7 +135,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
   };
 
   const handleSubmit = async () => {
-    // Validate at least one ICP with a name
     const validIcps = icps.filter((icp) => icp.name.trim());
     if (validIcps.length === 0) {
       toast({
@@ -150,16 +148,15 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     setIsSaving(true);
 
     try {
-      // Delete existing ICPs
       await supabase.from("icps").delete().eq("client_id", clientId);
 
-      // Insert new ICPs
       const icpsToInsert = validIcps.map((icp, index) => ({
         client_id: clientId,
         name: icp.name.trim(),
-        segment: icp.segment.trim() || null,
-        characteristics: icp.characteristics.trim() || null,
-        current_situation: icp.current_situation.trim() || null,
+        profession: icp.profession.trim() || null,
+        age: icp.age.trim() || null,
+        gender: icp.gender || null,
+        reason_needs_solution: icp.reason_needs_solution.trim() || null,
         sort_order: index,
       }));
 
@@ -183,7 +180,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     }
   };
 
-  // Check if ICPs are empty (only one empty ICP)
   const areICPsEmpty = icps.length === 1 && !icps[0].name.trim();
 
   if (isLoading) {
@@ -208,7 +204,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* AI Generation Card - Show only if ICPs are empty */}
         {areICPsEmpty && (
           <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
             <div className="flex items-start gap-3">
@@ -242,7 +237,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
           </div>
         )}
 
-        {/* ICP Forms */}
         {icps.map((icp, index) => (
           <div key={index} className="p-4 border rounded-lg space-y-4">
             <div className="flex items-center justify-between">
@@ -260,41 +254,56 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
               )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Nome do ICP *</Label>
-                <Input
-                  placeholder="Ex: Dono de academia"
-                  value={icp.name}
-                  onChange={(e) => handleChange(index, "name", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Segmento</Label>
-                <Input
-                  placeholder="Ex: Fitness, Saúde"
-                  value={icp.segment}
-                  onChange={(e) => handleChange(index, "segment", e.target.value)}
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>Características</Label>
-              <Textarea
-                placeholder="Descreva as características desse perfil..."
-                value={icp.characteristics}
-                onChange={(e) => handleChange(index, "characteristics", e.target.value)}
-                rows={2}
+              <Label>Nome do Perfil *</Label>
+              <Input
+                placeholder="Ex: Carlos, o Empresário"
+                value={icp.name}
+                onChange={(e) => handleChange(index, "name", e.target.value)}
               />
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Profissão</Label>
+                <Input
+                  placeholder="Ex: Dono de academia"
+                  value={icp.profession}
+                  onChange={(e) => handleChange(index, "profession", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Idade</Label>
+                <Input
+                  placeholder="Ex: 35-45 anos"
+                  value={icp.age}
+                  onChange={(e) => handleChange(index, "age", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Sexo</Label>
+                <Select
+                  value={icp.gender}
+                  onValueChange={(value) => handleChange(index, "gender", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                    <SelectItem value="ambos">Ambos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>Situação Atual</Label>
+              <Label>Por que precisa da solução?</Label>
               <Textarea
-                placeholder="Como esse cliente está hoje? O que ele enfrenta?"
-                value={icp.current_situation}
-                onChange={(e) => handleChange(index, "current_situation", e.target.value)}
+                placeholder="Qual problema ou situação leva essa pessoa a precisar do seu produto/serviço?"
+                value={icp.reason_needs_solution}
+                onChange={(e) => handleChange(index, "reason_needs_solution", e.target.value)}
                 rows={2}
               />
             </div>
