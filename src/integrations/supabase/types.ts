@@ -86,8 +86,13 @@ export type Database = {
           desire_1: string | null
           desire_2: string | null
           differentiators: string[] | null
+          facebook_login: string | null
+          facebook_password: string | null
           id: string
           initial_traffic_investment: string | null
+          instagram_link: string | null
+          instagram_login: string | null
+          instagram_password: string | null
           main_pain: string | null
           monthly_investment: string | null
           product_description: string | null
@@ -111,8 +116,13 @@ export type Database = {
           desire_1?: string | null
           desire_2?: string | null
           differentiators?: string[] | null
+          facebook_login?: string | null
+          facebook_password?: string | null
           id?: string
           initial_traffic_investment?: string | null
+          instagram_link?: string | null
+          instagram_login?: string | null
+          instagram_password?: string | null
           main_pain?: string | null
           monthly_investment?: string | null
           product_description?: string | null
@@ -136,8 +146,13 @@ export type Database = {
           desire_1?: string | null
           desire_2?: string | null
           differentiators?: string[] | null
+          facebook_login?: string | null
+          facebook_password?: string | null
           id?: string
           initial_traffic_investment?: string | null
+          instagram_link?: string | null
+          instagram_login?: string | null
+          instagram_password?: string | null
           main_pain?: string | null
           monthly_investment?: string | null
           product_description?: string | null
