@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users, Sparkles, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users, Sparkles, Info, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -63,9 +63,11 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     setIsGenerating(true);
 
     try {
-      const [clientRes, profileRes] = await Promise.all([
+      // Fetch ALL data to provide full context for ICP generation
+      const [clientRes, profileRes, promiseRes] = await Promise.all([
         supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
         supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
+        supabase.from("client_promise").select("*").eq("client_id", clientId).maybeSingle(),
       ]);
 
       const pppData = {
@@ -73,7 +75,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         profile: profileRes.data || null,
         icps: [],
         pains: [],
-        promise: null,
+        promise: promiseRes.data || null,
       };
 
       const response = await supabase.functions.invoke("generate-content", {
@@ -101,7 +103,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
 
         toast({
           title: "ICPs gerados!",
-          description: "3 perfis de cliente foram sugeridos. Você pode editá-los.",
+          description: "3 perfis de cliente foram sugeridos com base nos dados do seu negócio.",
         });
       }
     } catch (error) {
@@ -204,38 +206,44 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {areICPsEmpty && (
-          <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="space-y-2 flex-1">
-                <h4 className="text-sm font-medium">Você conhece bem seu cliente ideal?</h4>
-                <p className="text-sm text-muted-foreground">
-                  Se você ainda não tem clareza sobre quem é seu cliente ideal, podemos sugerir 3 perfis baseados nas informações do seu negócio.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGenerateWithAI}
-                  disabled={isGenerating}
-                  className="gap-2"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      Gerar Sugestões com IA
-                    </>
-                  )}
-                </Button>
-              </div>
+        {/* AI Generation Card */}
+        <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="space-y-2 flex-1">
+              <h4 className="text-sm font-medium">
+                {areICPsEmpty ? "Você conhece bem seu cliente ideal?" : "Quer gerar novas sugestões?"}
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Podemos sugerir 3 perfis baseados no seu produto, dores do comprador e promessa de valor.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGenerateWithAI}
+                disabled={isGenerating}
+                className="gap-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Gerando...
+                  </>
+                ) : areICPsEmpty ? (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Gerar Sugestões com IA
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Gerar Novamente
+                  </>
+                )}
+              </Button>
             </div>
           </div>
-        )}
+        </div>
 
         {icps.map((icp, index) => (
           <div key={index} className="p-4 border rounded-lg space-y-4">

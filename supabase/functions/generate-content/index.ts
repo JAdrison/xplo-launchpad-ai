@@ -39,7 +39,7 @@ interface PPPData {
 }
 
 interface RequestBody {
-  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-pains" | "generate-promise";
+  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-pains" | "generate-promise" | "generate-buyer-pains";
   clientId: string;
   pppData?: PPPData;
   icpId?: string;
@@ -291,14 +291,28 @@ REGRAS IMPORTANTES:
         break;
 
       case "generate-icps":
+        // Build buyer pains/desires context from profile
+        const buyerPainsContext = pppData?.profile ? `
+**DORES DO COMPRADOR:**
+- Dor Principal: ${(pppData.profile as any).main_pain || 'Não informada'}
+- Dor Secundária: ${(pppData.profile as any).secondary_pain || 'Não informada'}
+- Impactos: ${(pppData.profile as any).daily_impacts?.join(', ') || 'Não informados'}
+- Desejo 1: ${(pppData.profile as any).desire_1 || 'Não informado'}
+- Desejo 2: ${(pppData.profile as any).desire_2 || 'Não informado'}` : '';
+
+        // Build promise context
+        const promiseContext = pppData?.promise?.promise_text 
+          ? `\n**PROMESSA DE VALOR:**\n${pppData.promise.promise_text}` 
+          : '';
+
         systemPrompt = `Você é um estrategista de marketing especializado em definição de ICP (Ideal Customer Profile).
         
-Sua tarefa é analisar o NEGÓCIO ESPECÍFICO e identificar 3 perfis de cliente ideal que teriam MAIOR PROPENSÃO a comprar este produto/serviço.
+Sua tarefa é analisar o NEGÓCIO COMPLETO (produto, dores do comprador e promessa de valor) e identificar 3 perfis de cliente ideal que teriam MAIOR PROPENSÃO a comprar este produto/serviço.
 
 IMPORTANTE: Os ICPs devem ser REALISTAS e ESPECÍFICOS para o negócio informado. 
-Não invente perfis genéricos. Analise o nicho, o produto e os diferenciais.`;
+Não invente perfis genéricos. Analise o nicho, o produto, as dores mapeadas e a promessa de valor.`;
 
-        prompt = `Analise este negócio e identifique 3 perfis de cliente ideal:
+        prompt = `Analise este negócio COMPLETO e identifique 3 perfis de cliente ideal:
 
 ## DADOS DO NEGÓCIO
 
@@ -309,17 +323,25 @@ Não invente perfis genéricos. Analise o nicho, o produto e os diferenciais.`;
 **Nome:** ${pppData?.profile?.product_name || 'Não informado'}
 **Descrição:** ${pppData?.profile?.product_description || 'Não informado'}
 **Diferenciais:** ${pppData?.profile?.differentiators?.join(', ') || 'Não informados'}
+**Benefícios:** ${(pppData?.profile as any)?.benefits?.join(', ') || 'Não informados'}
+${buyerPainsContext}
+${promiseContext}
 
 ## INSTRUÇÕES
 
-Com base ESPECIFICAMENTE neste negócio, gere 3 perfis de cliente ideal DIFERENTES e COMPLEMENTARES.
+Com base em TODOS os dados acima (especialmente as DORES e a PROMESSA), gere 3 perfis de cliente ideal DIFERENTES e COMPLEMENTARES.
 
-Para cada ICP, use a NOVA estrutura simplificada:
+Os ICPs devem ser pessoas que:
+1. SOFREM das dores mapeadas
+2. DESEJAM o que a promessa oferece
+3. São COERENTES com o nicho e produto
+
+Para cada ICP, use a estrutura:
 - name: Nome/persona brasileiro com identificação (ex: "Carlos, o Empresário", "Maria, a Nutricionista")
 - profession: Profissão ou cargo específico
 - age: Faixa etária típica (ex: "35-45 anos")
 - gender: "masculino", "feminino" ou "ambos"
-- reason_needs_solution: Por que essa pessoa precisa do produto/serviço (1-2 frases)
+- reason_needs_solution: Por que essa pessoa precisa do produto/serviço (conectando com as dores mapeadas)
 
 Responda em JSON:
 {
@@ -333,7 +355,7 @@ Responda em JSON:
 REGRAS CRÍTICAS:
 1. Os ICPs devem ser COERENTES com o nicho "${pppData?.niche || 'informado'}"
 2. Os ICPs devem ser pessoas que REALMENTE comprariam "${pppData?.profile?.product_name || 'o produto'}"
-3. Use exemplos CONCRETOS e ESPECÍFICOS, não genéricos
+3. Use as DORES DO COMPRADOR como base para o reason_needs_solution
 4. Cada ICP deve representar um TIPO DIFERENTE de comprador
 5. Responda APENAS com o JSON válido, sem markdown`;
 
@@ -511,6 +533,115 @@ REGRAS:
 
         return new Response(
           JSON.stringify({ success: true, pains: parsedPains.pains }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case "generate-buyer-pains":
+        // Generate pains for the BUYER (not linked to specific ICPs)
+        const buyerPainsSystemPrompt = `Você é um estrategista de marketing especializado em mapeamento de dores e desejos do público-alvo.
+
+Sua tarefa é identificar as DORES mais profundas e os DESEJOS mais intensos de QUEM COMPRA este produto/serviço.
+
+METODOLOGIA HORMOZI:
+- DORES: O que causa sofrimento, frustração, perda de tempo/dinheiro
+- DESEJOS: O que o cliente QUER (não o que precisa) - o sonho, o resultado ideal`;
+
+        const buyerPainsPrompt = `## DADOS DO NEGÓCIO
+
+**Nicho:** ${pppData?.niche || 'Não informado'}
+
+## PRODUTO/SERVIÇO
+
+**Nome:** ${pppData?.profile?.product_name || 'Não informado'}
+**Descrição:** ${pppData?.profile?.product_description || 'Não informada'}
+**Diferenciais:** ${pppData?.profile?.differentiators?.join(', ') || 'Não informados'}
+**Benefícios:** ${(pppData?.profile as any)?.benefits?.join(', ') || 'Não informados'}
+
+## INSTRUÇÕES
+
+Com base no negócio acima, identifique as DORES e DESEJOS de quem compra este produto/serviço:
+
+1. **main_pain**: A dor PRINCIPAL (maior problema/frustração)
+2. **secondary_pain**: Uma dor secundária relacionada
+3. **daily_impacts**: Até 3 impactos no dia a dia (como a dor afeta a rotina)
+4. **desire_1**: O desejo mais profundo (o que ele QUER conquistar)
+5. **desire_2**: Outro desejo importante
+
+Responda em JSON:
+{
+  "pains": {
+    "main_pain": "...",
+    "secondary_pain": "...",
+    "daily_impacts": ["...", "...", "..."],
+    "desire_1": "...",
+    "desire_2": "..."
+  }
+}
+
+REGRAS:
+1. Seja ESPECÍFICO para o nicho "${pppData?.niche || 'informado'}"
+2. As dores devem ser EMOCIONAIS e REAIS, não genéricas
+3. Os desejos devem ser o que o cliente SONHA, não o que é racional
+4. Use linguagem que o próprio cliente usaria
+5. Responda APENAS com o JSON válido, sem markdown`;
+
+        const buyerPainsAiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: buyerPainsSystemPrompt },
+              { role: 'user', content: buyerPainsPrompt },
+            ],
+            temperature: 0.8,
+          }),
+        });
+
+        if (!buyerPainsAiResponse.ok) {
+          const errorText = await buyerPainsAiResponse.text();
+          console.error('AI API error:', errorText);
+          
+          if (buyerPainsAiResponse.status === 429) {
+            return new Response(
+              JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+              { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          if (buyerPainsAiResponse.status === 402) {
+            return new Response(
+              JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+              { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          throw new Error(`AI API error: ${buyerPainsAiResponse.status}`);
+        }
+
+        const buyerPainsAiData = await buyerPainsAiResponse.json();
+        const buyerPainsContent = buyerPainsAiData.choices?.[0]?.message?.content;
+
+        if (!buyerPainsContent) {
+          throw new Error('No content generated from AI');
+        }
+
+        console.log('Buyer pains generation response received, parsing...');
+
+        let parsedBuyerPains;
+        try {
+          const jsonMatch = buyerPainsContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          const jsonStr = jsonMatch ? jsonMatch[1] : buyerPainsContent;
+          parsedBuyerPains = JSON.parse(jsonStr);
+        } catch (e) {
+          console.error('Failed to parse AI response as JSON:', buyerPainsContent);
+          throw new Error('Failed to parse AI response');
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, pains: parsedBuyerPains.pains }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 

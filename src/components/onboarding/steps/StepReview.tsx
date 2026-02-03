@@ -12,7 +12,8 @@ import {
   AlertTriangle, 
   Target,
   Building2,
-  TrendingUp
+  TrendingUp,
+  Heart
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -20,7 +21,6 @@ import type { Tables } from "@/integrations/supabase/types";
 type Client = Tables<"clients">;
 type ClientProfile = Tables<"client_profile">;
 type ICP = Tables<"icps">;
-type ICPPain = Tables<"icp_pains">;
 type ClientPromise = Tables<"client_promise">;
 
 interface StepReviewProps {
@@ -34,9 +34,17 @@ interface ReviewData {
   client: Client | null;
   profile: ClientProfile | null;
   icps: ICP[];
-  pains: ICPPain[];
   promise: ClientPromise | null;
 }
+
+const CURRENT_REVENUE_LABELS: Record<string, string> = {
+  ate_10k: "Até R$ 10.000",
+  "10k_30k": "R$ 10.000 - R$ 30.000",
+  "30k_50k": "R$ 30.000 - R$ 50.000",
+  "50k_100k": "R$ 50.000 - R$ 100.000",
+  "100k_200k": "R$ 100.000 - R$ 200.000",
+  acima_200k: "Acima de R$ 200.000",
+};
 
 const INVESTMENT_LABELS: Record<string, string> = {
   nenhum: "Nenhum investimento",
@@ -79,7 +87,6 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
     client: null,
     profile: null,
     icps: [],
-    pains: [],
     promise: null,
   });
 
@@ -95,21 +102,10 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
       supabase.from("client_promise").select("*").eq("client_id", clientId).maybeSingle(),
     ]);
 
-    let pains: ICPPain[] = [];
-    if (icpsRes.data && icpsRes.data.length > 0) {
-      const icpIds = icpsRes.data.map((icp) => icp.id);
-      const { data: painsData } = await supabase
-        .from("icp_pains")
-        .select("*")
-        .in("icp_id", icpIds);
-      pains = painsData || [];
-    }
-
     setData({
       client: clientRes.data,
       profile: profileRes.data,
       icps: icpsRes.data || [],
-      pains,
       promise: promiseRes.data,
     });
 
@@ -121,6 +117,11 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
       return channel.replace("outro:", "");
     }
     return CHANNEL_LABELS[channel] || channel;
+  };
+
+  const formatRegions = (regions: string[] | null) => {
+    if (!regions || regions.length === 0) return null;
+    return regions.join(", ");
   };
 
   if (isLoading) {
@@ -159,7 +160,8 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
             )}
             {data.profile?.region && (
               <p className="text-sm">
-                <span className="text-muted-foreground">Região:</span> {data.profile.region}
+                <span className="text-muted-foreground">Regiões:</span>{" "}
+                {formatRegions(data.profile.region as string[] | null)}
               </p>
             )}
             {!data.client?.niche && !data.profile?.region && (
@@ -225,88 +227,51 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
 
         <Separator />
 
-        {/* ICPs */}
+        {/* Dores e Desejos do Comprador */}
         <div>
           <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4" />
-            ICPs ({data.icps.length})
+            <Heart className="h-4 w-4" />
+            Dores e Desejos do Comprador
           </h4>
-          {data.icps.length > 0 ? (
-            <div className="space-y-3">
-              {data.icps.map((icp) => (
-                <div key={icp.id} className="p-4 rounded-lg bg-muted/50 space-y-1">
-                  <p className="font-medium">{icp.name}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    {icp.profession && <span>Profissão: {icp.profession}</span>}
-                    {icp.age && <span>Idade: {icp.age}</span>}
-                    {icp.gender && <span>Sexo: {icp.gender}</span>}
-                  </div>
-                  {icp.reason_needs_solution && (
-                    <p className="text-sm text-muted-foreground mt-1">{icp.reason_needs_solution}</p>
-                  )}
+          {data.profile && (data.profile.main_pain || data.profile.desire_1) ? (
+            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+              {data.profile.main_pain && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Dor Principal:</p>
+                  <p className="text-sm font-medium">{data.profile.main_pain}</p>
                 </div>
-              ))}
+              )}
+              {data.profile.secondary_pain && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Dor Secundária:</p>
+                  <p className="text-sm">{data.profile.secondary_pain}</p>
+                </div>
+              )}
+              {data.profile.daily_impacts && (data.profile.daily_impacts as string[]).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {(data.profile.daily_impacts as string[]).map((impact, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {impact}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {(data.profile.desire_1 || data.profile.desire_2) && (
+                <div className="pt-2 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">Desejos:</p>
+                  <div className="space-y-1">
+                    {data.profile.desire_1 && (
+                      <p className="text-sm italic">"{data.profile.desire_1}"</p>
+                    )}
+                    {data.profile.desire_2 && (
+                      <p className="text-sm italic">"{data.profile.desire_2}"</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground italic">Nenhum ICP cadastrado</p>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Dores e Desejos */}
-        <div>
-          <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4" />
-            Dores e Desejos
-          </h4>
-          {data.pains.length > 0 ? (
-            <div className="space-y-3">
-              {data.pains
-                .filter((p) => p.main_pain)
-                .map((pain) => {
-                  const icp = data.icps.find((i) => i.id === pain.icp_id);
-                  return (
-                    <div key={pain.id} className="p-4 rounded-lg bg-muted/50 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {icp?.name || "ICP"}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-medium text-sm">{pain.main_pain}</p>
-                        {pain.secondary_pain && (
-                          <p className="text-sm text-muted-foreground">{pain.secondary_pain}</p>
-                        )}
-                      </div>
-                      {pain.daily_impacts && pain.daily_impacts.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {pain.daily_impacts.map((impact, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {impact}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      {(pain.desire_1 || pain.desire_2) && (
-                        <div className="pt-2 border-t border-border/50 mt-2">
-                          <p className="text-xs text-muted-foreground mb-1">Desejos:</p>
-                          <div className="space-y-1">
-                            {pain.desire_1 && (
-                              <p className="text-sm italic">"{pain.desire_1}"</p>
-                            )}
-                            {pain.desire_2 && (
-                              <p className="text-sm italic">"{pain.desire_2}"</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">Nenhuma dor cadastrada</p>
+            <p className="text-sm text-muted-foreground italic">Não preenchido</p>
           )}
         </div>
 
@@ -333,9 +298,19 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
                 </div>
               )}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {data.profile.current_revenue && (
+                  <span className="text-muted-foreground">
+                    Faturamento Atual: {CURRENT_REVENUE_LABELS[data.profile.current_revenue] || data.profile.current_revenue}
+                  </span>
+                )}
                 {data.profile.monthly_investment && (
                   <span className="text-muted-foreground">
-                    Investimento: {INVESTMENT_LABELS[data.profile.monthly_investment] || data.profile.monthly_investment}
+                    Investimento em Mkt: {INVESTMENT_LABELS[data.profile.monthly_investment] || data.profile.monthly_investment}
+                  </span>
+                )}
+                {data.profile.initial_traffic_investment && (
+                  <span className="text-muted-foreground">
+                    Investimento Inicial: R$ {parseInt(data.profile.initial_traffic_investment).toLocaleString('pt-BR')}
                   </span>
                 )}
                 {data.profile.sales_team_size && (
@@ -373,6 +348,35 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
             </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">Não definida</p>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* ICPs */}
+        <div>
+          <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+            <Users className="h-4 w-4" />
+            ICPs ({data.icps.length})
+          </h4>
+          {data.icps.length > 0 ? (
+            <div className="space-y-3">
+              {data.icps.map((icp) => (
+                <div key={icp.id} className="p-4 rounded-lg bg-muted/50 space-y-1">
+                  <p className="font-medium">{icp.name}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    {icp.profession && <span>Profissão: {icp.profession}</span>}
+                    {icp.age && <span>Idade: {icp.age}</span>}
+                    {icp.gender && <span>Sexo: {icp.gender}</span>}
+                  </div>
+                  {icp.reason_needs_solution && (
+                    <p className="text-sm text-muted-foreground mt-1">{icp.reason_needs_solution}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Nenhum ICP cadastrado</p>
           )}
         </div>
 

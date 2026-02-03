@@ -12,10 +12,10 @@ import type { Tables } from "@/integrations/supabase/types";
 // Import step components
 import { StepCompany } from "./steps/StepCompany";
 import { StepProduct } from "./steps/StepProduct";
-import { StepICPs } from "./steps/StepICPs";
 import { StepPains } from "./steps/StepPains";
 import { StepMarket } from "./steps/StepMarket";
 import { StepPromise } from "./steps/StepPromise";
+import { StepICPs } from "./steps/StepICPs";
 import { StepReview } from "./steps/StepReview";
 
 type Client = Tables<"clients">;
@@ -26,13 +26,14 @@ interface OnboardingWizardProps {
   onComplete?: () => void;
 }
 
+// NEW ORDER: Company > Product > Pains > Market > Promise > ICPs > Review
 const STEPS = [
-  { number: 1, name: "Empresa", description: "Nicho e região de atuação" },
+  { number: 1, name: "Empresa", description: "Nicho e regiões de atuação" },
   { number: 2, name: "Produto", description: "O que você oferece" },
-  { number: 3, name: "Público", description: "Perfis de cliente ideal" },
-  { number: 4, name: "Dores", description: "Problemas que você resolve" },
-  { number: 5, name: "Mercado", description: "Canais e metas" },
-  { number: 6, name: "Promessa", description: "Sua promessa de valor" },
+  { number: 3, name: "Dores", description: "Dores e desejos do comprador" },
+  { number: 4, name: "Mercado", description: "Faturamento, investimento e metas" },
+  { number: 5, name: "Promessa", description: "Sua promessa de valor" },
+  { number: 6, name: "Público", description: "Perfis de cliente ideal" },
   { number: 7, name: "Revisão", description: "Confirmar informações" },
 ];
 
@@ -173,13 +174,13 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
       case 2:
         return <StepProduct clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
       case 3:
-        return <StepICPs clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 4:
         return <StepPains clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 5:
+      case 4:
         return <StepMarket clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 6:
+      case 5:
         return <StepPromise clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+      case 6:
+        return <StepICPs clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
       case 7:
         return (
           <StepReview 

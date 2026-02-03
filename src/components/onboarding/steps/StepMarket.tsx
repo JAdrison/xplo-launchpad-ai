@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Loader2, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, TrendingUp, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -29,6 +29,15 @@ const DEMAND_CHANNELS = [
   { id: "email", label: "E-mail Marketing" },
 ];
 
+const CURRENT_REVENUE_OPTIONS = [
+  { value: "ate_10k", label: "Até R$ 10.000" },
+  { value: "10k_30k", label: "R$ 10.000 - R$ 30.000" },
+  { value: "30k_50k", label: "R$ 30.000 - R$ 50.000" },
+  { value: "50k_100k", label: "R$ 50.000 - R$ 100.000" },
+  { value: "100k_200k", label: "R$ 100.000 - R$ 200.000" },
+  { value: "acima_200k", label: "Acima de R$ 200.000" },
+];
+
 const INVESTMENT_OPTIONS = [
   { value: "nenhum", label: "Nenhum investimento" },
   { value: "ate_1k", label: "Até R$ 1.000" },
@@ -36,6 +45,14 @@ const INVESTMENT_OPTIONS = [
   { value: "5k_10k", label: "R$ 5.000 - R$ 10.000" },
   { value: "10k_20k", label: "R$ 10.000 - R$ 20.000" },
   { value: "acima_20k", label: "Acima de R$ 20.000" },
+];
+
+const TRAFFIC_INVESTMENT_OPTIONS = [
+  { value: "1000", label: "R$ 1.000" },
+  { value: "1500", label: "R$ 1.500" },
+  { value: "2000", label: "R$ 2.000" },
+  { value: "5000", label: "R$ 5.000" },
+  { value: "outro", label: "Outro valor" },
 ];
 
 const TEAM_SIZE_OPTIONS = [
@@ -50,11 +67,15 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<ClientProfile | null>(null);
+  const [showCustomTrafficInput, setShowCustomTrafficInput] = useState(false);
+  const [customTrafficValue, setCustomTrafficValue] = useState("");
 
   const [formData, setFormData] = useState({
     demand_channels: [] as string[],
     other_channel: "",
+    current_revenue: "",
     monthly_investment: "",
+    initial_traffic_investment: "",
     sales_team_size: "",
     revenue_goal: "",
   });
@@ -72,13 +93,23 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
 
     if (data) {
       setProfile(data);
+      const savedTrafficInv = data.initial_traffic_investment || "";
+      const isCustom = savedTrafficInv && !TRAFFIC_INVESTMENT_OPTIONS.some(o => o.value === savedTrafficInv);
+      
       setFormData({
         demand_channels: data.demand_channels || [],
         other_channel: "",
+        current_revenue: data.current_revenue || "",
         monthly_investment: data.monthly_investment || "",
+        initial_traffic_investment: isCustom ? "outro" : savedTrafficInv,
         sales_team_size: data.sales_team_size || "",
         revenue_goal: data.revenue_goal || "",
       });
+
+      if (isCustom) {
+        setShowCustomTrafficInput(true);
+        setCustomTrafficValue(savedTrafficInv);
+      }
     }
     setIsLoading(false);
   };
@@ -102,13 +133,47 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
     }
   };
 
+  const handleTrafficInvestmentChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, initial_traffic_investment: value }));
+    if (value === "outro") {
+      setShowCustomTrafficInput(true);
+    } else {
+      setShowCustomTrafficInput(false);
+      setCustomTrafficValue("");
+    }
+  };
+
+  // Calculate estimated leads
+  const estimatedLeads = useMemo(() => {
+    let investment = 0;
+    
+    if (formData.initial_traffic_investment === "outro" && customTrafficValue) {
+      investment = parseFloat(customTrafficValue.replace(/\D/g, "")) || 0;
+    } else if (formData.initial_traffic_investment && formData.initial_traffic_investment !== "outro") {
+      investment = parseFloat(formData.initial_traffic_investment) || 0;
+    }
+
+    if (investment > 0) {
+      const minLeads = Math.floor(investment / 15);
+      const maxLeads = Math.floor(investment / 7);
+      return { min: minLeads, max: maxLeads, investment };
+    }
+    return null;
+  }, [formData.initial_traffic_investment, customTrafficValue]);
+
   const handleSubmit = async () => {
     setIsSaving(true);
 
     try {
+      const trafficInvestment = formData.initial_traffic_investment === "outro" 
+        ? customTrafficValue 
+        : formData.initial_traffic_investment;
+
       const profileData = {
         demand_channels: formData.demand_channels.length > 0 ? formData.demand_channels : null,
+        current_revenue: formData.current_revenue || null,
         monthly_investment: formData.monthly_investment || null,
+        initial_traffic_investment: trafficInvestment || null,
         sales_team_size: formData.sales_team_size || null,
         revenue_goal: formData.revenue_goal.trim() || null,
       };
@@ -160,7 +225,7 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
           Sobre seu Mercado
         </CardTitle>
         <CardDescription>
-          Informações sobre como você atrai clientes e suas metas
+          Faturamento, investimento em marketing e metas
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -220,9 +285,29 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
             ))}
         </div>
 
-        {/* Investimento Mensal */}
+        {/* Faturamento Atual */}
         <div className="space-y-2">
-          <Label htmlFor="monthly_investment">Investimento Mensal em Marketing</Label>
+          <Label htmlFor="current_revenue">Faturamento Mensal Atual</Label>
+          <Select
+            value={formData.current_revenue}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, current_revenue: value }))}
+          >
+            <SelectTrigger id="current_revenue">
+              <SelectValue placeholder="Selecione uma faixa..." />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENT_REVENUE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Investimento Mensal (Atual) */}
+        <div className="space-y-2">
+          <Label htmlFor="monthly_investment">Investimento Mensal em Marketing (Atual)</Label>
           <Select
             value={formData.monthly_investment}
             onValueChange={(value) => setFormData((prev) => ({ ...prev, monthly_investment: value }))}
@@ -238,6 +323,50 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Investimento Inicial em Tráfego */}
+        <div className="space-y-3">
+          <Label>Quanto vai investir inicialmente em tráfego?</Label>
+          <div className="flex flex-wrap gap-2">
+            {TRAFFIC_INVESTMENT_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={formData.initial_traffic_investment === option.value ? "default" : "outline"}
+                onClick={() => handleTrafficInvestmentChange(option.value)}
+                size="sm"
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+          
+          {showCustomTrafficInput && (
+            <Input
+              placeholder="Digite o valor (ex: 3000)"
+              value={customTrafficValue}
+              onChange={(e) => setCustomTrafficValue(e.target.value)}
+              className="mt-2"
+            />
+          )}
+
+          {/* Lead Estimation Card */}
+          {estimatedLeads && (
+            <div className="p-4 rounded-lg border bg-primary/5 space-y-2 mt-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <span className="font-medium text-sm">Estimativa de Leads</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Com R$ {estimatedLeads.investment.toLocaleString('pt-BR')}, você pode gerar de{" "}
+                <span className="font-semibold text-foreground">{estimatedLeads.min} a {estimatedLeads.max} leads</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                (CPL estimado: R$ 7 a R$ 15)
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Tamanho da Equipe */}
