@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users, Loader2 } from "lucide-react";
+import { Plus, Users, Loader2, Link2, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Client = Tables<"clients">;
@@ -30,6 +31,19 @@ const STATUS_VARIANTS: Record<Client["status"], "default" | "secondary" | "outli
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/register`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    toast({
+      title: "Link copiado!",
+      description: "Envie para o cliente se cadastrar.",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     async function fetchClients() {
@@ -65,12 +79,18 @@ export default function Clients() {
           <h1 className="text-2xl font-bold text-foreground md:text-3xl">Clientes</h1>
           <p className="text-muted-foreground">Gerencie seus clientes e projetos</p>
         </div>
-        <Button asChild className="gap-2">
-          <Link to="/clients/new">
-            <Plus className="h-4 w-4" />
-            Novo Cliente
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleCopyLink} className="gap-2">
+            {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+            Copiar Link de Registro
+          </Button>
+          <Button asChild className="gap-2">
+            <Link to="/clients/new">
+              <Plus className="h-4 w-4" />
+              Novo Cliente
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {clients.length === 0 ? (
