@@ -13,7 +13,9 @@ import {
   Target,
   Building2,
   TrendingUp,
-  Heart
+  Heart,
+  Instagram,
+  Facebook
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -327,6 +329,34 @@ export function StepReview({ clientId, onPrevious, onComplete, isCompleting }: S
               {!data.profile.demand_channels?.length && !data.profile.monthly_investment && 
                !data.profile.sales_team_size && !data.profile.revenue_goal && (
                 <p className="text-sm text-muted-foreground italic">Não preenchido</p>
+              )}
+
+              {/* Meta Ads Credentials */}
+              {((data.profile as any).instagram_link || (data.profile as any).facebook_login) && (
+                <div className="pt-3 mt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <Instagram className="h-3 w-3" />
+                    <Facebook className="h-3 w-3" />
+                    Acesso Meta Ads:
+                  </p>
+                  <div className="space-y-1 text-sm">
+                    {(data.profile as any).instagram_link && (
+                      <p><span className="text-muted-foreground">Instagram:</span> {(data.profile as any).instagram_link}</p>
+                    )}
+                    {(data.profile as any).instagram_login && (
+                      <p><span className="text-muted-foreground">Login Instagram:</span> {(data.profile as any).instagram_login}</p>
+                    )}
+                    {(data.profile as any).instagram_password && (
+                      <p><span className="text-muted-foreground">Senha Instagram:</span> ••••••••</p>
+                    )}
+                    {(data.profile as any).facebook_login && (
+                      <p><span className="text-muted-foreground">Login Facebook:</span> {(data.profile as any).facebook_login}</p>
+                    )}
+                    {(data.profile as any).facebook_password && (
+                      <p><span className="text-muted-foreground">Senha Facebook:</span> ••••••••</p>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           ) : (

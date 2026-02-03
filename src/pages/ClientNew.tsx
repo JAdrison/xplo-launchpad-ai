@@ -98,11 +98,23 @@ export default function ClientNew() {
         </div>
       </div>
 
-      {/* Privacy Notice */}
+      {/* Privacy Notice - LGPD */}
       <Alert>
         <Shield className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Privacidade dos Dados:</strong> Os dados pessoais coletados (CNPJ, CPF, e-mail, etc) serão utilizados exclusivamente para elaboração de contrato e cadastro na plataforma de envio de boletos.
+        <AlertDescription className="space-y-2">
+          <strong>🔒 Conformidade com a LGPD</strong>
+          <p className="text-sm">
+            Os dados pessoais coletados (CNPJ, CPF, e-mail, telefone, etc) serão utilizados exclusivamente para:
+          </p>
+          <ul className="text-sm list-disc list-inside space-y-1 ml-2">
+            <li>Elaboração de contrato</li>
+            <li>Cadastro na plataforma de envio de boletos</li>
+            <li>Comunicação sobre os serviços contratados</li>
+          </ul>
+          <p className="text-sm text-muted-foreground">
+            Seus dados são protegidos por criptografia e armazenados de forma segura. 
+            Não compartilhamos suas informações com terceiros sem o seu consentimento.
+          </p>
         </AlertDescription>
       </Alert>
 

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Loader2, TrendingUp, Users } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, ArrowRight, Loader2, TrendingUp, Users, Shield, Instagram, Facebook } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -78,6 +79,11 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
     initial_traffic_investment: "",
     sales_team_size: "",
     revenue_goal: "",
+    instagram_link: "",
+    instagram_login: "",
+    instagram_password: "",
+    facebook_login: "",
+    facebook_password: "",
   });
 
   useEffect(() => {
@@ -104,6 +110,11 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
         initial_traffic_investment: isCustom ? "outro" : savedTrafficInv,
         sales_team_size: data.sales_team_size || "",
         revenue_goal: data.revenue_goal || "",
+        instagram_link: (data as any).instagram_link || "",
+        instagram_login: (data as any).instagram_login || "",
+        instagram_password: (data as any).instagram_password || "",
+        facebook_login: (data as any).facebook_login || "",
+        facebook_password: (data as any).facebook_password || "",
       });
 
       if (isCustom) {
@@ -176,6 +187,11 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
         initial_traffic_investment: trafficInvestment || null,
         sales_team_size: formData.sales_team_size || null,
         revenue_goal: formData.revenue_goal.trim() || null,
+        instagram_link: formData.instagram_link.trim() || null,
+        instagram_login: formData.instagram_login.trim() || null,
+        instagram_password: formData.instagram_password || null,
+        facebook_login: formData.facebook_login.trim() || null,
+        facebook_password: formData.facebook_password || null,
       };
 
       if (profile) {
@@ -401,6 +417,85 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
           <p className="text-xs text-muted-foreground">
             Qual faturamento mensal você deseja alcançar?
           </p>
+        </div>
+
+        {/* Meta Ads Credentials Section */}
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center gap-2">
+            <Instagram className="h-5 w-5 text-primary" />
+            <Facebook className="h-5 w-5 text-primary" />
+            <h3 className="font-medium">Acesso às Redes Sociais (Meta Ads)</h3>
+          </div>
+
+          <Alert className="bg-muted/50">
+            <AlertDescription>
+              O tráfego pago será realizado através do <strong>Meta Ads</strong> (Facebook/Instagram). 
+              Para configurar e gerenciar suas campanhas, precisamos do acesso às suas contas.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-2">
+            <Label htmlFor="instagram_link">Link do Instagram</Label>
+            <Input
+              id="instagram_link"
+              placeholder="@usuario ou https://instagram.com/usuario"
+              value={formData.instagram_link}
+              onChange={(e) => setFormData((prev) => ({ ...prev, instagram_link: e.target.value }))}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="instagram_login">Login do Instagram</Label>
+              <Input
+                id="instagram_login"
+                placeholder="E-mail ou usuário"
+                value={formData.instagram_login}
+                onChange={(e) => setFormData((prev) => ({ ...prev, instagram_login: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="instagram_password">Senha do Instagram</Label>
+              <Input
+                id="instagram_password"
+                type="password"
+                placeholder="••••••••"
+                value={formData.instagram_password}
+                onChange={(e) => setFormData((prev) => ({ ...prev, instagram_password: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="facebook_login">Login do Facebook</Label>
+              <Input
+                id="facebook_login"
+                placeholder="E-mail ou usuário"
+                value={formData.facebook_login}
+                onChange={(e) => setFormData((prev) => ({ ...prev, facebook_login: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="facebook_password">Senha do Facebook</Label>
+              <Input
+                id="facebook_password"
+                type="password"
+                placeholder="••••••••"
+                value={formData.facebook_password}
+                onChange={(e) => setFormData((prev) => ({ ...prev, facebook_password: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Conformidade com a LGPD:</strong> Suas credenciais são protegidas por criptografia e 
+              armazenadas de forma segura. Não compartilhamos seus dados com terceiros e utilizamos 
+              apenas para a gestão das suas campanhas de tráfego pago.
+            </AlertDescription>
+          </Alert>
         </div>
 
         <div className="flex justify-between pt-4">
