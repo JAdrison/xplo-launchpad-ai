@@ -6,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Save, Loader2, Shield } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Shield, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 export default function ClientNew() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,8 +31,21 @@ export default function ClientNew() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Apply masks based on field name
+    let maskedValue = value;
+    if (name === "responsible_cpf") {
+      maskedValue = maskCPF(value);
+    } else if (name === "cnpj") {
+      maskedValue = maskCNPJ(value);
+    } else if (name === "phone") {
+      maskedValue = maskPhone(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [name]: maskedValue }));
   };
+
+  const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,10 +137,18 @@ export default function ClientNew() {
       {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Informações do Cliente</CardTitle>
-          <CardDescription>
-            Preencha os dados básicos do cliente. Você poderá adicionar mais detalhes durante o onboarding.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Informações do Cliente</CardTitle>
+              <CardDescription>
+                Preencha os dados básicos do cliente. Você poderá adicionar mais detalhes durante o onboarding.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Data: {today}</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

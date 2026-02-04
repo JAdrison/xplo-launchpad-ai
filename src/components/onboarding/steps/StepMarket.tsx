@@ -4,14 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, ArrowRight, Loader2, TrendingUp, Users, Shield, Instagram, Facebook } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, ArrowRight, Loader2, TrendingUp, Users, Shield, Instagram, Facebook, Eye, EyeOff, Building, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { maskCurrency } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
 type ClientProfile = Tables<"client_profile">;
+
+interface Competitor {
+  name: string;
+  reason: string;
+}
 
 interface StepMarketProps {
   clientId: string;
@@ -70,6 +78,10 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [showCustomTrafficInput, setShowCustomTrafficInput] = useState(false);
   const [customTrafficValue, setCustomTrafficValue] = useState("");
+  
+  // Password visibility toggles
+  const [showInstagramPassword, setShowInstagramPassword] = useState(false);
+  const [showFacebookPassword, setShowFacebookPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     demand_channels: [] as string[],
@@ -84,6 +96,11 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
     instagram_password: "",
     facebook_login: "",
     facebook_password: "",
+    // Competitors
+    local_competitor_1: { name: "", reason: "" } as Competitor,
+    local_competitor_2: { name: "", reason: "" } as Competitor,
+    inspiration_company_1: { name: "", reason: "" } as Competitor,
+    inspiration_company_2: { name: "", reason: "" } as Competitor,
   });
 
   useEffect(() => {
@@ -102,6 +119,14 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
       const savedTrafficInv = data.initial_traffic_investment || "";
       const isCustom = savedTrafficInv && !TRAFFIC_INVESTMENT_OPTIONS.some(o => o.value === savedTrafficInv);
       
+      // Parse competitor data from JSONB
+      const parseCompetitor = (value: any): Competitor => {
+        if (value && typeof value === 'object') {
+          return { name: value.name || "", reason: value.reason || "" };
+        }
+        return { name: "", reason: "" };
+      };
+      
       setFormData({
         demand_channels: data.demand_channels || [],
         other_channel: "",
@@ -115,6 +140,10 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
         instagram_password: (data as any).instagram_password || "",
         facebook_login: (data as any).facebook_login || "",
         facebook_password: (data as any).facebook_password || "",
+        local_competitor_1: parseCompetitor((data as any).local_competitor_1),
+        local_competitor_2: parseCompetitor((data as any).local_competitor_2),
+        inspiration_company_1: parseCompetitor((data as any).inspiration_company_1),
+        inspiration_company_2: parseCompetitor((data as any).inspiration_company_2),
       });
 
       if (isCustom) {
@@ -154,6 +183,18 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
     }
   };
 
+  const handleRevenueGoalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const maskedValue = maskCurrency(e.target.value);
+    setFormData((prev) => ({ ...prev, revenue_goal: maskedValue }));
+  };
+
+  const handleCompetitorChange = (field: string, key: 'name' | 'reason', value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: { ...(prev as any)[field], [key]: value },
+    }));
+  };
+
   // Calculate estimated leads
   const estimatedLeads = useMemo(() => {
     let investment = 0;
@@ -180,6 +221,14 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
         ? customTrafficValue 
         : formData.initial_traffic_investment;
 
+      // Prepare competitor data
+      const prepareCompetitor = (competitor: Competitor) => {
+        if (competitor.name.trim() || competitor.reason.trim()) {
+          return { name: competitor.name.trim(), reason: competitor.reason.trim() };
+        }
+        return null;
+      };
+
       const profileData = {
         demand_channels: formData.demand_channels.length > 0 ? formData.demand_channels : null,
         current_revenue: formData.current_revenue || null,
@@ -192,6 +241,10 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
         instagram_password: formData.instagram_password || null,
         facebook_login: formData.facebook_login.trim() || null,
         facebook_password: formData.facebook_password || null,
+        local_competitor_1: prepareCompetitor(formData.local_competitor_1),
+        local_competitor_2: prepareCompetitor(formData.local_competitor_2),
+        inspiration_company_1: prepareCompetitor(formData.inspiration_company_1),
+        inspiration_company_2: prepareCompetitor(formData.inspiration_company_2),
       };
 
       if (profile) {
@@ -410,17 +463,141 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
           <Label htmlFor="revenue_goal">Meta de Faturamento Mensal</Label>
           <Input
             id="revenue_goal"
-            placeholder="Ex: R$ 50.000 ou R$ 100.000"
+            placeholder="R$ 0,00"
             value={formData.revenue_goal}
-            onChange={(e) => setFormData((prev) => ({ ...prev, revenue_goal: e.target.value }))}
+            onChange={handleRevenueGoalChange}
           />
           <p className="text-xs text-muted-foreground">
             Qual faturamento mensal você deseja alcançar?
           </p>
         </div>
 
+        <Separator />
+
+        {/* Análise Competitiva Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Building className="h-5 w-5 text-primary" />
+            <h3 className="font-medium">Análise Competitiva</h3>
+          </div>
+
+          {/* Concorrentes Locais */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building className="h-4 w-4" />
+              <span>Concorrentes Locais (sua região)</span>
+            </div>
+            
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <p className="text-sm font-medium">Concorrente 1</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="competitor1_name" className="text-xs">Nome</Label>
+                  <Input
+                    id="competitor1_name"
+                    placeholder="Nome da empresa"
+                    value={formData.local_competitor_1.name}
+                    onChange={(e) => handleCompetitorChange('local_competitor_1', 'name', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="competitor1_reason" className="text-xs">Por que é concorrente?</Label>
+                  <Input
+                    id="competitor1_reason"
+                    placeholder="Ex: Atende o mesmo público"
+                    value={formData.local_competitor_1.reason}
+                    onChange={(e) => handleCompetitorChange('local_competitor_1', 'reason', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <p className="text-sm font-medium">Concorrente 2</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="competitor2_name" className="text-xs">Nome</Label>
+                  <Input
+                    id="competitor2_name"
+                    placeholder="Nome da empresa"
+                    value={formData.local_competitor_2.name}
+                    onChange={(e) => handleCompetitorChange('local_competitor_2', 'name', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="competitor2_reason" className="text-xs">Por que é concorrente?</Label>
+                  <Input
+                    id="competitor2_reason"
+                    placeholder="Ex: Oferece serviço similar"
+                    value={formData.local_competitor_2.reason}
+                    onChange={(e) => handleCompetitorChange('local_competitor_2', 'reason', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Empresas que Inspiram */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Lightbulb className="h-4 w-4" />
+              <span>Empresas que Inspiram (referência no mercado)</span>
+            </div>
+            
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <p className="text-sm font-medium">Empresa 1</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="inspiration1_name" className="text-xs">Nome</Label>
+                  <Input
+                    id="inspiration1_name"
+                    placeholder="Nome da empresa"
+                    value={formData.inspiration_company_1.name}
+                    onChange={(e) => handleCompetitorChange('inspiration_company_1', 'name', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="inspiration1_reason" className="text-xs">Por que inspira você?</Label>
+                  <Input
+                    id="inspiration1_reason"
+                    placeholder="Ex: Ótimo atendimento"
+                    value={formData.inspiration_company_1.reason}
+                    onChange={(e) => handleCompetitorChange('inspiration_company_1', 'reason', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <p className="text-sm font-medium">Empresa 2</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="inspiration2_name" className="text-xs">Nome</Label>
+                  <Input
+                    id="inspiration2_name"
+                    placeholder="Nome da empresa"
+                    value={formData.inspiration_company_2.name}
+                    onChange={(e) => handleCompetitorChange('inspiration_company_2', 'name', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="inspiration2_reason" className="text-xs">Por que inspira você?</Label>
+                  <Input
+                    id="inspiration2_reason"
+                    placeholder="Ex: Marketing inovador"
+                    value={formData.inspiration_company_2.reason}
+                    onChange={(e) => handleCompetitorChange('inspiration_company_2', 'reason', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
         {/* Meta Ads Credentials Section */}
-        <div className="space-y-4 pt-4 border-t">
+        <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Instagram className="h-5 w-5 text-primary" />
             <Facebook className="h-5 w-5 text-primary" />
@@ -456,13 +633,23 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="instagram_password">Senha do Instagram</Label>
-              <Input
-                id="instagram_password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.instagram_password}
-                onChange={(e) => setFormData((prev) => ({ ...prev, instagram_password: e.target.value }))}
-              />
+              <div className="relative">
+                <Input
+                  id="instagram_password"
+                  type={showInstagramPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.instagram_password}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, instagram_password: e.target.value }))}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowInstagramPassword(!showInstagramPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showInstagramPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -478,13 +665,23 @@ export function StepMarket({ clientId, onNext, onPrevious }: StepMarketProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="facebook_password">Senha do Facebook</Label>
-              <Input
-                id="facebook_password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.facebook_password}
-                onChange={(e) => setFormData((prev) => ({ ...prev, facebook_password: e.target.value }))}
-              />
+              <div className="relative">
+                <Input
+                  id="facebook_password"
+                  type={showFacebookPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={formData.facebook_password}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, facebook_password: e.target.value }))}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowFacebookPassword(!showFacebookPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showFacebookPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
 

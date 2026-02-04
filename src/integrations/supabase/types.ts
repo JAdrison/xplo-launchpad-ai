@@ -90,9 +90,13 @@ export type Database = {
           facebook_password: string | null
           id: string
           initial_traffic_investment: string | null
+          inspiration_company_1: Json | null
+          inspiration_company_2: Json | null
           instagram_link: string | null
           instagram_login: string | null
           instagram_password: string | null
+          local_competitor_1: Json | null
+          local_competitor_2: Json | null
           main_pain: string | null
           monthly_investment: string | null
           product_description: string | null
@@ -120,9 +124,13 @@ export type Database = {
           facebook_password?: string | null
           id?: string
           initial_traffic_investment?: string | null
+          inspiration_company_1?: Json | null
+          inspiration_company_2?: Json | null
           instagram_link?: string | null
           instagram_login?: string | null
           instagram_password?: string | null
+          local_competitor_1?: Json | null
+          local_competitor_2?: Json | null
           main_pain?: string | null
           monthly_investment?: string | null
           product_description?: string | null
@@ -150,9 +158,13 @@ export type Database = {
           facebook_password?: string | null
           id?: string
           initial_traffic_investment?: string | null
+          inspiration_company_1?: Json | null
+          inspiration_company_2?: Json | null
           instagram_link?: string | null
           instagram_login?: string | null
           instagram_password?: string | null
+          local_competitor_1?: Json | null
+          local_competitor_2?: Json | null
           main_pain?: string | null
           monthly_investment?: string | null
           product_description?: string | null

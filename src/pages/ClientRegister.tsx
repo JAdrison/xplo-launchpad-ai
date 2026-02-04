@@ -11,10 +11,14 @@ import {
   CheckCircle2, 
   Rocket, 
   Clock,
-  MessageCircle
+  MessageCircle,
+  Calendar
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import logoXplo from "@/assets/logo-xplo.png";
 
 type PageState = "form" | "choice" | "success" | "onboarding";
@@ -44,8 +48,21 @@ export default function ClientRegister() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Apply masks based on field name
+    let maskedValue = value;
+    if (name === "responsible_cpf") {
+      maskedValue = maskCPF(value);
+    } else if (name === "cnpj") {
+      maskedValue = maskCNPJ(value);
+    } else if (name === "phone") {
+      maskedValue = maskPhone(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [name]: maskedValue }));
   };
+
+  const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +196,10 @@ export default function ClientRegister() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground">Cadastro Inicial</h1>
             <p className="text-muted-foreground">Preencha seus dados para começar</p>
+            <div className="flex items-center justify-center gap-2 mt-2 text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span>Data: {today}</span>
+            </div>
           </div>
 
           {/* Privacy Notice */}
