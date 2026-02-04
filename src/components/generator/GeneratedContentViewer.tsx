@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables, Json } from "@/integrations/supabase/types";
 import { OfferOptionsSelector } from "./OfferOptionsSelector";
+import { DemandPlanEditor } from "./DemandPlanEditor";
 import { LandingPageViewer } from "./LandingPageViewer";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
 
@@ -136,6 +137,9 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  
+  // State for tracking live edits per offer (for PDF sync)
+  const [liveEdits, setLiveEdits] = useState<Record<string, { options: GeneratedOptions; selected: SelectedOptions }>>({});
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -161,6 +165,30 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
       prev.map((offer) =>
         offer.id === offerId
           ? { ...offer, generated_options: options as unknown as Json, selected_options: selected as unknown as Json }
+          : offer
+      )
+    );
+    // Also update live edits for PDF sync
+    setLiveEdits((prev) => ({
+      ...prev,
+      [offerId]: { options, selected }
+    }));
+  };
+
+  // Handler for live edit changes (before save) - for PDF sync
+  const handleEditChange = (offerId: string, currentOptions: GeneratedOptions, currentSelected: SelectedOptions) => {
+    setLiveEdits((prev) => ({
+      ...prev,
+      [offerId]: { options: currentOptions, selected: currentSelected }
+    }));
+  };
+
+  // Handler for demand plan updates
+  const handleDemandPlanUpdate = (offerId: string, plan: DemandPlan) => {
+    setOffers((prev) =>
+      prev.map((offer) =>
+        offer.id === offerId
+          ? { ...offer, demand_generation_strategies: plan as unknown as Json }
           : offer
       )
     );
@@ -269,6 +297,11 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                   const selectedOptions = (offer.selected_options as SelectedOptions) || {};
                   const hasOptions = Object.keys(generatedOptions).length > 0;
                   
+                  // Get live edits for this offer (for PDF sync)
+                  const offerLiveEdits = liveEdits[offer.id];
+                  const pdfOptions = offerLiveEdits?.options || generatedOptions;
+                  const pdfSelected = offerLiveEdits?.selected || selectedOptions;
+                  
                   return (
                     <div key={offer.id} className="border rounded-lg p-4 space-y-4">
                       <div className="flex items-center justify-between">
@@ -281,6 +314,9 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                             type="offer"
                             clientName={clientName}
                             content={offer}
+                            liveOptions={pdfOptions}
+                            liveSelected={pdfSelected}
+                            refreshKey={Date.now()}
                           />
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -318,6 +354,7 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                           generatedOptions={generatedOptions}
                           selectedOptions={selectedOptions}
                           onOptionsUpdate={(opts, sel) => handleOptionsUpdate(offer.id, opts, sel)}
+                          onEditChange={(opts, sel) => handleEditChange(offer.id, opts, sel)}
                           pppData={pppData}
                         />
                       ) : (
@@ -613,6 +650,17 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                             </div>
                           )}
                         </div>
+                      )}
+                      
+                      {/* Editor do Plano de Demanda */}
+                      {demandPlan && (
+                        <DemandPlanEditor
+                          offerId={offer.id}
+                          clientId={clientId}
+                          demandPlan={demandPlan}
+                          onPlanUpdate={(plan) => handleDemandPlanUpdate(offer.id, plan)}
+                          pppData={pppData}
+                        />
                       )}
                     </div>
                   );

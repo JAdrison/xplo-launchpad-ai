@@ -12,6 +12,10 @@ interface PDFExportButtonProps {
   variant?: string;
   createdAt?: string;
   size?: "sm" | "default" | "lg" | "icon";
+  // For live-edited options sync
+  liveOptions?: any;
+  liveSelected?: any;
+  refreshKey?: number;
 }
 
 export function PDFExportButton({ 
@@ -20,7 +24,10 @@ export function PDFExportButton({
   content, 
   variant = "direct",
   createdAt = new Date().toISOString(),
-  size = "sm"
+  size = "sm",
+  liveOptions,
+  liveSelected,
+  refreshKey = 0
 }: PDFExportButtonProps) {
   const sanitizedClientName = clientName
     .toLowerCase()
@@ -62,6 +69,7 @@ export function PDFExportButton({
       {/* Hidden template for PDF generation */}
       <div 
         ref={targetRef} 
+        key={refreshKey}
         style={{ 
           position: "absolute", 
           left: "-9999px",
@@ -71,7 +79,9 @@ export function PDFExportButton({
         {type === "offer" && (
           <OfferPDFTemplate 
             offer={content} 
-            clientName={clientName} 
+            clientName={clientName}
+            liveOptions={liveOptions}
+            liveSelected={liveSelected}
           />
         )}
         {type === "landing-page" && (
