@@ -1,188 +1,158 @@
 
+# Correcoes do PDF de Ofertas e Plano de Geracao de Demanda
 
-# Atualizacoes Completas do Onboarding X1
+## Problemas Identificados
 
-## Resumo das 11 Alteracoes
+Analisando o PDF enviado e o codigo, identifiquei 4 problemas principais:
 
-| # | Alteracao | Tipo |
-|---|-----------|------|
-| 1 | CPF com mascara (000.000.000-00) | Cadastro Cliente |
-| 2 | CNPJ com mascara (00.000.000/0000-00) | Cadastro Cliente |
-| 3 | Telefone com mascara ((00) 00000-0000) | Cadastro Cliente |
-| 4 | Data de preenchimento (hoje) | Cadastro Cliente |
-| 5 | PDF Completo com todos os dados | Exportacao |
-| 6 | PDF atualiza ao editar onboarding | Exportacao |
-| 7 | Modelo de Venda B2B/B2C | Onboarding Wizard |
-| 8 | Fazer parte da {empresa} na etapa Empresa | Onboarding Wizard |
-| 9 | Meta de Faturamento em R$ | Onboarding Wizard |
-| 10 | Olhinho nas senhas Instagram/Facebook | Onboarding Wizard |
-| 11 | Secao de Concorrentes (2 locais + 2 inspiracoes) | Onboarding Wizard |
+| Problema | Causa Raiz |
+|----------|------------|
+| Edicoes com caneta nao salvam | Estado local nao sincroniza com o PDF |
+| Plano de Geracao ausente no PDF | Template nao inclui a secao demand_generation_strategies |
+| PDF nao atualiza | Componente recebe dados antigos do banco |
+| Sem edicao do Plano de Demanda | Nao existe UI para personalizar |
 
 ---
 
-## Grupo 1: Campos de Cadastro (1-4)
+## Solucao Proposta
 
-### Criacao de Funcoes de Mascara
+### 1. Sincronizar Edicoes com PDF
 
-Adicionar ao arquivo `src/lib/utils.ts`:
+O problema esta no fluxo de dados:
+- Usuario edita texto com caneta: atualiza estado local
+- Usuario clica em PDF: renderiza template com dados antigos
+- Dados editados nao sao passados para o PDF
+
+**Correcao:**
+- Passar localOptions e localSelected do OfferOptionsSelector para o componente pai
+- Atualizar o PDFExportButton para usar os dados mais recentes
+- Forcar re-render do PDF quando houver edicoes pendentes
+
+### 2. Adicionar Plano de Demanda ao PDF
+
+O OfferPDFTemplate.tsx precisa incluir uma nova secao completa com:
+- Analise do Contexto (nicho, ICP, insight)
+- Estrategia Principal (canal, tipo campanha, publicos, criativos)
+- Estrategias Complementares
+- Funil de Aquisicao (TOFU, MOFU, BOFU)
+- Sinergias entre Canais
+- Cronograma de Implementacao
+
+### 3. Atualizar o PDF ao Editar
+
+Criar sistema de refresh:
+- PDFExportButton recebe key ou refreshKey para forcar re-render
+- GeneratedContentViewer passa dados atualizados para o PDF
+
+### 4. Editor do Plano de Demanda
+
+Criar novo componente DemandPlanEditor com:
+- Campos editaveis para cada secao do plano
+- Botao de salvar alteracoes
+- Opcao de regenerar com IA
+
+---
+
+## Alteracoes Tecnicas
+
+### Arquivo: src/components/export/OfferPDFTemplate.tsx
+
+Adicionar interface DemandPlan e nova secao no template:
 
 ```text
-maskCPF(value)    → 123.456.789-00
-maskCNPJ(value)   → 12.345.678/0001-00
-maskPhone(value)  → (11) 98765-4321
-maskCurrency(value) → R$ 1.500,00
+interface DemandPlan {
+  context_analysis?: {...}
+  primary_strategy?: {...}
+  complementary_strategies?: [...]
+  acquisition_funnel?: {...}
+  channel_synergies?: string[]
+  implementation_timeline?: {...}
+}
+
+// Nova secao apos CTA Principal:
+{demandPlan && (
+  <div>
+    <h2>PLANO DE GERACAO DE DEMANDA</h2>
+    {/* Analise do Contexto */}
+    {/* Estrategia Principal */}
+    {/* Estrategias Complementares */}
+    {/* Funil de Aquisicao */}
+    {/* Sinergias */}
+    {/* Cronograma */}
+  </div>
+)}
 ```
 
-### Aplicar Mascaras nos Formularios
+### Arquivo: src/components/generator/OfferOptionsSelector.tsx
 
-| Arquivo | Campos a Atualizar |
-|---------|-------------------|
-| `src/pages/ClientNew.tsx` | CPF, CNPJ, Telefone + exibir data |
-| `src/pages/ClientDetails.tsx` | CPF, CNPJ, Telefone |
-| `src/pages/ClientRegister.tsx` | CPF, CNPJ, Telefone + exibir data |
-
----
-
-## Grupo 2: Onboarding Wizard (7-11)
-
-### 7. Modelo de Venda B2B/B2C
-
-Status: Ja existe no banco (`sales_model` enum). Verificar se `StepProduct.tsx` esta usando corretamente.
-
-### 8. Etapa Empresa com Dados do Cliente
-
-Atualizar `StepCompany.tsx` para exibir/editar dados cadastrais:
-- Nome da Empresa (readonly)
-- CNPJ (editavel com mascara)
-- Responsavel (editavel)
-- CPF do Responsavel (editavel com mascara)
-- Email (editavel)
-- Telefone (editavel com mascara)
-
-### 9. Meta de Faturamento em R$
-
-Atualizar `StepMarket.tsx` para usar mascara de moeda no campo `revenue_goal`.
-
-### 10. Toggle de Visibilidade nas Senhas
-
-Adicionar icones Eye/EyeOff nos campos de senha do Instagram e Facebook em `StepMarket.tsx`.
-
-### 11. Secao de Concorrentes (NOVA)
-
-**Migracao de Banco de Dados necessaria:**
-Adicionar 4 novos campos JSONB na tabela `client_profile`:
-- `local_competitor_1` (nome + por que e concorrente)
-- `local_competitor_2` (nome + por que e concorrente)
-- `inspiration_company_1` (nome + por que inspira)
-- `inspiration_company_2` (nome + por que inspira)
-
-**Interface no StepMarket.tsx:**
-Nova secao "Analise Competitiva" com:
+Adicionar callback para notificar edicoes pendentes:
 
 ```text
-Concorrentes Locais (sua regiao)
-┌────────────────────────────────────────────┐
-│ Concorrente 1                              │
-│ Nome: [________________]                   │
-│ Por que e concorrente? [______________]    │
-├────────────────────────────────────────────┤
-│ Concorrente 2                              │
-│ Nome: [________________]                   │
-│ Por que e concorrente? [______________]    │
-└────────────────────────────────────────────┘
+interface OfferOptionsSelectorProps {
+  // ... existente
+  onEditChange?: (hasUnsavedEdits: boolean, currentOptions: GeneratedOptions) => void;
+}
 
-Empresas que Inspiram (referencia no mercado)
-┌────────────────────────────────────────────┐
-│ Empresa 1                                  │
-│ Nome: [________________]                   │
-│ Por que inspira voce? [______________]     │
-├────────────────────────────────────────────┤
-│ Empresa 2                                  │
-│ Nome: [________________]                   │
-│ Por que inspira voce? [______________]     │
-└────────────────────────────────────────────┘
+// Chamar o callback quando editar
+const handleEditOption = (field, idx, newText) => {
+  // ... atualiza estado
+  onEditChange?.(true, localOptions);
+};
 ```
 
----
+### Arquivo: src/components/generator/GeneratedContentViewer.tsx
 
-## Grupo 3: PDF e Exportacao (5-6)
+- Passar dados atualizados para o PDFExportButton
+- Criar estado para armazenar edicoes pendentes por oferta
+- Adicionar editor do Plano de Demanda
 
-### 5. PDF Completo
+### Novo Arquivo: src/components/generator/DemandPlanEditor.tsx
 
-Atualizar `OnboardingPDFTemplate.tsx` para incluir TODAS as secoes:
-
-| Secao | Dados |
-|-------|-------|
-| Cabecalho | Nome da Empresa, Data de Preenchimento, CNPJ, Responsavel |
-| Empresa | Nicho, Regioes de Atuacao |
-| Produto | Nome, Descricao, Ticket, Modelo B2B/B2C, Diferenciais, Beneficios |
-| Dores | Dor Principal, Secundaria, Impactos, Desejos |
-| Mercado | Faturamento, Investimento, Canais, Meta, Concorrentes, Inspiracoes |
-| Redes Sociais | Instagram, Facebook (logins, sem senhas) |
-| Promessa | Texto da Promessa |
-| Publico | ICPs com todos os detalhes |
-
-### 6. Atualizacao Automatica do PDF
-
-Garantir que `OnboardingX1Section.tsx` faca refetch dos dados apos qualquer alteracao no wizard, usando callback ou key para forcar re-render do componente PDF.
-
----
-
-## Migracao de Banco de Dados
-
-```sql
--- Adicionar campos de concorrentes na tabela client_profile
-ALTER TABLE client_profile
-ADD COLUMN IF NOT EXISTS local_competitor_1 JSONB DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS local_competitor_2 JSONB DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS inspiration_company_1 JSONB DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS inspiration_company_2 JSONB DEFAULT NULL;
-
--- Estrutura esperada do JSONB:
--- { "name": "Nome da Empresa", "reason": "Motivo" }
-```
+Componente para editar o plano de geracao de demanda com:
+- Secao de Analise do Contexto (3 campos texto)
+- Secao de Estrategia Principal (canal, campanha, publicos, criativos, budget)
+- Secao de Estrategias Complementares (array de items editaveis)
+- Secao de Funil (TOFU, MOFU, BOFU)
+- Secao de Sinergias (lista editavel)
+- Secao de Cronograma (3 periodos)
+- Botao Salvar e Regenerar
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteracoes |
-|---------|------------|
-| `src/lib/utils.ts` | Funcoes maskCPF, maskCNPJ, maskPhone, maskCurrency |
-| `src/pages/ClientNew.tsx` | Mascaras nos inputs + data de preenchimento |
-| `src/pages/ClientDetails.tsx` | Mascaras nos inputs |
-| `src/pages/ClientRegister.tsx` | Mascaras nos inputs + data de preenchimento |
-| `src/components/onboarding/steps/StepCompany.tsx` | Campos do cliente editaveis |
-| `src/components/onboarding/steps/StepProduct.tsx` | Verificar B2B/B2C |
-| `src/components/onboarding/steps/StepMarket.tsx` | Toggle senha, mascara moeda, secao concorrentes |
-| `src/components/export/OnboardingPDFTemplate.tsx` | Todas as secoes do onboarding |
-| `src/components/client/OnboardingX1Section.tsx` | Dados completos para PDF + refresh |
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/components/export/OfferPDFTemplate.tsx` | Adicionar secao completa do Plano de Demanda |
+| `src/components/generator/OfferOptionsSelector.tsx` | Callback para edicoes pendentes |
+| `src/components/generator/GeneratedContentViewer.tsx` | Passar dados atualizados ao PDF + integrar DemandPlanEditor |
+| `src/components/export/PDFExportButton.tsx` | Suporte a refresh key |
+| `src/components/generator/DemandPlanEditor.tsx` | NOVO - Editor do Plano de Demanda |
 
 ---
 
-## Fluxo de Implementacao
+## Fluxo de Dados Corrigido
 
-1. Executar migracao SQL (novos campos concorrentes)
-2. Criar funcoes de mascara em utils.ts
-3. Atualizar formularios de cadastro (ClientNew, ClientDetails, ClientRegister)
-4. Atualizar StepCompany com dados do cliente
-5. Atualizar StepMarket (toggle senha, mascara moeda, secao concorrentes)
-6. Atualizar OnboardingPDFTemplate com todos os dados
-7. Atualizar OnboardingX1Section para refresh do PDF
-8. Testar fluxo interno e externo (link)
+```text
+Usuario edita texto com caneta
+        ↓
+OfferOptionsSelector atualiza estado local
+        ↓
+Callback notifica GeneratedContentViewer
+        ↓
+GeneratedContentViewer atualiza estado das edicoes
+        ↓
+PDFExportButton recebe dados atualizados
+        ↓
+PDF renderiza com dados mais recentes
+```
 
 ---
 
 ## Resultado Esperado
 
-1. CPF, CNPJ e Telefone formatados automaticamente em todos os formularios
-2. Data de preenchimento visivel
-3. PDF completo com TODOS os dados das 7 etapas
-4. PDF sempre atualizado quando editar o onboarding
-5. Modelo B2B/B2C funcionando
-6. Etapa Empresa exibe dados cadastrais do cliente
-7. Meta de faturamento com formato R$
-8. Olhinho para ver senhas digitadas
-9. Secao de concorrentes locais e empresas de inspiracao
-10. Todas as alteracoes funcionando no link externo tambem
-
+1. Edicoes feitas com caneta aparecem no PDF imediatamente (apos salvar)
+2. PDF inclui secao completa do Plano de Geracao de Demanda
+3. PDF sempre atualiza quando dados sao modificados
+4. Usuario pode editar/personalizar cada parte do Plano de Demanda
+5. Botao para regenerar secoes especificas do plano com IA
