@@ -150,19 +150,54 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     setIsSaving(true);
 
     try {
-      await supabase.from("icps").delete().eq("client_id", clientId);
+      // 1. Buscar ICPs existentes para saber quais deletar
+      const { data: existingIcps, error: fetchError } = await supabase
+        .from("icps")
+        .select("id")
+        .eq("client_id", clientId);
 
-      const icpsToInsert = validIcps.map((icp, index) => ({
-        client_id: clientId,
-        name: icp.name.trim(),
-        profession: icp.profession.trim() || null,
-        age: icp.age.trim() || null,
-        gender: icp.gender || null,
-        reason_needs_solution: icp.reason_needs_solution.trim() || null,
-        sort_order: index,
-      }));
+      if (fetchError) throw fetchError;
 
-      await supabase.from("icps").insert(icpsToInsert);
+      const existingIds = existingIcps?.map((icp) => icp.id) || [];
+      const idsToKeep = validIcps.filter((icp) => icp.id).map((icp) => icp.id!);
+      const idsToDelete = existingIds.filter((id) => !idsToKeep.includes(id));
+
+      // 2. Deletar apenas os ICPs que foram removidos pelo usuário
+      if (idsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("icps")
+          .delete()
+          .in("id", idsToDelete);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // 3. Processar cada ICP (update se tem ID, insert se não tem)
+      for (let i = 0; i < validIcps.length; i++) {
+        const icp = validIcps[i];
+        const icpData = {
+          client_id: clientId,
+          name: icp.name.trim(),
+          profession: icp.profession.trim() || null,
+          age: icp.age.trim() || null,
+          gender: icp.gender || null,
+          reason_needs_solution: icp.reason_needs_solution.trim() || null,
+          sort_order: i,
+        };
+
+        if (icp.id) {
+          // Atualizar existente
+          const { error } = await supabase
+            .from("icps")
+            .update(icpData)
+            .eq("id", icp.id);
+          if (error) throw error;
+        } else {
+          // Inserir novo
+          const { error } = await supabase.from("icps").insert(icpData);
+          if (error) throw error;
+        }
+      }
 
       toast({
         title: "ICPs salvos",
