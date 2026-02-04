@@ -1,152 +1,151 @@
 
 
-# Adição de Credenciais Meta Ads e Conformidade LGPD
+# Correção de ICPs Duplicados - Cliente XPLO SOLAR LTDA
 
-## Resumo
+## Diagnóstico
 
-Adicionar campos para credenciais do Instagram/Facebook no onboarding (necessárias para gestão de tráfego via Meta Ads) e incluir avisos de conformidade com LGPD tanto no onboarding quanto no cadastro de clientes.
+### Problema Identificado
+
+O cliente XPLO SOLAR LTDA possui 8 ICPs duplicados idênticos criados em datas diferentes:
+
+| Data | Quantidade | Nome do ICP |
+|------|------------|-------------|
+| 31/01 | 1 | homens e mulheres que moram em apartamentos |
+| 02/02 | 1 | homens e mulheres que moram em apartamentos |
+| 03/02 | 4 | homens e mulheres que moram em apartamentos |
+| 04/02 | 2 | homens e mulheres que moram em apartamentos |
+
+### Causa Raiz
+
+O código em `StepICPs.tsx` (linhas 152-165) faz:
+1. `DELETE` todos os ICPs do cliente
+2. `INSERT` os novos ICPs
+
+**Problema**: Nenhuma das operações verifica se houve erro. Se o `DELETE` falhar silenciosamente, o `INSERT` adiciona novos registros sem remover os antigos.
+
+```typescript
+// Código atual - sem verificação de erro
+await supabase.from("icps").delete().eq("client_id", clientId);
+await supabase.from("icps").insert(icpsToInsert);
+```
 
 ---
 
-## Alterações Necessárias
+## Solução
 
-### 1. Migração de Banco de Dados
+### Parte 1: Limpeza dos Dados (SQL)
 
-Adicionar novos campos na tabela `client_profile` para armazenar as credenciais:
+Remover os 7 ICPs duplicados, mantendo apenas o mais recente:
 
 ```sql
-ALTER TABLE public.client_profile 
-ADD COLUMN IF NOT EXISTS instagram_link text DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS instagram_login text DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS instagram_password text DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS facebook_login text DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS facebook_password text DEFAULT NULL;
+DELETE FROM icps 
+WHERE client_id = '2fa874bf-ef4f-4504-ab66-60a306b55405'
+  AND id != '1db535de-25fd-4135-bd2d-74b836dafd1e';
+```
+
+### Parte 2: Correção do Código
+
+Modificar `StepICPs.tsx` para:
+
+1. **Verificar erros** nas operações de banco
+2. **Usar estratégia UPSERT** em vez de DELETE + INSERT
+3. **Manter IDs existentes** ao atualizar ICPs já salvos
+
+**Nova lógica:**
+
+```typescript
+const handleSubmit = async () => {
+  // ... validação ...
+
+  setIsSaving(true);
+
+  try {
+    // 1. Buscar ICPs existentes para saber quais deletar
+    const { data: existingIcps } = await supabase
+      .from("icps")
+      .select("id")
+      .eq("client_id", clientId);
+
+    const existingIds = existingIcps?.map(icp => icp.id) || [];
+    const idsToKeep = validIcps.filter(icp => icp.id).map(icp => icp.id!);
+    const idsToDelete = existingIds.filter(id => !idsToKeep.includes(id));
+
+    // 2. Deletar apenas os ICPs que foram removidos pelo usuário
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("icps")
+        .delete()
+        .in("id", idsToDelete);
+      
+      if (deleteError) throw deleteError;
+    }
+
+    // 3. Processar cada ICP (update se tem ID, insert se não tem)
+    for (let i = 0; i < validIcps.length; i++) {
+      const icp = validIcps[i];
+      const icpData = {
+        client_id: clientId,
+        name: icp.name.trim(),
+        profession: icp.profession.trim() || null,
+        age: icp.age.trim() || null,
+        gender: icp.gender || null,
+        reason_needs_solution: icp.reason_needs_solution.trim() || null,
+        sort_order: i,
+      };
+
+      if (icp.id) {
+        // Atualizar existente
+        const { error } = await supabase
+          .from("icps")
+          .update(icpData)
+          .eq("id", icp.id);
+        if (error) throw error;
+      } else {
+        // Inserir novo
+        const { error } = await supabase
+          .from("icps")
+          .insert(icpData);
+        if (error) throw error;
+      }
+    }
+
+    toast({ title: "ICPs salvos", ... });
+    onNext();
+  } catch (error) {
+    console.error("Error saving ICPs:", error);
+    toast({ title: "Erro ao salvar", variant: "destructive" });
+  } finally {
+    setIsSaving(false);
+  }
+};
 ```
 
 ---
 
-### 2. StepMarket.tsx - Nova Seção de Credenciais Meta
-
-Adicionar nova seção no formulário de Mercado com:
-
-**Explicação do Contexto:**
-```
-O tráfego pago será feito através do Meta Ads (Facebook/Instagram). 
-Para gerenciar suas campanhas, precisamos das credenciais de acesso às suas contas.
-```
-
-**Campos:**
-- Link do Instagram (@ ou URL)
-- Login do Instagram
-- Senha do Instagram
-- Login do Facebook
-- Senha do Facebook
-
-**Layout:**
-```
-+----------------------------------------------------------+
-|  Acesso às Redes Sociais (Meta Ads)                      |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  | O tráfego pago será realizado através do Meta Ads  |  |
-|  | (Facebook/Instagram). Para configurar e gerenciar  |  |
-|  | suas campanhas, precisamos do acesso às contas.    |  |
-|  +----------------------------------------------------+  |
-|                                                          |
-|  Link do Instagram    [@usuario ou URL_______________]   |
-|                                                          |
-|  [Grid 2 colunas]                                        |
-|  Login Instagram      [______________]                   |
-|  Senha Instagram      [**************] (type=password)   |
-|                                                          |
-|  Login Facebook       [______________]                   |
-|  Senha Facebook       [**************] (type=password)   |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  | 🔒 AVISO DE PRIVACIDADE (LGPD)                     |  |
-|  | Suas credenciais são protegidas por criptografia e |  |
-|  | armazenadas de forma segura. Não compartilhamos    |  |
-|  | seus dados com terceiros e utilizamos apenas para  |  |
-|  | a gestão das suas campanhas de tráfego pago.       |  |
-|  +----------------------------------------------------+  |
-+----------------------------------------------------------+
-```
-
----
-
-### 3. ClientNew.tsx - Aviso LGPD Aprimorado
-
-Atualizar o alerta de privacidade existente para ser mais completo:
-
-```
-🔒 Conformidade com a LGPD
-
-Os dados pessoais coletados (CNPJ, CPF, e-mail, telefone, etc) serão utilizados 
-exclusivamente para:
-• Elaboração de contrato
-• Cadastro na plataforma de envio de boletos
-• Comunicação sobre os serviços contratados
-
-Seus dados são protegidos por criptografia e armazenados de forma segura. 
-Não compartilhamos suas informações com terceiros sem o seu consentimento.
-```
-
----
-
-### 4. StepReview.tsx - Exibir Credenciais
-
-Adicionar seção para mostrar as credenciais cadastradas (mascarando senhas):
-
-```
-Acesso Meta Ads
-• Instagram: @usuario
-• Login Instagram: email@exemplo.com
-• Senha: ••••••••
-• Login Facebook: email@exemplo.com  
-• Senha: ••••••••
-```
-
----
-
-## Segurança e LGPD
-
-| Aspecto | Implementação |
-|---------|---------------|
-| Armazenamento | Campos text no banco (Supabase usa TLS em trânsito) |
-| Exibição | Senhas mascaradas com asteriscos na revisão |
-| Aviso legal | Texto claro sobre uso exclusivo para gestão de tráfego |
-| Consentimento | Implícito ao preencher o formulário |
-
----
-
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Migração SQL | Adicionar 5 campos de credenciais |
-| `StepMarket.tsx` | Adicionar seção de credenciais Meta + aviso LGPD |
-| `ClientNew.tsx` | Melhorar aviso de privacidade LGPD |
-| `StepReview.tsx` | Exibir credenciais na revisão (senhas mascaradas) |
+| `StepICPs.tsx` | Corrigir lógica de persistência com verificação de erros |
 
 ---
 
-## Checklist
+## Ação Manual Necessária
 
-| # | Item |
-|---|------|
-| 1 | Migração SQL para campos de credenciais |
-| 2 | StepMarket.tsx: Seção de credenciais Meta Ads |
-| 3 | StepMarket.tsx: Aviso LGPD sobre senhas |
-| 4 | ClientNew.tsx: Aviso LGPD melhorado |
-| 5 | StepReview.tsx: Exibir credenciais (senhas mascaradas) |
-| 6 | Testar fluxo completo interno e externo |
+Executar SQL para limpar os duplicados atuais:
+
+```sql
+-- Manter apenas o ICP mais recente (1db535de-25fd-4135-bd2d-74b836dafd1e)
+DELETE FROM icps 
+WHERE client_id = '2fa874bf-ef4f-4504-ab66-60a306b55405'
+  AND id != '1db535de-25fd-4135-bd2d-74b836dafd1e';
+```
 
 ---
 
 ## Resultado Esperado
 
-1. **Credenciais coletadas**: Instagram link, login/senha, Facebook login/senha
-2. **Transparência LGPD**: Avisos claros sobre uso e proteção dos dados
-3. **Segurança visual**: Senhas exibidas como asteriscos na revisão
-4. **Contexto claro**: Explicação de que o tráfego é feito via Meta Ads
+1. **Dados limpos**: Cliente ficará com apenas 1 ICP (o mais recente)
+2. **Prevenção futura**: Código com verificação de erros impede duplicações
+3. **Melhor performance**: UPSERT é mais eficiente que DELETE + INSERT
 
