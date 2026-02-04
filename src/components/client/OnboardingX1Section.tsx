@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,11 @@ type ICP = Tables<"icps">;
 type ICPPain = Tables<"icp_pains">;
 type ClientPromise = Tables<"client_promise">;
 
+interface Competitor {
+  name: string;
+  reason: string;
+}
+
 interface OnboardingData {
   profile: ClientProfile | null;
   icps: ICP[];
@@ -74,6 +79,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetCheckpoints, setResetCheckpoints] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     profile: null,
     icps: [],
@@ -82,11 +88,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     niche: null,
   });
 
-  useEffect(() => {
-    fetchOnboardingData();
-  }, [client.id]);
-
-  const fetchOnboardingData = async () => {
+  const fetchOnboardingData = useCallback(async () => {
     setIsLoading(true);
 
     const [profileRes, icpsRes, promiseRes] = await Promise.all([
@@ -127,7 +129,11 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     });
 
     setIsLoading(false);
-  };
+  }, [client.id, client.niche]);
+
+  useEffect(() => {
+    fetchOnboardingData();
+  }, [fetchOnboardingData, refreshKey]);
 
   const calculateProgress = () => {
     let completed = 0;
@@ -444,30 +450,67 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     );
   }
 
-  // Prepare PDF content
+  // Helper to parse competitor data
+  const parseCompetitor = (value: any): Competitor | null => {
+    if (value && typeof value === 'object' && value.name) {
+      return { name: value.name, reason: value.reason || "" };
+    }
+    return null;
+  };
+
+  // Prepare PDF content with all data
   const pdfContent = {
+    client: {
+      cnpj: client.cnpj,
+      responsible_name: client.responsible_name,
+      responsible_cpf: client.responsible_cpf,
+      email: client.email,
+      phone: client.phone,
+    },
+    company: {
+      niche: client.niche,
+      regions: onboardingData.profile?.region || [],
+    },
     product: {
       name: onboardingData.profile?.product_name || null,
       description: onboardingData.profile?.product_description || null,
+      average_ticket: onboardingData.profile?.average_ticket || null,
+      sales_model: onboardingData.profile?.sales_model || null,
       differentiators: onboardingData.profile?.differentiators || [],
+      benefits: onboardingData.profile?.benefits || [],
+      promotions: onboardingData.profile?.promotions || null,
+    },
+    pains: {
+      main_pain: onboardingData.profile?.main_pain || null,
+      secondary_pain: onboardingData.profile?.secondary_pain || null,
+      daily_impacts: onboardingData.profile?.daily_impacts || [],
+      desire_1: onboardingData.profile?.desire_1 || null,
+      desire_2: onboardingData.profile?.desire_2 || null,
+    },
+    market: {
+      current_revenue: onboardingData.profile?.current_revenue || null,
+      monthly_investment: onboardingData.profile?.monthly_investment || null,
+      initial_traffic_investment: onboardingData.profile?.initial_traffic_investment || null,
+      demand_channels: onboardingData.profile?.demand_channels || [],
+      sales_team_size: onboardingData.profile?.sales_team_size || null,
+      revenue_goal: onboardingData.profile?.revenue_goal || null,
+      instagram_link: (onboardingData.profile as any)?.instagram_link || null,
+      instagram_login: (onboardingData.profile as any)?.instagram_login || null,
+      facebook_login: (onboardingData.profile as any)?.facebook_login || null,
+      local_competitor_1: parseCompetitor((onboardingData.profile as any)?.local_competitor_1),
+      local_competitor_2: parseCompetitor((onboardingData.profile as any)?.local_competitor_2),
+      inspiration_company_1: parseCompetitor((onboardingData.profile as any)?.inspiration_company_1),
+      inspiration_company_2: parseCompetitor((onboardingData.profile as any)?.inspiration_company_2),
     },
     icps: onboardingData.icps.map((icp) => ({
       name: icp.name,
       segment: icp.segment,
       characteristics: icp.characteristics,
       current_situation: icp.current_situation,
+      age: icp.age,
+      gender: icp.gender,
+      profession: icp.profession,
     })),
-    pains: onboardingData.pains
-      .filter((pain) => pain.main_pain)
-      .map((pain) => {
-        const icp = onboardingData.icps.find((i) => i.id === pain.icp_id);
-        return {
-          icp_name: icp?.name || "ICP",
-          main_pain: pain.main_pain,
-          consequence: pain.consequence,
-          daily_impacts: pain.daily_impacts || [],
-        };
-      }),
     promise: onboardingData.promise?.promise_text || null,
   };
 

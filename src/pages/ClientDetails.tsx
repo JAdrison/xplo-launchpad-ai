@@ -29,6 +29,7 @@ import {
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -100,11 +101,11 @@ export default function ClientDetails() {
         setClient(data);
         setFormData({
           name: data.name,
-          cnpj: data.cnpj || "",
+          cnpj: data.cnpj ? maskCNPJ(data.cnpj.replace(/\D/g, "")) : "",
           responsible_name: data.responsible_name || "",
-          responsible_cpf: data.responsible_cpf || "",
+          responsible_cpf: data.responsible_cpf ? maskCPF(data.responsible_cpf.replace(/\D/g, "")) : "",
           email: data.email || "",
-          phone: data.phone || "",
+          phone: data.phone ? maskPhone(data.phone.replace(/\D/g, "")) : "",
           niche: data.niche || "",
           product_description: data.product_description || "",
           notes: data.notes || "",
@@ -404,7 +405,7 @@ export default function ClientDetails() {
                         id="edit-cnpj"
                         value={formData.cnpj}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, cnpj: e.target.value }))
+                          setFormData((prev) => ({ ...prev, cnpj: maskCNPJ(e.target.value) }))
                         }
                         placeholder="00.000.000/0000-00"
                       />
@@ -444,7 +445,7 @@ export default function ClientDetails() {
                         id="edit-responsible_cpf"
                         value={formData.responsible_cpf}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, responsible_cpf: e.target.value }))
+                          setFormData((prev) => ({ ...prev, responsible_cpf: maskCPF(e.target.value) }))
                         }
                         placeholder="000.000.000-00"
                       />
@@ -467,7 +468,7 @@ export default function ClientDetails() {
                         id="edit-phone"
                         value={formData.phone}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                          setFormData((prev) => ({ ...prev, phone: maskPhone(e.target.value) }))
                         }
                         placeholder="(00) 00000-0000"
                       />

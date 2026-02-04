@@ -86,9 +86,12 @@ export function PDFExportButton({
           <OnboardingPDFTemplate 
             clientName={clientName}
             createdAt={createdAt}
+            client={content.client}
+            company={content.company}
             product={content.product}
-            icps={content.icps}
             pains={content.pains}
+            market={content.market}
+            icps={content.icps}
             promise={content.promise}
           />
         )}

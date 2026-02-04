@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Building2, Loader2, Plus, X } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { ArrowRight, Building2, Loader2, Plus, X, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Client = Tables<"clients">;
@@ -22,8 +24,17 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [newRegion, setNewRegion] = useState("");
+  const [client, setClient] = useState<Client | null>(null);
   
   const [formData, setFormData] = useState({
+    // Client data
+    name: "",
+    cnpj: "",
+    responsible_name: "",
+    responsible_cpf: "",
+    email: "",
+    phone: "",
+    // Profile data
     niche: "",
     regions: [] as string[],
   });
@@ -34,21 +45,41 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
 
   const fetchData = async () => {
     const [clientRes, profileRes] = await Promise.all([
-      supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
+      supabase.from("clients").select("*").eq("id", clientId).maybeSingle(),
       supabase.from("client_profile").select("region").eq("client_id", clientId).maybeSingle(),
     ]);
 
-    setFormData({
-      niche: clientRes.data?.niche || "",
-      regions: profileRes.data?.region || [],
-    });
+    if (clientRes.data) {
+      setClient(clientRes.data);
+      setFormData({
+        name: clientRes.data.name || "",
+        cnpj: clientRes.data.cnpj ? maskCNPJ(clientRes.data.cnpj.replace(/\D/g, "")) : "",
+        responsible_name: clientRes.data.responsible_name || "",
+        responsible_cpf: clientRes.data.responsible_cpf ? maskCPF(clientRes.data.responsible_cpf.replace(/\D/g, "")) : "",
+        email: clientRes.data.email || "",
+        phone: clientRes.data.phone ? maskPhone(clientRes.data.phone.replace(/\D/g, "")) : "",
+        niche: clientRes.data.niche || "",
+        regions: profileRes.data?.region || [],
+      });
+    }
 
     setIsLoading(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Apply masks based on field name
+    let maskedValue = value;
+    if (name === "responsible_cpf") {
+      maskedValue = maskCPF(value);
+    } else if (name === "cnpj") {
+      maskedValue = maskCNPJ(value);
+    } else if (name === "phone") {
+      maskedValue = maskPhone(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [name]: maskedValue }));
   };
 
   const handleAddRegion = () => {
@@ -81,10 +112,17 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
     setIsSaving(true);
 
     try {
-      // Update client niche
+      // Update client data
       await supabase
         .from("clients")
-        .update({ niche: formData.niche.trim() })
+        .update({ 
+          niche: formData.niche.trim(),
+          cnpj: formData.cnpj.trim() || null,
+          responsible_name: formData.responsible_name.trim() || null,
+          responsible_cpf: formData.responsible_cpf.trim() || null,
+          email: formData.email.trim() || null,
+          phone: formData.phone.trim() || null,
+        })
         .eq("id", clientId);
 
       // Check if profile exists and upsert region
@@ -141,11 +179,43 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
           Sobre sua Empresa
         </CardTitle>
         <CardDescription>
-          Informações básicas sobre seu negócio
+          Confirme e complete as informações do seu negócio
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Dados da Empresa */}
         <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Building2 className="h-4 w-4" />
+            Dados da Empresa
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da Empresa</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Este campo não pode ser alterado aqui.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cnpj">CNPJ</Label>
+              <Input
+                id="cnpj"
+                name="cnpj"
+                placeholder="00.000.000/0000-00"
+                value={formData.cnpj}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="niche">Nicho/Segmento de Atuação *</Label>
             <Input
@@ -203,6 +273,60 @@ export function StepCompany({ clientId, onNext }: StepCompanyProps) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Dados do Responsável */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <User className="h-4 w-4" />
+            Dados do Responsável
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="responsible_name">Nome do Responsável</Label>
+              <Input
+                id="responsible_name"
+                name="responsible_name"
+                placeholder="Nome completo"
+                value={formData.responsible_name}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="responsible_cpf">CPF do Responsável</Label>
+              <Input
+                id="responsible_cpf"
+                name="responsible_cpf"
+                placeholder="000.000.000-00"
+                value={formData.responsible_cpf}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="contato@empresa.com"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                name="phone"
+                placeholder="(00) 00000-0000"
+                value={formData.phone}
+                onChange={handleChange}
+              />
+            </div>
           </div>
         </div>
 
