@@ -6,15 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
+  Building2,
   Package,
-  Users,
-  AlertTriangle,
+  Heart,
+  TrendingUp,
   Target,
+  Users,
   Play,
   Pencil,
   CheckCircle,
   Clock,
   Loader2,
+  MapPin,
+  DollarSign,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -31,6 +35,7 @@ interface OnboardingData {
   icps: ICP[];
   pains: ICPPain[];
   promise: ClientPromise | null;
+  niche: string | null;
 }
 
 interface OnboardingX1SectionProps {
@@ -39,10 +44,12 @@ interface OnboardingX1SectionProps {
 }
 
 const STEPS = [
+  { name: "Empresa", icon: Building2 },
   { name: "Produto", icon: Package },
-  { name: "ICPs", icon: Users },
-  { name: "Dores", icon: AlertTriangle },
+  { name: "Dores", icon: Heart },
+  { name: "Mercado", icon: TrendingUp },
   { name: "Promessa", icon: Target },
+  { name: "Público", icon: Users },
   { name: "Revisão", icon: CheckCircle },
 ];
 
@@ -55,6 +62,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     icps: [],
     pains: [],
     promise: null,
+    niche: null,
   });
 
   useEffect(() => {
@@ -98,6 +106,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
       icps: icpsRes.data || [],
       pains,
       promise: promiseRes.data,
+      niche: client.niche,
     });
 
     setIsLoading(false);
@@ -105,29 +114,43 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
 
   const calculateProgress = () => {
     let completed = 0;
-    const total = 5;
+    const total = 7;
 
-    // Step 1: Produto
+    // Step 1: Empresa (niche ou region preenchidos)
+    if (client.niche || (onboardingData.profile?.region && onboardingData.profile.region.length > 0)) {
+      completed++;
+    }
+
+    // Step 2: Produto (product_name ou product_description)
     if (onboardingData.profile?.product_name || onboardingData.profile?.product_description) {
       completed++;
     }
 
-    // Step 2: ICPs
-    if (onboardingData.icps.length > 0) {
+    // Step 3: Dores (main_pain no profile - dores gerais do comprador)
+    if (onboardingData.profile?.main_pain) {
       completed++;
     }
 
-    // Step 3: Dores
-    if (onboardingData.pains.some((p) => p.main_pain)) {
+    // Step 4: Mercado (current_revenue ou monthly_investment ou initial_traffic_investment)
+    if (
+      onboardingData.profile?.current_revenue ||
+      onboardingData.profile?.monthly_investment ||
+      onboardingData.profile?.initial_traffic_investment
+    ) {
       completed++;
     }
 
-    // Step 4: Promessa
+    // Step 5: Promessa
     if (onboardingData.promise?.promise_text) {
       completed++;
     }
 
-    // Step 5: Revisão (completado se status é ppp_completed ou posterior)
+    // Step 6: Público (ICPs cadastrados)
+    if (onboardingData.icps.length > 0) {
+      completed++;
+    }
+
+    // Step 7: Revisão (completado se status é ppp_completed ou posterior)
     if (["ppp_completed", "offer_generated", "assets_generated"].includes(client.status)) {
       completed++;
     }
@@ -136,19 +159,36 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
   };
 
   const getCurrentStep = () => {
-    if (!onboardingData.profile?.product_name && !onboardingData.profile?.product_description) {
+    // Etapa 1: Empresa
+    if (!client.niche && !(onboardingData.profile?.region && onboardingData.profile.region.length > 0)) {
       return 1;
     }
-    if (onboardingData.icps.length === 0) {
+    // Etapa 2: Produto
+    if (!onboardingData.profile?.product_name && !onboardingData.profile?.product_description) {
       return 2;
     }
-    if (!onboardingData.pains.some((p) => p.main_pain)) {
+    // Etapa 3: Dores
+    if (!onboardingData.profile?.main_pain) {
       return 3;
     }
-    if (!onboardingData.promise?.promise_text) {
+    // Etapa 4: Mercado
+    if (
+      !onboardingData.profile?.current_revenue &&
+      !onboardingData.profile?.monthly_investment &&
+      !onboardingData.profile?.initial_traffic_investment
+    ) {
       return 4;
     }
-    return 5;
+    // Etapa 5: Promessa
+    if (!onboardingData.promise?.promise_text) {
+      return 5;
+    }
+    // Etapa 6: Público (ICPs)
+    if (onboardingData.icps.length === 0) {
+      return 6;
+    }
+    // Etapa 7: Revisão
+    return 7;
   };
 
   const handleStartOnboarding = async () => {
@@ -178,7 +218,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
   const isDraft = client.status === "draft";
   const isInProgress = client.status === "ppp_in_progress";
   const isCompleted = ["ppp_completed", "offer_generated", "assets_generated"].includes(client.status);
-  const hasData = onboardingData.profile || onboardingData.icps.length > 0 || onboardingData.promise;
+  const hasData = onboardingData.profile || onboardingData.icps.length > 0 || onboardingData.promise || client.niche;
 
   if (isLoading) {
     return (
@@ -289,6 +329,31 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
           <>
             <Separator />
 
+            {/* Empresa */}
+            {(client.niche || (onboardingData.profile?.region && onboardingData.profile.region.length > 0)) && (
+              <div>
+                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+                  <Building2 className="h-4 w-4" />
+                  Empresa
+                </h4>
+                {client.niche && (
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Nicho:</span> {client.niche}
+                  </p>
+                )}
+                {onboardingData.profile?.region && onboardingData.profile.region.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
+                    {onboardingData.profile.region.map((region, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {region}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Produto */}
             {(onboardingData.profile?.product_name || onboardingData.profile?.product_description) && (
               <div>
@@ -318,52 +383,67 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
               </div>
             )}
 
-            {/* ICPs */}
-            {onboardingData.icps.length > 0 && (
+            {/* Dores */}
+            {onboardingData.profile?.main_pain && (
               <div>
                 <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <Users className="h-4 w-4" />
-                  ICPs Definidos ({onboardingData.icps.length})
+                  <Heart className="h-4 w-4" />
+                  Dores do Comprador
                 </h4>
-                <ul className="space-y-1">
-                  {onboardingData.icps.map((icp) => (
-                    <li key={icp.id} className="text-sm text-muted-foreground flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      {icp.name}
-                      {icp.segment && (
-                        <span className="text-xs text-muted-foreground/70">
-                          ({icp.segment})
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-destructive rounded-full" />
+                  {onboardingData.profile.main_pain}
+                </p>
+                {onboardingData.profile.secondary_pain && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                    <span className="w-1.5 h-1.5 bg-destructive/60 rounded-full" />
+                    {onboardingData.profile.secondary_pain}
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Dores */}
-            {onboardingData.pains.length > 0 && onboardingData.pains.some((p) => p.main_pain) && (
+            {/* Mercado */}
+            {(onboardingData.profile?.current_revenue ||
+              onboardingData.profile?.monthly_investment ||
+              onboardingData.profile?.initial_traffic_investment) && (
               <div>
                 <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Dores Mapeadas ({onboardingData.pains.filter((p) => p.main_pain).length})
+                  <TrendingUp className="h-4 w-4" />
+                  Mercado
                 </h4>
-                <ul className="space-y-1">
-                  {onboardingData.pains
-                    .filter((p) => p.main_pain)
-                    .slice(0, 3)
-                    .map((pain) => (
-                      <li key={pain.id} className="text-sm text-muted-foreground flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-destructive rounded-full" />
-                        {pain.main_pain}
-                      </li>
-                    ))}
-                  {onboardingData.pains.filter((p) => p.main_pain).length > 3 && (
-                    <li className="text-xs text-muted-foreground">
-                      +{onboardingData.pains.filter((p) => p.main_pain).length - 3} mais...
-                    </li>
+                <div className="space-y-1">
+                  {onboardingData.profile?.current_revenue && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <DollarSign className="h-3 w-3" />
+                      <span className="font-medium text-foreground">Faturamento:</span>{" "}
+                      {onboardingData.profile.current_revenue}
+                    </p>
                   )}
-                </ul>
+                  {onboardingData.profile?.monthly_investment && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <DollarSign className="h-3 w-3" />
+                      <span className="font-medium text-foreground">Investimento mensal:</span>{" "}
+                      {onboardingData.profile.monthly_investment}
+                    </p>
+                  )}
+                  {onboardingData.profile?.initial_traffic_investment && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <DollarSign className="h-3 w-3" />
+                      <span className="font-medium text-foreground">Investimento inicial:</span> R${" "}
+                      {onboardingData.profile.initial_traffic_investment}
+                    </p>
+                  )}
+                </div>
+                {onboardingData.profile?.demand_channels && onboardingData.profile.demand_channels.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {onboardingData.profile.demand_channels.map((channel, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {channel}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -381,6 +461,29 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
                 <p className="text-sm text-muted-foreground">(Ainda não definida)</p>
               )}
             </div>
+
+            {/* ICPs / Público */}
+            {onboardingData.icps.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4" />
+                  Público - ICPs ({onboardingData.icps.length})
+                </h4>
+                <ul className="space-y-1">
+                  {onboardingData.icps.map((icp) => (
+                    <li key={icp.id} className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
+                      {icp.name}
+                      {icp.segment && (
+                        <span className="text-xs text-muted-foreground/70">
+                          ({icp.segment})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         )}
 
