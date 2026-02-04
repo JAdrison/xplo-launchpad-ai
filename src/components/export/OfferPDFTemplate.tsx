@@ -110,6 +110,11 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
     marginBottom: "15mm"
   };
 
+  const itemStyle = {
+    pageBreakInside: "avoid" as const,
+    breakInside: "avoid" as const,
+  };
+
   const headingStyle = {
     fontSize: "14pt",
     fontWeight: "600" as const,
@@ -150,7 +155,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
     <div style={{ 
       width: "210mm", 
       minHeight: "297mm", 
-      padding: "5mm",
+      padding: "15mm",
       backgroundColor: "#ffffff",
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "12pt",
@@ -347,7 +352,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                 <h3 style={subHeadingStyle}>🔄 Estratégias Complementares</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                   {demandPlan.complementary_strategies.map((strategy, idx) => (
-                    <div key={idx} style={{ border: "1px solid #e5e7eb", borderRadius: "6px", padding: "10px" }}>
+                    <div key={idx} style={{ ...itemStyle, border: "1px solid #e5e7eb", borderRadius: "6px", padding: "10px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                         <strong style={{ fontSize: "11pt" }}>{strategy.channel}</strong>
                         {strategy.budget_percentage && (
@@ -372,7 +377,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                 <h3 style={subHeadingStyle}>📈 Funil de Aquisição</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {demandPlan.acquisition_funnel.tofu && (
-                    <div style={{ display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
+                    <div style={{ ...itemStyle, display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
                       <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>TOPO</span>
                       <div>
                         <p style={{ fontSize: "11pt", fontWeight: "500" }}>{demandPlan.acquisition_funnel.tofu.objective}</p>
@@ -388,7 +393,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                     </div>
                   )}
                   {demandPlan.acquisition_funnel.mofu && (
-                    <div style={{ display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
+                    <div style={{ ...itemStyle, display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
                       <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>MEIO</span>
                       <div>
                         <p style={{ fontSize: "11pt", fontWeight: "500" }}>{demandPlan.acquisition_funnel.mofu.objective}</p>
@@ -404,7 +409,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                     </div>
                   )}
                   {demandPlan.acquisition_funnel.bofu && (
-                    <div style={{ display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
+                    <div style={{ ...itemStyle, display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
                       <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>FUNDO</span>
                       <div>
                         <p style={{ fontSize: "11pt", fontWeight: "500" }}>{demandPlan.acquisition_funnel.bofu.objective}</p>
@@ -429,7 +434,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                 <h3 style={subHeadingStyle}>⚡ Sinergias entre Canais</h3>
                 <ul style={{ listStyleType: "none", padding: 0, margin: 0 }}>
                   {demandPlan.channel_synergies.map((syn, i) => (
-                    <li key={i} style={{ fontSize: "11pt", marginBottom: "4px", paddingLeft: "16px", position: "relative" }}>
+                    <li key={i} style={{ ...itemStyle, fontSize: "11pt", marginBottom: "4px", paddingLeft: "16px", position: "relative" }}>
                       <span style={{ position: "absolute", left: 0, color: "#7c3aed" }}>→</span>
                       {syn}
                     </li>
@@ -444,19 +449,19 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                 <h3 style={subHeadingStyle}>📅 Cronograma de Implementação</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {demandPlan.implementation_timeline.week_1_2 && (
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                    <div style={{ ...itemStyle, display: "flex", gap: "12px", alignItems: "flex-start" }}>
                       <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>Sem 1-2</span>
                       <p style={{ fontSize: "11pt", margin: 0 }}>{demandPlan.implementation_timeline.week_1_2}</p>
                     </div>
                   )}
                   {demandPlan.implementation_timeline.week_3_4 && (
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                    <div style={{ ...itemStyle, display: "flex", gap: "12px", alignItems: "flex-start" }}>
                       <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>Sem 3-4</span>
                       <p style={{ fontSize: "11pt", margin: 0 }}>{demandPlan.implementation_timeline.week_3_4}</p>
                     </div>
                   )}
                   {demandPlan.implementation_timeline.week_5_8 && (
-                    <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                    <div style={{ ...itemStyle, display: "flex", gap: "12px", alignItems: "flex-start" }}>
                       <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>Sem 5-8</span>
                       <p style={{ fontSize: "11pt", margin: 0 }}>{demandPlan.implementation_timeline.week_5_8}</p>
                     </div>
