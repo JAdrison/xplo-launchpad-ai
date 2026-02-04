@@ -33,6 +33,7 @@ interface OfferOptionsSelectorProps {
   generatedOptions: GeneratedOptions;
   selectedOptions: SelectedOptions;
   onOptionsUpdate: (options: GeneratedOptions, selected: SelectedOptions) => void;
+  onEditChange?: (currentOptions: GeneratedOptions, currentSelected: SelectedOptions) => void;
   pppData?: any;
 }
 
@@ -57,6 +58,7 @@ export function OfferOptionsSelector({
   generatedOptions,
   selectedOptions,
   onOptionsUpdate,
+  onEditChange,
   pppData,
 }: OfferOptionsSelectorProps) {
   const [localOptions, setLocalOptions] = useState<GeneratedOptions>(generatedOptions);
@@ -79,20 +81,30 @@ export function OfferOptionsSelector({
       newSelected = [...currentSelected, optionIndex];
     }
 
-    setLocalSelected((prev) => ({
-      ...prev,
+    const newLocalSelected = {
+      ...localSelected,
       [field]: newSelected,
-    }));
+    };
+
+    setLocalSelected(newLocalSelected);
+    
+    // Notify parent of selection changes for PDF sync
+    onEditChange?.(localOptions, newLocalSelected);
   };
 
   const handleEditOption = (field: OfferField, optionIndex: number, newText: string) => {
     const currentOptions = [...(localOptions[field] || [])];
     currentOptions[optionIndex] = newText;
 
-    setLocalOptions((prev) => ({
-      ...prev,
+    const newLocalOptions = {
+      ...localOptions,
       [field]: currentOptions,
-    }));
+    };
+
+    setLocalOptions(newLocalOptions);
+    
+    // Notify parent of edit changes for PDF sync
+    onEditChange?.(newLocalOptions, localSelected);
   };
 
   const handleRefreshField = async (field: OfferField) => {
