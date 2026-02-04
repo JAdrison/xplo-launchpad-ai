@@ -1,98 +1,77 @@
 
+# Atualizar Página de Onboarding para 7 Etapas
 
-# Adicionar Opcao de Reiniciar Onboarding
+## Problema Identificado
 
-## Resumo
+A página `src/pages/Onboarding.tsx` possui sua própria implementação de onboarding com 6 etapas antigas, completamente diferente do `OnboardingWizard.tsx` que já tem as 7 etapas corretas.
 
-Adicionar um botao "Reiniciar Onboarding" no card de Onboarding X1 que permite ao usuario apagar todos os dados preenchidos e recomegar o processo do zero.
+### Comparativo
+
+| Página Atual (6 etapas) | Estrutura Correta (7 etapas) |
+|-------------------------|------------------------------|
+| 1. Produto | 1. Empresa |
+| 2. ICPs | 2. Produto |
+| 3. Dores | 3. Dores |
+| 4. Promessa | 4. Mercado |
+| 5. Revisão | 5. Promessa |
+| 6. Oferta | 6. Público (ICPs) |
+| - | 7. Revisão |
 
 ---
 
-## UX Proposta
+## Solução Proposta
 
-O botao sera exibido apenas quando o cliente tiver dados de onboarding preenchidos (qualquer status). Ao clicar, um dialogo de confirmacao sera exibido alertando que todos os dados serao perdidos. Apos a confirmacao, os dados serao apagados e o cliente sera redirecionado para a primeira etapa.
+Refatorar a página `src/pages/Onboarding.tsx` para utilizar o `OnboardingWizard.tsx` que já está implementado corretamente, em vez de manter duas implementações paralelas.
 
 ---
 
-## Alteracoes
+## Alteracoes Tecnicas
 
-### Arquivo: src/components/client/OnboardingX1Section.tsx
+### Arquivo: src/pages/Onboarding.tsx
 
-**1. Adicionar imports necessarios**
-- Importar `RotateCcw` do lucide-react para o icone
-- Importar `AlertDialog` e componentes relacionados de "@/components/ui/alert-dialog"
+**Opcao A - Substituir pela reutilizacao do OnboardingWizard (Recomendado)**
 
-**2. Adicionar estados de controle**
-- `isResetDialogOpen`: Controle do dialogo de confirmacao
-- `isResetting`: Estado de loading durante a exclusao
+1. Quando `clientId` estiver presente, renderizar o `OnboardingWizard` em vez de todo o codigo duplicado
+2. Manter o `OnboardingDashboard` para quando nao houver cliente selecionado
+3. Remover as definicoes duplicadas de STEPS, FormData, e todos os componentes internos de step
 
-**3. Criar funcao handleResetOnboarding**
-A funcao ira deletar dados de todas as tabelas relacionadas ao onboarding na ordem correta (respeitando foreign keys):
-
+O codigo ficaria assim:
 ```text
-Ordem de exclusao:
-1. icp_pains (depende de icps)
-2. offers_hormozi (depende de icps)
-3. ads (depende de offers_hormozi)
-4. landing_pages (depende de offers_hormozi)
-5. icps (depende de clients)
-6. client_promise (depende de clients)
-7. client_profile (depende de clients)
-8. Atualizar status do cliente para "draft"
-9. Limpar niche do cliente (campo da tabela clients)
+// Sem cliente: mostrar dashboard
+if (!clientId) {
+  return <OnboardingDashboard />;
+}
+
+// Com cliente: usar wizard
+return <OnboardingWizard clientId={clientId} />;
 ```
 
-**4. Adicionar dialogo de confirmacao**
-Um AlertDialog com mensagem de aviso clara:
-- Titulo: "Reiniciar Onboarding?"
-- Descricao: Aviso de que todos os dados serao perdidos permanentemente (ICPs, promessa, mercado, etc)
-- Botoes: "Cancelar" e "Sim, Reiniciar" (com variante destrutiva)
+**Beneficios:**
+- Elimina codigo duplicado (o arquivo tem 1274 linhas!)
+- Garante consistencia entre todos os fluxos
+- Futuras mudancas so precisam ser feitas em um lugar
 
-**5. Adicionar botao na secao de acoes**
-O botao aparecera quando `hasData` for true (dados existentes), com estilo outline e icone de reset.
+**Opcao B - Atualizar a pagina existente manualmente**
 
----
+Se preferir manter a estrutura atual, sera necessario:
+1. Atualizar array STEPS para 7 etapas
+2. Adicionar novos campos de Empresa e Mercado ao FormData
+3. Criar novos componentes StepEmpresa e StepMercado
+4. Reordenar todos os steps
+5. Ajustar toda logica de salvamento
+6. Atualizar navegacao e progresso
 
-## Fluxo de Dados
-
-```text
-[Usuario clica "Reiniciar"]
-        |
-        v
-[Dialogo de confirmacao abre]
-        |
-        v
-[Usuario confirma]
-        |
-        v
-[Delete cascade nos dados]
-        |
-        v
-[Status volta para "draft"]
-        |
-        v
-[Callback onStatusChange() atualiza a pagina]
-        |
-        v
-[Toast de sucesso]
-```
+Esta opcao exige mudancas extensivas (~500+ linhas).
 
 ---
 
-## Componentes UI Utilizados
+## Recomendacao
 
-| Componente | Uso |
-|------------|-----|
-| AlertDialog | Confirmacao antes de deletar |
-| Button | Botao "Reiniciar Onboarding" |
-| RotateCcw | Icone do botao |
-| Loader2 | Icone de loading durante exclusao |
-
----
-
-## Seguranca
-
-A exclusao sera feita apenas para o `client_id` especifico, respeitando as RLS policies existentes. A ordem de exclusao respeita as foreign keys para evitar erros de constraint.
+**Opcao A** e fortemente recomendada porque:
+- O `OnboardingWizard` ja esta funcionando corretamente
+- Evita manutencao de codigo duplicado
+- Reduz drasticamente o tamanho do arquivo
+- Garante consistencia entre fluxo interno e externo
 
 ---
 
@@ -100,5 +79,13 @@ A exclusao sera feita apenas para o `client_id` especifico, respeitando as RLS p
 
 | Arquivo | Tipo de Mudanca |
 |---------|-----------------|
-| `src/components/client/OnboardingX1Section.tsx` | Adicionar dialogo, estados, funcao de reset e botao |
+| `src/pages/Onboarding.tsx` | Refatorar para usar OnboardingWizard quando clientId presente |
 
+---
+
+## Resultado Esperado
+
+1. Pagina de Onboarding mostrara "Etapa X de 7" corretamente
+2. Nova sequencia: Empresa → Produto → Dores → Mercado → Promessa → Publico → Revisao
+3. Consistencia total entre onboarding interno e externo
+4. Codigo mais limpo e facil de manter
