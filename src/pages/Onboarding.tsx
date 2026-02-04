@@ -211,56 +211,85 @@ export default function Onboarding() {
           break;
 
         case 2: // ICPs
-          // Deletar ICPs antigos e inserir novos
-          await supabase.from("icps").delete().eq("client_id", clientId);
-          
+          // Estratégia de sincronização: buscar existentes, deletar removidos, upsert os demais
           const validIcps = formData.icps.filter(icp => icp.name.trim());
-          if (validIcps.length > 0) {
-            const { data: insertedIcps } = await supabase
-              .from("icps")
-              .insert(
-                validIcps.map((icp, index) => ({
-                  client_id: clientId,
-                  name: icp.name,
-                  segment: icp.segment || null,
-                  characteristics: icp.characteristics || null,
-                  current_situation: icp.current_situation || null,
-                  sort_order: index,
-                }))
-              )
-              .select();
+          
+          // 1. Buscar ICPs existentes
+          const { data: existingIcps } = await supabase
+            .from("icps")
+            .select("id")
+            .eq("client_id", clientId);
+          
+          const existingIds = existingIcps?.map(icp => icp.id) || [];
+          const idsToKeep = validIcps.filter(icp => icp.id).map(icp => icp.id!);
+          const idsToDelete = existingIds.filter(id => !idsToKeep.includes(id));
+          
+          // 2. Deletar apenas os ICPs removidos
+          if (idsToDelete.length > 0) {
+            await supabase.from("icps").delete().in("id", idsToDelete);
+          }
+          
+          // 3. Processar cada ICP (update ou insert)
+          const savedIcps: ICP[] = [];
+          for (let i = 0; i < validIcps.length; i++) {
+            const icp = validIcps[i];
+            const icpData = {
+              client_id: clientId,
+              name: icp.name,
+              segment: icp.segment || null,
+              characteristics: icp.characteristics || null,
+              current_situation: icp.current_situation || null,
+              sort_order: i,
+            };
+            
+            if (icp.id) {
+              // Atualizar existente
+              await supabase.from("icps").update(icpData).eq("id", icp.id);
+              savedIcps.push({ ...icp });
+            } else {
+              // Inserir novo
+              const { data: inserted } = await supabase
+                .from("icps")
+                .insert(icpData)
+                .select()
+                .single();
+              
+              if (inserted) {
+                savedIcps.push({
+                  id: inserted.id,
+                  name: inserted.name,
+                  segment: inserted.segment || "",
+                  characteristics: inserted.characteristics || "",
+                  current_situation: inserted.current_situation || "",
+                });
+              }
+            }
+          }
+          
+          // Atualizar estado com IDs
+          if (savedIcps.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              icps: savedIcps,
+            }));
 
-            // Atualizar IDs nos ICPs
-            if (insertedIcps) {
-              setFormData(prev => ({
-                ...prev,
-                icps: insertedIcps.map(icp => ({
-                  id: icp.id,
-                  name: icp.name,
-                  segment: icp.segment || "",
-                  characteristics: icp.characteristics || "",
-                  current_situation: icp.current_situation || "",
-                })),
+            // Inicializar pains para cada ICP se não existirem
+            const existingPainIcpIds = new Set(formData.pains.map(p => p.icp_id));
+            const newPains = savedIcps
+              .filter(icp => icp.id && !existingPainIcpIds.has(icp.id))
+              .map(icp => ({
+                icp_id: icp.id!,
+                icp_name: icp.name,
+                main_pain: "",
+                consequence: "",
+                daily_impacts: [""],
               }));
 
-              // Inicializar pains para cada ICP se não existirem
-              const existingPainIcpIds = new Set(formData.pains.map(p => p.icp_id));
-              const newPains = insertedIcps
-                .filter(icp => !existingPainIcpIds.has(icp.id))
-                .map(icp => ({
-                  icp_id: icp.id,
-                  icp_name: icp.name,
-                  main_pain: "",
-                  consequence: "",
-                  daily_impacts: [""],
-                }));
-
-              if (newPains.length > 0) {
-                setFormData(prev => ({
-                  ...prev,
-                  pains: [...prev.pains.filter(p => insertedIcps.some(i => i.id === p.icp_id)), ...newPains],
-                }));
-              }
+            if (newPains.length > 0) {
+              setFormData(prev => ({
+                ...prev,
+                pains: [...prev.pains.filter(p => savedIcps.some(i => i.id === p.icp_id)), ...newPains],
+              }));
             }
           }
           break;
