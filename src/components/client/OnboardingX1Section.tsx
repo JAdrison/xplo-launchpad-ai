@@ -15,6 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Building2,
   Package,
@@ -71,6 +73,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
   const [isStarting, setIsStarting] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [resetCheckpoints, setResetCheckpoints] = useState<string[]>([]);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     profile: null,
     icps: [],
@@ -229,88 +232,199 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
   };
 
   const handleResetOnboarding = async () => {
+    if (resetCheckpoints.length === 0) {
+      toast.error("Selecione pelo menos um checkpoint para reiniciar.");
+      return;
+    }
+
     setIsResetting(true);
 
     try {
-      // Get ICP ids to delete related pains first
-      const { data: icps } = await supabase
-        .from("icps")
-        .select("id")
-        .eq("client_id", client.id);
-
-      const icpIds = icps?.map((icp) => icp.id) || [];
-
-      // Get offer ids to delete related ads and landing pages first
-      const { data: offers } = await supabase
-        .from("offers_hormozi")
-        .select("id")
-        .eq("client_id", client.id);
-
-      const offerIds = offers?.map((offer) => offer.id) || [];
-
-      // Delete in correct order (respecting foreign keys)
-      // 1. Delete icp_pains (depends on icps)
-      if (icpIds.length > 0) {
+      // Reset Empresa (checkpoint 1)
+      if (resetCheckpoints.includes("empresa")) {
         await supabase
-          .from("icp_pains")
+          .from("clients")
+          .update({ niche: null })
+          .eq("id", client.id);
+
+        // Also reset region in client_profile
+        const { data: profile } = await supabase
+          .from("client_profile")
+          .select("id")
+          .eq("client_id", client.id)
+          .maybeSingle();
+
+        if (profile) {
+          await supabase
+            .from("client_profile")
+            .update({ region: null })
+            .eq("id", profile.id);
+        }
+      }
+
+      // Reset Produto (checkpoint 2)
+      if (resetCheckpoints.includes("produto")) {
+        const { data: profile } = await supabase
+          .from("client_profile")
+          .select("id")
+          .eq("client_id", client.id)
+          .maybeSingle();
+
+        if (profile) {
+          await supabase
+            .from("client_profile")
+            .update({
+              product_name: null,
+              product_description: null,
+              differentiators: null,
+              benefits: null,
+              promotions: null,
+              average_ticket: null,
+            })
+            .eq("id", profile.id);
+        }
+      }
+
+      // Reset Dores (checkpoint 3)
+      if (resetCheckpoints.includes("dores")) {
+        const { data: profile } = await supabase
+          .from("client_profile")
+          .select("id")
+          .eq("client_id", client.id)
+          .maybeSingle();
+
+        if (profile) {
+          await supabase
+            .from("client_profile")
+            .update({
+              main_pain: null,
+              secondary_pain: null,
+              daily_impacts: null,
+              desire_1: null,
+              desire_2: null,
+            })
+            .eq("id", profile.id);
+        }
+      }
+
+      // Reset Mercado (checkpoint 4)
+      if (resetCheckpoints.includes("mercado")) {
+        const { data: profile } = await supabase
+          .from("client_profile")
+          .select("id")
+          .eq("client_id", client.id)
+          .maybeSingle();
+
+        if (profile) {
+          await supabase
+            .from("client_profile")
+            .update({
+              current_revenue: null,
+              monthly_investment: null,
+              initial_traffic_investment: null,
+              demand_channels: null,
+              sales_model: null,
+              sales_team_size: null,
+              revenue_goal: null,
+            })
+            .eq("id", profile.id);
+        }
+      }
+
+      // Reset Promessa (checkpoint 5)
+      if (resetCheckpoints.includes("promessa")) {
+        await supabase
+          .from("client_promise")
           .delete()
+          .eq("client_id", client.id);
+      }
+
+      // Reset Público/ICPs (checkpoint 6)
+      if (resetCheckpoints.includes("publico")) {
+        // Get ICP ids to delete related pains first
+        const { data: icps } = await supabase
+          .from("icps")
+          .select("id")
+          .eq("client_id", client.id);
+
+        const icpIds = icps?.map((icp) => icp.id) || [];
+
+        // Delete icp_pains first
+        if (icpIds.length > 0) {
+          await supabase
+            .from("icp_pains")
+            .delete()
+            .in("icp_id", icpIds);
+        }
+
+        // Delete offers that reference these ICPs
+        await supabase
+          .from("offers_hormozi")
+          .update({ icp_id: null })
           .in("icp_id", icpIds);
-      }
 
-      // 2. Delete ads (depends on offers_hormozi)
-      if (offerIds.length > 0) {
+        // Delete icps
         await supabase
-          .from("ads")
+          .from("icps")
           .delete()
-          .in("offer_id", offerIds);
+          .eq("client_id", client.id);
       }
 
-      // 3. Delete landing_pages (depends on offers_hormozi)
-      if (offerIds.length > 0) {
+      // If all main checkpoints are reset, set status back to draft
+      const allMainCheckpoints = ["empresa", "produto", "dores", "mercado", "promessa", "publico"];
+      const allSelected = allMainCheckpoints.every((cp) => resetCheckpoints.includes(cp));
+      
+      if (allSelected) {
         await supabase
-          .from("landing_pages")
-          .delete()
-          .in("offer_id", offerIds);
+          .from("clients")
+          .update({ status: "draft" })
+          .eq("id", client.id);
+      } else if (resetCheckpoints.includes("publico") || resetCheckpoints.includes("promessa")) {
+        // If ICPs or Promise are reset, move back to ppp_in_progress
+        await supabase
+          .from("clients")
+          .update({ status: "ppp_in_progress" })
+          .eq("id", client.id);
       }
 
-      // 4. Delete offers_hormozi (depends on icps and clients)
-      await supabase
-        .from("offers_hormozi")
-        .delete()
-        .eq("client_id", client.id);
+      const checkpointNames = resetCheckpoints.map((cp) => {
+        const names: Record<string, string> = {
+          empresa: "Empresa",
+          produto: "Produto",
+          dores: "Dores",
+          mercado: "Mercado",
+          promessa: "Promessa",
+          publico: "Público",
+        };
+        return names[cp];
+      }).join(", ");
 
-      // 5. Delete icps (depends on clients)
-      await supabase
-        .from("icps")
-        .delete()
-        .eq("client_id", client.id);
-
-      // 6. Delete client_promise (depends on clients)
-      await supabase
-        .from("client_promise")
-        .delete()
-        .eq("client_id", client.id);
-
-      // 7. Delete client_profile (depends on clients)
-      await supabase
-        .from("client_profile")
-        .delete()
-        .eq("client_id", client.id);
-
-      // 8. Reset client status and niche
-      await supabase
-        .from("clients")
-        .update({ status: "draft", niche: null })
-        .eq("id", client.id);
-
-      toast.success("Onboarding reiniciado com sucesso!");
+      toast.success(`Checkpoints reiniciados: ${checkpointNames}`);
       setIsResetDialogOpen(false);
+      setResetCheckpoints([]);
       onStatusChange?.();
     } catch (error) {
       console.error("Error resetting onboarding:", error);
-      toast.error("Erro ao reiniciar o onboarding. Tente novamente.");
+      toast.error("Erro ao reiniciar checkpoints. Tente novamente.");
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const toggleCheckpoint = (checkpoint: string) => {
+    setResetCheckpoints((prev) =>
+      prev.includes(checkpoint)
+        ? prev.filter((cp) => cp !== checkpoint)
+        : [...prev, checkpoint]
+    );
+  };
+
+  const toggleAllCheckpoints = () => {
+    const allCheckpoints = ["empresa", "produto", "dores", "mercado", "promessa", "publico"];
+    if (resetCheckpoints.length === allCheckpoints.length) {
+      setResetCheckpoints([]);
+    } else {
+      setResetCheckpoints(allCheckpoints);
     }
   };
 
@@ -649,29 +763,79 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
         </div>
 
         {/* Dialog de confirmação para reiniciar */}
-        <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
-          <AlertDialogContent>
+        <AlertDialog open={isResetDialogOpen} onOpenChange={(open) => {
+          setIsResetDialogOpen(open);
+          if (!open) setResetCheckpoints([]);
+        }}>
+          <AlertDialogContent className="max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle>Reiniciar Onboarding?</AlertDialogTitle>
+              <AlertDialogTitle>Reiniciar Checkpoints</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação irá apagar <strong>permanentemente</strong> todos os dados do onboarding deste cliente, incluindo:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Dados da empresa e produto</li>
-                  <li>Dores e promessa</li>
-                  <li>Dados de mercado</li>
-                  <li>Perfis de cliente ideal (ICPs)</li>
-                  <li>Ofertas e anúncios gerados</li>
-                </ul>
-                <span className="block mt-3 font-medium text-destructive">
-                  Esta ação não pode ser desfeita.
-                </span>
+                Selecione quais etapas do onboarding você deseja reiniciar. Os dados selecionados serão apagados permanentemente.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            
+            <div className="space-y-3 py-4">
+              <div className="flex items-center justify-between pb-2 border-b">
+                <Label className="text-sm font-medium">Selecionar checkpoints</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleAllCheckpoints}
+                  className="text-xs h-7"
+                >
+                  {resetCheckpoints.length === 6 ? "Desmarcar todos" : "Selecionar todos"}
+                </Button>
+              </div>
+              
+              {[
+                { id: "empresa", label: "Empresa", description: "Nicho e regiões de atuação", icon: Building2 },
+                { id: "produto", label: "Produto", description: "Nome, descrição e diferenciais", icon: Package },
+                { id: "dores", label: "Dores", description: "Dores e desejos do comprador", icon: Heart },
+                { id: "mercado", label: "Mercado", description: "Faturamento, investimento e canais", icon: TrendingUp },
+                { id: "promessa", label: "Promessa", description: "Promessa de transformação", icon: Target },
+                { id: "publico", label: "Público (ICPs)", description: "Perfis de cliente ideal", icon: Users },
+              ].map((checkpoint) => {
+                const Icon = checkpoint.icon;
+                return (
+                  <div
+                    key={checkpoint.id}
+                    className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    onClick={() => toggleCheckpoint(checkpoint.id)}
+                  >
+                    <Checkbox
+                      id={checkpoint.id}
+                      checked={resetCheckpoints.includes(checkpoint.id)}
+                      onCheckedChange={() => toggleCheckpoint(checkpoint.id)}
+                    />
+                    <div className="flex-1 space-y-0.5">
+                      <Label
+                        htmlFor={checkpoint.id}
+                        className="text-sm font-medium flex items-center gap-2 cursor-pointer"
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        {checkpoint.label}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {checkpoint.description}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {resetCheckpoints.length > 0 && (
+              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+                <strong>Atenção:</strong> {resetCheckpoints.length} checkpoint(s) será(ão) reiniciado(s). Esta ação não pode ser desfeita.
+              </div>
+            )}
+
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isResetting}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleResetOnboarding}
-                disabled={isResetting}
+                disabled={isResetting || resetCheckpoints.length === 0}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {isResetting ? (
@@ -680,7 +844,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
                     Reiniciando...
                   </>
                 ) : (
-                  "Sim, Reiniciar"
+                  `Reiniciar ${resetCheckpoints.length > 0 ? `(${resetCheckpoints.length})` : ""}`
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>
