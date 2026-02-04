@@ -87,11 +87,13 @@ export function OnboardingDashboard() {
     // Fetch related data for each client
     const clientIds = clientsData.map((c) => c.id);
 
-    const [profilesRes, icpsRes, promisesRes, painsRes] = await Promise.all([
-      supabase.from("client_profile").select("client_id, product_name").in("client_id", clientIds),
+    const [profilesRes, icpsRes, promisesRes] = await Promise.all([
+      supabase
+        .from("client_profile")
+        .select("client_id, product_name, main_pain, current_revenue, monthly_investment, initial_traffic_investment, region")
+        .in("client_id", clientIds),
       supabase.from("icps").select("id, name, client_id").in("client_id", clientIds),
       supabase.from("client_promise").select("client_id, promise_text").in("client_id", clientIds),
-      supabase.from("icp_pains").select("icp_id, main_pain"),
     ]);
 
     const profilesMap = new Map(profilesRes.data?.map((p) => [p.client_id, p]) || []);
@@ -103,14 +105,8 @@ export function OnboardingDashboard() {
       icpsMap.get(icp.client_id)!.push({ id: icp.id, name: icp.name });
     });
     const promisesMap = new Map(promisesRes.data?.map((p) => [p.client_id, p]) || []);
-    const painsMap = new Map<string, boolean>();
-    painsRes.data?.forEach((pain) => {
-      if (pain.main_pain) {
-        painsMap.set(pain.icp_id, true);
-      }
-    });
 
-    // Calculate progress for each client
+    // Calculate progress for each client (7 steps)
     const clientsWithProgress = clientsData.map((client) => {
       const profile = profilesMap.get(client.id);
       const icps = icpsMap.get(client.id) || [];
@@ -118,22 +114,39 @@ export function OnboardingDashboard() {
 
       let completedSteps = 0;
 
-      // Step 1: Product
-      if (profile?.product_name) completedSteps++;
+      // Step 1: Empresa (niche ou region)
+      if (client.niche || (profile?.region && profile.region.length > 0)) {
+        completedSteps++;
+      }
 
-      // Step 2: ICPs
-      if (icps.length > 0) completedSteps++;
+      // Step 2: Produto
+      if (profile?.product_name) {
+        completedSteps++;
+      }
 
-      // Step 3: Pains
-      const hasAnyPain = icps.some((icp) => painsMap.has(icp.id));
-      if (hasAnyPain) completedSteps++;
+      // Step 3: Dores (main_pain no profile)
+      if (profile?.main_pain) {
+        completedSteps++;
+      }
 
-      // Step 4: Promise
-      if (promise?.promise_text) completedSteps++;
+      // Step 4: Mercado
+      if (profile?.current_revenue || profile?.monthly_investment || profile?.initial_traffic_investment) {
+        completedSteps++;
+      }
 
-      // Step 5: Review/Complete
+      // Step 5: Promessa
+      if (promise?.promise_text) {
+        completedSteps++;
+      }
+
+      // Step 6: Público (ICPs)
+      if (icps.length > 0) {
+        completedSteps++;
+      }
+
+      // Step 7: Revisão/Complete
       if (["ppp_completed", "offer_generated", "assets_generated"].includes(client.status)) {
-        completedSteps = 5;
+        completedSteps = 7;
       }
 
       return {
@@ -141,7 +154,7 @@ export function OnboardingDashboard() {
         client_profile: profile ? { product_name: profile.product_name } : null,
         icps,
         client_promise: promise ? { promise_text: promise.promise_text } : null,
-        progress: (completedSteps / 5) * 100,
+        progress: (completedSteps / 7) * 100,
         completedSteps,
       };
     });
@@ -293,7 +306,7 @@ function ClientOnboardingCard({ client, onNavigate }: ClientOnboardingCardProps)
 
   const handleContinueOnboarding = () => {
     const nextStep = client.completedSteps + 1;
-    navigate(`/onboarding?client=${client.id}&step=${Math.min(nextStep, 5)}`);
+    navigate(`/onboarding?client=${client.id}&step=${Math.min(nextStep, 7)}`);
   };
 
   const handleEditOnboarding = () => {
@@ -328,10 +341,10 @@ function ClientOnboardingCard({ client, onNavigate }: ClientOnboardingCardProps)
             {/* Progress */}
             {!isPending && (
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium">{client.completedSteps} de 5 etapas</span>
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Progresso</span>
+                <span className="font-medium">{client.completedSteps} de 7 etapas</span>
+              </div>
                 <Progress value={client.progress} className="h-2" />
               </div>
             )}
