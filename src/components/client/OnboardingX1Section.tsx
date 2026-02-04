@@ -6,6 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Building2,
   Package,
   Heart,
@@ -19,7 +29,9 @@ import {
   Loader2,
   MapPin,
   DollarSign,
+  RotateCcw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
@@ -57,6 +69,8 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     profile: null,
     icps: [],
@@ -212,6 +226,92 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
 
   const handleEditOnboarding = () => {
     navigate(`/onboarding?client=${client.id}&step=1`);
+  };
+
+  const handleResetOnboarding = async () => {
+    setIsResetting(true);
+
+    try {
+      // Get ICP ids to delete related pains first
+      const { data: icps } = await supabase
+        .from("icps")
+        .select("id")
+        .eq("client_id", client.id);
+
+      const icpIds = icps?.map((icp) => icp.id) || [];
+
+      // Get offer ids to delete related ads and landing pages first
+      const { data: offers } = await supabase
+        .from("offers_hormozi")
+        .select("id")
+        .eq("client_id", client.id);
+
+      const offerIds = offers?.map((offer) => offer.id) || [];
+
+      // Delete in correct order (respecting foreign keys)
+      // 1. Delete icp_pains (depends on icps)
+      if (icpIds.length > 0) {
+        await supabase
+          .from("icp_pains")
+          .delete()
+          .in("icp_id", icpIds);
+      }
+
+      // 2. Delete ads (depends on offers_hormozi)
+      if (offerIds.length > 0) {
+        await supabase
+          .from("ads")
+          .delete()
+          .in("offer_id", offerIds);
+      }
+
+      // 3. Delete landing_pages (depends on offers_hormozi)
+      if (offerIds.length > 0) {
+        await supabase
+          .from("landing_pages")
+          .delete()
+          .in("offer_id", offerIds);
+      }
+
+      // 4. Delete offers_hormozi (depends on icps and clients)
+      await supabase
+        .from("offers_hormozi")
+        .delete()
+        .eq("client_id", client.id);
+
+      // 5. Delete icps (depends on clients)
+      await supabase
+        .from("icps")
+        .delete()
+        .eq("client_id", client.id);
+
+      // 6. Delete client_promise (depends on clients)
+      await supabase
+        .from("client_promise")
+        .delete()
+        .eq("client_id", client.id);
+
+      // 7. Delete client_profile (depends on clients)
+      await supabase
+        .from("client_profile")
+        .delete()
+        .eq("client_id", client.id);
+
+      // 8. Reset client status and niche
+      await supabase
+        .from("clients")
+        .update({ status: "draft", niche: null })
+        .eq("id", client.id);
+
+      toast.success("Onboarding reiniciado com sucesso!");
+      setIsResetDialogOpen(false);
+      onStatusChange?.();
+    } catch (error) {
+      console.error("Error resetting onboarding:", error);
+      toast.error("Erro ao reiniciar o onboarding. Tente novamente.");
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const { completed, total, percentage } = calculateProgress();
@@ -534,7 +634,58 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
               </Button>
             </>
           )}
+
+          {/* Botão de Reiniciar - aparece quando há dados */}
+          {hasData && (
+            <Button
+              variant="outline"
+              onClick={() => setIsResetDialogOpen(true)}
+              className="gap-2 text-destructive hover:text-destructive"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reiniciar
+            </Button>
+          )}
         </div>
+
+        {/* Dialog de confirmação para reiniciar */}
+        <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reiniciar Onboarding?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação irá apagar <strong>permanentemente</strong> todos os dados do onboarding deste cliente, incluindo:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Dados da empresa e produto</li>
+                  <li>Dores e promessa</li>
+                  <li>Dados de mercado</li>
+                  <li>Perfis de cliente ideal (ICPs)</li>
+                  <li>Ofertas e anúncios gerados</li>
+                </ul>
+                <span className="block mt-3 font-medium text-destructive">
+                  Esta ação não pode ser desfeita.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isResetting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleResetOnboarding}
+                disabled={isResetting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isResetting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Reiniciando...
+                  </>
+                ) : (
+                  "Sim, Reiniciar"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
