@@ -1,78 +1,58 @@
 
-# Correcoes do PDF de Ofertas e Plano de Geracao de Demanda
+# Correção de Quebra de Página no PDF de Ofertas
 
-## Status: ✅ IMPLEMENTADO
+## Problema Identificado
 
----
+Analisando o print enviado, o texto está sendo cortado entre páginas em:
+- Funil de Aquisição (seção FUNDO cortada)
+- Sinergias entre Canais (cortada no meio)
 
-## Problemas Corrigidos
+O `pageBreakInside: "avoid"` está aplicado apenas no container das seções, mas os itens internos (TOPO, MEIO, FUNDO, cada sinergia) não têm essa proteção e podem ser divididos quando a página acaba.
 
-| Problema | Solucao |
-|----------|---------|
-| ✅ Edicoes com caneta nao salvam | Callback onEditChange sincroniza estado local com PDF |
-| ✅ Plano de Geracao ausente no PDF | OfferPDFTemplate inclui secao completa demand_generation_strategies |
-| ✅ PDF nao atualiza | refreshKey + liveOptions/liveSelected garantem dados atualizados |
-| ✅ Sem edicao do Plano de Demanda | Novo componente DemandPlanEditor criado |
+## Solução
 
----
+Aplicar controle de quebra de página em **cada item individual** dentro das seções problemáticas, garantindo que nenhum bloco de conteúdo seja cortado no meio.
 
-## Arquivos Modificados
+### Alterações no OfferPDFTemplate.tsx
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/export/OfferPDFTemplate.tsx` | Secao completa do Plano de Demanda com todas as subsecoes |
-| `src/components/generator/OfferOptionsSelector.tsx` | Callback onEditChange para notificar edicoes pendentes |
-| `src/components/generator/GeneratedContentViewer.tsx` | Estado liveEdits, handler para DemandPlan, integracao com editor |
-| `src/components/export/PDFExportButton.tsx` | Props liveOptions, liveSelected, refreshKey |
-| `src/components/generator/DemandPlanEditor.tsx` | NOVO - Editor completo do Plano de Demanda |
+| Seção | Correção |
+|-------|----------|
+| Container Principal | Aumentar padding de 5mm para 15mm |
+| Estratégias Complementares | Cada card recebe pageBreakInside: avoid |
+| Funil de Aquisição (TOPO/MEIO/FUNDO) | Cada item recebe pageBreakInside: avoid |
+| Sinergias entre Canais | Cada item da lista recebe pageBreakInside: avoid |
+| Cronograma | Cada período recebe pageBreakInside: avoid |
 
----
+### Estilos a Adicionar
 
-## Fluxo de Dados Implementado
+Criar um novo estilo para itens internos:
 
 ```text
-Usuario edita texto com caneta
-        ↓
-OfferOptionsSelector atualiza estado local
-        ↓
-Callback onEditChange notifica GeneratedContentViewer
-        ↓
-GeneratedContentViewer atualiza liveEdits[offerId]
-        ↓
-PDFExportButton recebe liveOptions + liveSelected
-        ↓
-PDF renderiza com dados mais recentes
+const itemStyle = {
+  pageBreakInside: "avoid" as const,
+  breakInside: "avoid" as const,
+};
 ```
 
----
+Aplicar esse estilo em:
+1. Cada card de estratégia complementar
+2. Cada item do funil (TOPO, MEIO, FUNDO)
+3. Cada item de sinergia
+4. Cada período do cronograma
 
-## Funcionalidades do DemandPlanEditor
+### Margens de Segurança
 
-- Edicao da Analise do Contexto (nicho, ICP, insight)
-- Edicao da Estrategia Principal (canal, campanha, publicos, criativos, budget, CPL)
-- Edicao do Funil de Aquisicao (TOFU, MOFU, BOFU)
-- Gerenciamento de Sinergias entre Canais (adicionar/remover)
-- Edicao do Cronograma de Implementacao (semanas 1-2, 3-4, 5-8)
-- Botao Salvar para persistir alteracoes
-- Botao Regenerar para solicitar novo plano via IA
+Conforme documentado na memória do projeto, usar margem de segurança de 15mm ao final de cada seção para evitar corte de texto. Atualmente está com 15mm, mas precisa verificar se os itens internos também respeitam isso.
 
----
+## Arquivo a Modificar
 
-## PDF Atualizado Inclui
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/export/OfferPDFTemplate.tsx` | Aplicar pageBreakInside em cada item interno das seções |
 
-1. Cabecalho com Logo XPLO + Data
-2. Titulo "OFERTA IRRESISTIVEL" + Nome do Cliente
-3. Promessa Principal
-4. Mecanismo Unico
-5. Garantia
-6. Prova Social
-7. Reversao de Risco
-8. Pilha de Valor
-9. CTA Principal
-10. **PLANO DE GERACAO DE DEMANDA**
-    - Analise do Contexto
-    - Estrategia Principal (com badges de canal e budget)
-    - Estrategias Complementares (grid 2x2)
-    - Funil de Aquisicao (TOPO, MEIO, FUNDO)
-    - Sinergias entre Canais
-    - Cronograma de Implementacao
+## Resultado Esperado
+
+1. Nenhum item do Funil de Aquisição será cortado entre páginas
+2. Nenhuma sinergia será cortada no meio
+3. Cards de estratégias complementares não serão divididos
+4. Margens adequadas evitam cortes inesperados
