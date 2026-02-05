@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, ArrowRight, Loader2, Target, Lightbulb, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getAIConfig } from "@/lib/aiConfig";
 import type { Tables } from "@/integrations/supabase/types";
 
 type ClientPromise = Tables<"client_promise">;
@@ -62,11 +63,13 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
         promise: null,
       };
 
+      const aiConfig = getAIConfig();
       const response = await supabase.functions.invoke("generate-content", {
         body: {
           type: "generate-promise",
           clientId,
           pppData,
+          aiConfig,
         },
       });
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight, Loader2, Plus, X, Sparkles, Info, Heart, Pencil, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getAIConfig } from "@/lib/aiConfig";
 import type { Tables } from "@/integrations/supabase/types";
 
 type ClientProfile = Tables<"client_profile">;
@@ -106,11 +107,13 @@ export function StepPains({ clientId, onNext, onPrevious }: StepPainsProps) {
         promise: null,
       };
 
+      const aiConfig = getAIConfig();
       const response = await supabase.functions.invoke("generate-content", {
         body: {
           type: "generate-buyer-pains",
           clientId,
           pppData,
+          aiConfig,
         },
       });
 

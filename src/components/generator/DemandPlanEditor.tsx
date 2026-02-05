@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Save, RefreshCw, Target, TrendingUp, Calendar, Zap, Megaphone, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAIConfig } from "@/lib/aiConfig";
 import { toast } from "sonner";
 
 interface DemandPlan {
@@ -149,12 +150,14 @@ export function DemandPlanEditor({
   const handleRegenerate = async () => {
     setIsRegenerating(true);
     try {
+      const aiConfig = getAIConfig();
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           type: "refresh-demand-plan",
           clientId,
           offerId,
           pppData,
+          aiConfig,
         },
       });
 

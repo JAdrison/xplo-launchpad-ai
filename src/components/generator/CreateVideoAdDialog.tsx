@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAIConfig } from "@/lib/aiConfig";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Ad = Tables<"ads">;
@@ -42,11 +43,13 @@ export function CreateVideoAdDialog({
     setIsCreating(true);
 
     try {
+      const aiConfig = getAIConfig();
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           type: "create-video-ad",
           clientId,
           instruction: instruction.trim(),
+          aiConfig,
         },
       });
 

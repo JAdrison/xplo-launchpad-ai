@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, Check, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAIConfig } from "@/lib/aiConfig";
 
 interface VideoContent {
   hook: string;
@@ -71,6 +72,7 @@ export function AdsRefinerChat({
     setIsLoading(true);
 
     try {
+      const aiConfig = getAIConfig();
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           type: "refine-ad",
@@ -79,6 +81,7 @@ export function AdsRefinerChat({
           adType,
           currentContent: refinedContent || currentContent,
           instruction: userMessage,
+          aiConfig,
         },
       });
 

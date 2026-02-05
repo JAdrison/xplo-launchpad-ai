@@ -2,8 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+interface AIConfig {
+  source: "lovable" | "custom";
+  provider: "gemini" | "openai";
+  model: string;
+  apiKey?: string;
+}
 
 interface PPPData {
   profile: {
@@ -25,8 +32,18 @@ interface PPPData {
 }
 
 interface ReqBody {
-  type: string; clientId: string; pppData?: PPPData; icpId?: string; offerId?: string; field?: string; lpVariant?: string;
-  adId?: string; adType?: string; currentContent?: Record<string, unknown>; instruction?: string;
+  type: string; 
+  clientId: string; 
+  pppData?: PPPData; 
+  icpId?: string; 
+  offerId?: string; 
+  field?: string; 
+  lpVariant?: string;
+  adId?: string; 
+  adType?: string; 
+  currentContent?: Record<string, unknown>; 
+  instruction?: string;
+  aiConfig?: AIConfig;
 }
 
 function buildCtx(p: PPPData): string {
@@ -79,26 +96,102 @@ function extractVisualNotes(res: Record<string, unknown>): string {
   return notes.join('\n\n') || '';
 }
 
-async function ai(key: string, sys: string, usr: string, t = 0.7) {
+async function ai(config: AIConfig, sys: string, usr: string, t = 0.7) {
   const fullSys = `${sys}\n\nIMPORTANTE: Responda APENAS com JSON válido. Sem explicações, sem texto antes ou depois. Apenas o JSON puro.`;
-  const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      model: 'google/gemini-2.5-flash', 
-      messages: [{ role: 'system', content: fullSys }, { role: 'user', content: usr }], 
+  
+  let url: string;
+  let headers: Record<string, string>;
+  let body: Record<string, unknown>;
+  let isGeminiDirect = false;
+
+  if (config.source === "custom" && config.apiKey) {
+    if (config.provider === "openai") {
+      // OpenAI API direta
+      url = "https://api.openai.com/v1/chat/completions";
+      headers = { 
+        "Authorization": `Bearer ${config.apiKey}`, 
+        "Content-Type": "application/json" 
+      };
+      body = {
+        model: config.model,
+        messages: [
+          { role: "system", content: fullSys },
+          { role: "user", content: usr }
+        ],
+        temperature: t,
+        response_format: { type: "json_object" }
+      };
+      console.log(`[AI] Using custom OpenAI API with model: ${config.model}`);
+    } else {
+      // Google Gemini API direta
+      isGeminiDirect = true;
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+      headers = { "Content-Type": "application/json" };
+      body = {
+        contents: [{ parts: [{ text: `${fullSys}\n\n${usr}` }] }],
+        generationConfig: { 
+          temperature: t,
+          responseMimeType: "application/json"
+        }
+      };
+      console.log(`[AI] Using custom Gemini API with model: ${config.model}`);
+    }
+  } else {
+    // Lovable AI Gateway (padrão)
+    const KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!KEY) throw new Error("No LOVABLE_API_KEY configured");
+    
+    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    headers = { 
+      "Authorization": `Bearer ${KEY}`, 
+      "Content-Type": "application/json" 
+    };
+    body = {
+      model: config.model || "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: fullSys },
+        { role: "user", content: usr }
+      ],
       temperature: t,
       response_format: { type: "json_object" }
-    }),
+    };
+    console.log(`[AI] Using Lovable AI Gateway with model: ${config.model || "google/gemini-2.5-flash"}`);
+  }
+
+  const r = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
   });
-  if (!r.ok) { const st = r.status; throw { status: st, message: st === 429 ? 'Rate limit' : st === 402 ? 'Payment required' : `Error ${st}` }; }
+
+  if (!r.ok) {
+    const st = r.status;
+    const errorText = await r.text();
+    console.error(`[AI] Error ${st}:`, errorText.substring(0, 500));
+    throw { 
+      status: st, 
+      message: st === 429 ? "Rate limit exceeded" : st === 402 ? "Payment required" : st === 401 ? "Invalid API key" : `Error ${st}` 
+    };
+  }
+
   const d = await r.json();
-  const c = d.choices?.[0]?.message?.content;
-  if (!c) throw new Error('No AI content');
-  console.log('AI response length:', c.length);
+  
+  // Extrair conteúdo baseado no provedor
+  let content: string;
+  if (isGeminiDirect) {
+    content = d.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } else {
+    content = d.choices?.[0]?.message?.content || "";
+  }
+  
+  if (!content) throw new Error("No AI content returned");
+  
+  console.log('[AI] Response length:', content.length);
+  
   try {
-    return extractJson(c);
+    return extractJson(content);
   } catch (e) {
-    console.error('Failed to parse JSON, raw content:', c.substring(0, 500));
+    console.error('[AI] Failed to parse JSON, raw content:', content.substring(0, 500));
     throw new Error('Invalid JSON from AI');
   }
 }
@@ -107,10 +200,16 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
     const b = await req.json() as ReqBody;
-    const { type, clientId, pppData, icpId, offerId, field, lpVariant } = b;
-    console.log(`${type} for ${clientId}`);
-    const KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!KEY) throw new Error('No API key');
+    const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig } = b;
+    console.log(`[generate-content] ${type} for ${clientId}`);
+    
+    // Usar config recebida ou padrão Lovable
+    const config: AIConfig = aiConfig || {
+      source: "lovable",
+      provider: "gemini", 
+      model: "google/gemini-2.5-flash"
+    };
+    
     const ctx = pppData ? buildCtx(pppData) : '';
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -119,14 +218,14 @@ Deno.serve(async (req) => {
       if (!c || !instruction) return new Response(JSON.stringify({ error: 'Missing' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       const p = adType === "video" ? `Refine vídeo:\nHOOK: ${c.hook}\nPROBLEMA: ${c.problem}\nPOR QUE: ${c.why_bad}\nSOLUÇÃO: ${c.solution}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"hook":"","problem":"","why_bad":"","solution":"","cta":"","duration":"","visual_notes":""}`
         : `Refine estático:\nHEADLINE: ${c.headline}\nSUBHEADLINE: ${c.subheadline}\nCOPY: ${c.body_text}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}`;
-      const res = await ai(KEY, 'Copywriter.', p);
+      const res = await ai(config, 'Copywriter.', p);
       return new Response(JSON.stringify({ success: true, refinedContent: res }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     if (type === "refresh-field" && field && offerId) {
       const { data: o } = await supabase.from('offers_hormozi').select('*').eq('id', offerId).single();
       if (!o) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      const res = await ai(KEY, 'Hormozi copywriter.', `${ctx}\nGere 2 opções para ${field}.\nJSON: {"options":["op1","op2"]}`, 0.8);
+      const res = await ai(config, 'Hormozi copywriter.', `${ctx}\nGere 2 opções para ${field}.\nJSON: {"options":["op1","op2"]}`, 0.8);
       const opts = res.options;
       const go = (o.generated_options as Record<string, string[]>) || {};
       go[field] = opts;
@@ -161,22 +260,22 @@ JSON: {"profiles":[{
   "why_buys": "Motivo real pelo qual compra (preço, rapidez, confiança, etc)",
   "is_ideal": "ideal"
 }]}`;
-      const res = await ai(KEY, sys, prompt, 0.8);
+      const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, profiles: res.profiles }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "generate-pains") {
       sys = 'Mapeador dores.';
       prompt = `${ctx}\nPara cada ICP, identifique dores.\nJSON: {"pains":[{"icp_name":"","main_pain":"","secondary_pain":"","daily_impacts":[],"desire_1":"","desire_2":""}]}`;
-      const res = await ai(KEY, sys, prompt, 0.8);
+      const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, pains: res.pains }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "generate-buyer-pains") {
       sys = 'Mapeador dores comprador.';
       prompt = `${ctx}\nIdentifique dores do comprador.\nJSON: {"pains":{"main_pain":"","secondary_pain":"","daily_impacts":[],"desire_1":"","desire_2":""}}`;
-      const res = await ai(KEY, sys, prompt, 0.8);
+      const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, pains: res.pains }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "generate-promise") {
       sys = 'Copywriter Hormozi. Fórmula: [QUEM] consegue [DESEJO] em [PRAZO] sem [DOR].';
       prompt = `${ctx}\nCrie promessa.\nJSON: {"promise":""}`;
-      const res = await ai(KEY, sys, prompt, 0.8);
+      const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, promise: res.promise }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "create-video-ad") {
       const { instruction } = b;
@@ -201,7 +300,7 @@ JSON: {"profiles":[{
       const videoSys = 'Copywriter especialista em anúncios de vídeo para redes sociais. Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), CTA (chamada para ação). Duração 20-60s.';
       const videoPrompt = `${adCtx}\n\nInstrução do usuário: ${instruction}\n\nIMPORTANTE: Retorne APENAS strings simples em cada campo, NÃO objetos.\nRetorne visual_notes como um único campo com todas as notas visuais combinadas.\n\nJSON (valores devem ser strings, não objetos):\n{\n  "video_type": "tipo do vídeo",\n  "duration": "duração em segundos",\n  "hook": "texto do hook",\n  "problem": "texto do problema",\n  "why_bad": "texto de por que é ruim",\n  "solution": "texto da solução",\n  "cta": "texto do CTA",\n  "visual_notes": "todas as notas visuais combinadas"\n}`;
       
-      const videoRes = await ai(KEY, videoSys, videoPrompt, 0.8) as Record<string, unknown>;
+      const videoRes = await ai(config, videoSys, videoPrompt, 0.8) as Record<string, unknown>;
       
       // Insert into database with text extraction for robustness
       const { data: newAd, error: insertError } = await supabase.from('ads').insert({
@@ -250,7 +349,7 @@ JSON: {"video_scripts":[
   {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
   {"video_type":"question_box","title":"Caixinha de Perguntas","duration":"","hook":"[PERGUNTA DO COTIDIANO]","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""}
 ],"static_ads":{"pain_based":[{"angle":"pain","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}],"desire_based":[{"angle":"desire","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}]}}`;
-      const res = await ai(KEY, sys, prompt);
+      const res = await ai(config, sys, prompt);
       if (vOid) await supabase.from('ads').delete().eq('offer_id', vOid);
       else await supabase.from('ads').delete().eq('client_id', clientId).is('offer_id', null);
       for (const v of res.video_scripts || []) await supabase.from('ads').insert({ client_id: clientId, offer_id: vOid, asset_type: 'video_ad', video_type: v.video_type, video_hook: v.hook, video_problem: v.problem, video_why_bad: v.why_bad, video_solution: v.solution, video_cta: v.cta, video_duration: v.duration, video_visual_notes: v.visual_notes, ad_angle: v.video_type, headline: v.title });
@@ -259,7 +358,7 @@ JSON: {"video_scripts":[
       return new Response(JSON.stringify({ success: true, data: res }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const res = await ai(KEY, sys, prompt);
+    const res = await ai(config, sys, prompt);
     if (type === "offer") {
       const opts = res.options || {};
       const { data: ins, error } = await supabase.from('offers_hormozi').insert({
@@ -275,7 +374,7 @@ JSON: {"video_scripts":[
     }
     return new Response(JSON.stringify({ success: true, data: res }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e: any) {
-    console.error('Error:', e);
+    console.error('[generate-content] Error:', e);
     return new Response(JSON.stringify({ error: e.message || 'Error' }), { status: e.status || 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
