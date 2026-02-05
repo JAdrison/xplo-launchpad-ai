@@ -17,45 +17,87 @@ export type Database = {
       ads: {
         Row: {
           ad_angle: string | null
+          angle: string | null
           asset_type: Database["public"]["Enums"]["asset_type"]
           body_text: string | null
           client_id: string
           created_at: string
           cta: string | null
+          eliminators: string[] | null
+          focus: string | null
           headline: string | null
           id: string
           is_active: boolean | null
           offer_id: string | null
           script: Json | null
+          subheadline: string | null
           updated_at: string
+          video_cta: string | null
+          video_duration: string | null
+          video_hook: string | null
+          video_problem: string | null
+          video_proof: string | null
+          video_solution: string | null
+          video_type: string | null
+          video_visual_notes: string | null
+          video_why_bad: string | null
+          visual_suggestion: string | null
         }
         Insert: {
           ad_angle?: string | null
+          angle?: string | null
           asset_type: Database["public"]["Enums"]["asset_type"]
           body_text?: string | null
           client_id: string
           created_at?: string
           cta?: string | null
+          eliminators?: string[] | null
+          focus?: string | null
           headline?: string | null
           id?: string
           is_active?: boolean | null
           offer_id?: string | null
           script?: Json | null
+          subheadline?: string | null
           updated_at?: string
+          video_cta?: string | null
+          video_duration?: string | null
+          video_hook?: string | null
+          video_problem?: string | null
+          video_proof?: string | null
+          video_solution?: string | null
+          video_type?: string | null
+          video_visual_notes?: string | null
+          video_why_bad?: string | null
+          visual_suggestion?: string | null
         }
         Update: {
           ad_angle?: string | null
+          angle?: string | null
           asset_type?: Database["public"]["Enums"]["asset_type"]
           body_text?: string | null
           client_id?: string
           created_at?: string
           cta?: string | null
+          eliminators?: string[] | null
+          focus?: string | null
           headline?: string | null
           id?: string
           is_active?: boolean | null
           offer_id?: string | null
           script?: Json | null
+          subheadline?: string | null
           updated_at?: string
+          video_cta?: string | null
+          video_duration?: string | null
+          video_hook?: string | null
+          video_problem?: string | null
+          video_proof?: string | null
+          video_solution?: string | null
+          video_type?: string | null
+          video_visual_notes?: string | null
+          video_why_bad?: string | null
+          visual_suggestion?: string | null
         }
         Relationships: [
           {

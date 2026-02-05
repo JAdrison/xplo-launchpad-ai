@@ -10,6 +10,13 @@ interface PPPData {
     product_name: string | null;
     product_description: string | null;
     differentiators: string[] | null;
+    benefits?: string[] | null;
+    main_pain?: string | null;
+    secondary_pain?: string | null;
+    daily_impacts?: string[] | null;
+    desire_1?: string | null;
+    desire_2?: string | null;
+    region?: string[] | null;
   } | null;
   icps: Array<{
     id: string;
@@ -39,7 +46,7 @@ interface PPPData {
 }
 
 interface RequestBody {
-  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-pains" | "generate-promise" | "generate-buyer-pains";
+  type: "offer" | "lp" | "ads" | "refresh-field" | "generate-icps" | "generate-pains" | "generate-promise" | "generate-buyer-pains" | "refine-ad";
   clientId: string;
   pppData?: PPPData;
   icpId?: string;
@@ -47,6 +54,11 @@ interface RequestBody {
   field?: string;
   currentOptions?: string[];
   lpVariant?: "direct" | "consultive" | "aggressive";
+  // For refine-ad
+  adId?: string;
+  adType?: "static" | "video";
+  currentContent?: Record<string, unknown>;
+  instruction?: string;
 }
 
 serve(async (req) => {
@@ -61,8 +73,6 @@ serve(async (req) => {
 
     console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}, field: ${field || 'all'}, lpVariant: ${lpVariant || 'none'}`);
 
-    console.log(`Generating ${type} for client ${clientId}, ICP: ${icpId || 'all'}, field: ${field || 'all'}`);
-
     // Get the Lovable API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -72,6 +82,11 @@ serve(async (req) => {
     // Handle refresh-field type - regenerate 2 options for a specific field
     if (type === "refresh-field" && field && offerId) {
       return await handleRefreshField(field, offerId, pppData, LOVABLE_API_KEY);
+    }
+
+    // Handle refine-ad type - refine a specific ad with AI
+    if (type === "refine-ad") {
+      return await handleRefineAd(body, LOVABLE_API_KEY);
     }
 
     // Build context from PPP data
@@ -762,9 +777,9 @@ REGRAS CRÍTICAS:
         }
 
         const promiseAiData = await promiseAiResponse.json();
-        const promiseContent = promiseAiData.choices?.[0]?.message?.content;
+        const promiseContentRes = promiseAiData.choices?.[0]?.message?.content;
 
-        if (!promiseContent) {
+        if (!promiseContentRes) {
           throw new Error('No content generated from AI');
         }
 
@@ -772,11 +787,11 @@ REGRAS CRÍTICAS:
 
         let parsedPromise;
         try {
-          const jsonMatch = promiseContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-          const jsonStr = jsonMatch ? jsonMatch[1] : promiseContent;
+          const jsonMatch = promiseContentRes.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+          const jsonStr = jsonMatch ? jsonMatch[1] : promiseContentRes;
           parsedPromise = JSON.parse(jsonStr);
         } catch (e) {
-          console.error('Failed to parse AI response as JSON:', promiseContent);
+          console.error('Failed to parse AI response as JSON:', promiseContentRes);
           throw new Error('Failed to parse AI response');
         }
 
@@ -819,26 +834,252 @@ REGRAS CRÍTICAS:
           }
         }
 
-        systemPrompt = `Você é um especialista em anúncios para redes sociais, criando tanto anúncios estáticos quanto scripts de vídeo.
-Sua tarefa é criar anúncios com base na oferta e dados de discovery fornecidos.
-Os anúncios devem ser coerentes com a oferta criada anteriormente.`;
+        // Build enhanced context with buyer pains from profile
+        const buyerPainsFromProfile = pppData?.profile ? `
+## DORES E DESEJOS DO COMPRADOR (CRÍTICO!)
+
+**Dor Principal:** ${pppData.profile.main_pain || 'Não informada'}
+**Dor Secundária:** ${pppData.profile.secondary_pain || 'Não informada'}
+**Impactos no Dia a Dia:** ${pppData.profile.daily_impacts?.join(', ') || 'Não informados'}
+**Desejo 1:** ${pppData.profile.desire_1 || 'Não informado'}
+**Desejo 2:** ${pppData.profile.desire_2 || 'Não informado'}
+
+## REGIÃO DE ATUAÇÃO
+${pppData.profile.region?.join(', ') || 'Não informada'}
+` : '';
+
+        systemPrompt = `Você é um especialista em anúncios para redes sociais usando a metodologia Ladeira de criação de criativos.
+
+Sua tarefa é criar **15 ANÚNCIOS NO TOTAL**:
+- 5 ROTEIROS DE VÍDEO (estrutura de 6 seções, duração flexível 20-80s)
+- 10 ANÚNCIOS ESTÁTICOS (5 baseados em DORES + 5 baseados em DESEJOS)
+
+## ESTRUTURA DOS ROTEIROS DE VÍDEO (OBRIGATÓRIA - 6 SEÇÕES)
+
+Cada vídeo DEVE seguir esta estrutura na ordem:
+1. **HOOK** - Chamada que prende atenção (pergunta, promessa, quebra de padrão ou frase do cliente)
+2. **PROBLEMA** - O que a pessoa está enfrentando hoje (a dor/sintoma/situação)
+3. **POR QUE ISSO É RUIM** - Consequência clara de não resolver (perda de tempo, dinheiro, saúde, oportunidade, risco, estresse)
+4. **SOLUÇÃO** - O caminho simples/seguro para resolver (método, serviço, produto, sistema) + como ajuda
+5. **PROVA** - Evidência rápida (resultado, número, depoimento, "casos reais", antes/depois, autoridade) - opcional mas recomendado
+6. **CTA** - A próxima ação em 1 passo (clique, mande "X", peça orçamento, agende, fale no WhatsApp)
+
+## DURAÇÃO DOS VÍDEOS
+- Mínimo: 20-25 segundos
+- Máximo: 70-80 segundos
+- Você decide a duração ideal para cada roteiro com base em:
+  - Complexidade do produto/serviço
+  - Tipo de vídeo
+  - Quantidade de prova necessária
+  - Nível de consciência do público
+
+## OS 5 TIPOS DE VÍDEO
+
+1. **pattern_break** (Quebra de Padrão) - Hook: Afirmação surpreendente que desafia crença comum - Duração típica: 20-35s
+2. **question_box** (Caixinha de Perguntas) - Hook: Pergunta real do público-alvo - Duração típica: 35-50s
+3. **daily_scene** (Cotidiano + Problema) - Hook: Cena do dia-a-dia com identificação - Duração típica: 30-45s
+4. **location_based** (Direcionado para Região) - Hook: Menção geográfica + oportunidade - Duração típica: 25-40s
+5. **social_proof** (Prova Social) - Hook: Resultado de cliente real - Duração típica: 45-80s
+
+## ESTRUTURA DOS ANÚNCIOS ESTÁTICOS
+
+Cada estático deve conter:
+- **headline**: Título impactante (até 15 palavras)
+- **subheadline**: Subtítulo complementar
+- **body_text**: Copy explicativa (2-3 frases)
+- **eliminators**: Array de 3 bullets no formato "SEM [objeção]" (ex: "SEM INSTALAÇÃO", "SEM DOR DE CABEÇA")
+- **cta**: Call-to-action
+- **visual_suggestion**: Sugestão de imagem para o criativo`;
+
         prompt = `Com base nos seguintes dados:
 
 ${offerContext}${context}
 
-Crie os seguintes anúncios baseados na oferta acima:
+${buyerPainsFromProfile}
 
-**2 Anúncios Estáticos:**
-Para cada um, inclua: headline, body_text, cta, ad_angle (ângulo/abordagem)
+## PROMESSA DE VALOR
+${pppData?.promise?.promise_text || 'Não definida'}
 
-**3 Scripts de Vídeo:**
-1. **Direto**: Script curto e direto ao ponto (15-30 segundos)
-2. **Educacional**: Script que ensina algo e vende no final (45-60 segundos)
-3. **Caixinha de Perguntas**: Script no formato de responder perguntas comuns (30-45 segundos)
+Crie os 15 anúncios seguindo a estrutura abaixo. Responda em JSON:
 
-Para cada script, inclua: hook (gancho inicial), body (desenvolvimento), cta (chamada para ação), duration (duração sugerida)
+{
+  "video_scripts": [
+    {
+      "video_type": "pattern_break",
+      "title": "Quebra de Padrão",
+      "duration": "30s",
+      "hook": "Chamada inicial surpreendente",
+      "problem": "Descrição do problema que a pessoa enfrenta",
+      "why_bad": "Consequência clara de não resolver",
+      "solution": "Como a solução resolve de forma simples",
+      "proof": "Evidência rápida (opcional mas recomendado)",
+      "cta": "Próxima ação em 1 passo",
+      "visual_notes": "Sugestões de cena/imagem para gravação"
+    },
+    {
+      "video_type": "question_box",
+      "title": "Caixinha de Perguntas",
+      "duration": "45s",
+      "hook": "Pergunta frequente do público",
+      "problem": "...",
+      "why_bad": "...",
+      "solution": "...",
+      "proof": "...",
+      "cta": "...",
+      "visual_notes": "..."
+    },
+    {
+      "video_type": "daily_scene",
+      "title": "Cotidiano + Problema",
+      "duration": "35s",
+      "hook": "Situação do dia-a-dia",
+      "problem": "...",
+      "why_bad": "...",
+      "solution": "...",
+      "proof": "...",
+      "cta": "...",
+      "visual_notes": "..."
+    },
+    {
+      "video_type": "location_based",
+      "title": "Direcionado para Região",
+      "duration": "25s",
+      "hook": "Menção geográfica específica",
+      "problem": "...",
+      "why_bad": "...",
+      "solution": "...",
+      "proof": "...",
+      "cta": "...",
+      "visual_notes": "..."
+    },
+    {
+      "video_type": "social_proof",
+      "title": "Prova Social",
+      "duration": "70s",
+      "hook": "Resultado de cliente real",
+      "problem": "...",
+      "why_bad": "...",
+      "solution": "...",
+      "proof": "...",
+      "cta": "...",
+      "visual_notes": "..."
+    }
+  ],
+  "static_ads": {
+    "pain_based": [
+      {
+        "angle": "pain",
+        "focus": "main_pain",
+        "headline": "Headline focada na dor principal",
+        "subheadline": "Subtítulo complementar",
+        "body_text": "Copy de 2-3 frases",
+        "eliminators": ["SEM OBJEÇÃO 1", "SEM OBJEÇÃO 2", "SEM OBJEÇÃO 3"],
+        "cta": "Texto do CTA",
+        "visual_suggestion": "Sugestão de imagem"
+      },
+      {
+        "angle": "pain",
+        "focus": "secondary_pain",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "pain",
+        "focus": "impact_1",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "pain",
+        "focus": "impact_2",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "pain",
+        "focus": "consequence",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      }
+    ],
+    "desire_based": [
+      {
+        "angle": "desire",
+        "focus": "desire_1",
+        "headline": "Headline focada no desejo 1",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "desire",
+        "focus": "desire_2",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "desire",
+        "focus": "promise",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "desire",
+        "focus": "result",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      },
+      {
+        "angle": "desire",
+        "focus": "transformation",
+        "headline": "...",
+        "subheadline": "...",
+        "body_text": "...",
+        "eliminators": ["...", "...", "..."],
+        "cta": "...",
+        "visual_suggestion": "..."
+      }
+    ]
+  }
+}
 
-Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (objeto com direct, educational, question_box)`;
+REGRAS CRÍTICAS:
+1. Cada vídeo DEVE ter as 6 seções na ordem: HOOK → PROBLEMA → POR QUE É RUIM → SOLUÇÃO → PROVA → CTA
+2. Use as DORES REAIS do onboarding para os anúncios baseados em dor (main_pain, secondary_pain, daily_impacts)
+3. Use os DESEJOS REAIS do onboarding para os anúncios baseados em desejo (desire_1, desire_2)
+4. Use a REGIÃO de atuação no anúncio location_based
+5. A duração deve ser definida com base na complexidade (20-80s)
+6. Responda APENAS com o JSON válido, sem markdown`;
         
         // Store validOfferId for use in save section
         (body as any)._validOfferId = validOfferId;
@@ -964,44 +1205,73 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
         // Get the validated offer ID (or null if offer was deleted)
         const validatedOfferId = (body as any)._validOfferId || null;
         
-        // Delete existing ads for this client
+        // Delete existing ads for this client/offer
         if (validatedOfferId) {
           await supabase.from('ads').delete().eq('offer_id', validatedOfferId);
         } else {
-          // If no valid offer, just delete by client_id
           await supabase.from('ads').delete().eq('client_id', clientId).is('offer_id', null);
         }
         
-        // Insert static ads
-        for (const ad of parsedContent.static_ads || []) {
+        // Insert video ads (5 scripts with new structure)
+        for (const video of parsedContent.video_scripts || []) {
+          const { error: videoError } = await supabase.from('ads').insert({
+            client_id: clientId,
+            offer_id: validatedOfferId,
+            asset_type: 'video_ad',
+            video_type: video.video_type,
+            video_hook: video.hook,
+            video_problem: video.problem,
+            video_why_bad: video.why_bad,
+            video_solution: video.solution,
+            video_proof: video.proof,
+            video_cta: video.cta,
+            video_duration: video.duration,
+            video_visual_notes: video.visual_notes,
+            ad_angle: video.video_type,
+            headline: video.title,
+          });
+          if (videoError) throw videoError;
+        }
+
+        // Insert static ads - pain based (5)
+        for (const ad of parsedContent.static_ads?.pain_based || []) {
           const { error: adError } = await supabase.from('ads').insert({
             client_id: clientId,
             offer_id: validatedOfferId,
             asset_type: 'static_ad',
+            angle: ad.angle,
+            focus: ad.focus,
             headline: ad.headline,
+            subheadline: ad.subheadline,
             body_text: ad.body_text,
+            eliminators: ad.eliminators,
             cta: ad.cta,
-            ad_angle: ad.ad_angle,
+            visual_suggestion: ad.visual_suggestion,
+            ad_angle: `${ad.angle}_${ad.focus}`,
           });
           if (adError) throw adError;
         }
 
-        // Insert video ads
-        const videoTypes = ['direct', 'educational', 'question_box'];
-        for (const videoType of videoTypes) {
-          const script = parsedContent.video_scripts?.[videoType];
-          if (script) {
-            const { error: videoError } = await supabase.from('ads').insert({
-              client_id: clientId,
-              offer_id: validatedOfferId,
-              asset_type: 'video_ad',
-              ad_angle: videoType,
-              script: script,
-            });
-            if (videoError) throw videoError;
-          }
+        // Insert static ads - desire based (5)
+        for (const ad of parsedContent.static_ads?.desire_based || []) {
+          const { error: adError } = await supabase.from('ads').insert({
+            client_id: clientId,
+            offer_id: validatedOfferId,
+            asset_type: 'static_ad',
+            angle: ad.angle,
+            focus: ad.focus,
+            headline: ad.headline,
+            subheadline: ad.subheadline,
+            body_text: ad.body_text,
+            eliminators: ad.eliminators,
+            cta: ad.cta,
+            visual_suggestion: ad.visual_suggestion,
+            ad_angle: `${ad.angle}_${ad.focus}`,
+          });
+          if (adError) throw adError;
         }
-        console.log('Ads saved successfully');
+
+        console.log('15 ads saved successfully (5 videos + 10 statics)');
         break;
     }
 
@@ -1019,6 +1289,130 @@ Responda em formato JSON com as chaves: static_ads (array de 2), video_scripts (
     );
   }
 });
+
+// Handler for refining a specific ad
+async function handleRefineAd(
+  body: RequestBody,
+  apiKey: string
+) {
+  const { adId, adType, currentContent, instruction } = body;
+  
+  if (!adId || !adType || !currentContent || !instruction) {
+    return new Response(
+      JSON.stringify({ error: 'Missing required fields for ad refinement' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const systemPrompt = `Você é um especialista em copywriting e anúncios. 
+Sua tarefa é REFINAR um anúncio existente com base na instrução do usuário.
+Mantenha a estrutura original, apenas ajuste o conteúdo conforme solicitado.`;
+
+  let prompt = "";
+  if (adType === "video") {
+    prompt = `## ROTEIRO DE VÍDEO ATUAL
+
+HOOK: ${(currentContent as any).hook}
+PROBLEMA: ${(currentContent as any).problem}
+POR QUE É RUIM: ${(currentContent as any).why_bad}
+SOLUÇÃO: ${(currentContent as any).solution}
+PROVA: ${(currentContent as any).proof}
+CTA: ${(currentContent as any).cta}
+DURAÇÃO: ${(currentContent as any).duration}
+
+## INSTRUÇÃO DO USUÁRIO
+${instruction}
+
+## TAREFA
+Refine o roteiro conforme a instrução. Mantenha a estrutura de 6 seções.
+
+Responda em JSON:
+{
+  "hook": "...",
+  "problem": "...",
+  "why_bad": "...",
+  "solution": "...",
+  "proof": "...",
+  "cta": "...",
+  "duration": "...",
+  "visual_notes": "..."
+}`;
+  } else {
+    prompt = `## ANÚNCIO ESTÁTICO ATUAL
+
+HEADLINE: ${(currentContent as any).headline}
+SUBHEADLINE: ${(currentContent as any).subheadline}
+COPY: ${(currentContent as any).body_text}
+ELIMINATORS: ${(currentContent as any).eliminators?.join(', ')}
+CTA: ${(currentContent as any).cta}
+
+## INSTRUÇÃO DO USUÁRIO
+${instruction}
+
+## TAREFA
+Refine o anúncio conforme a instrução.
+
+Responda em JSON:
+{
+  "headline": "...",
+  "subheadline": "...",
+  "body_text": "...",
+  "eliminators": ["...", "...", "..."],
+  "cta": "...",
+  "visual_suggestion": "..."
+}`;
+  }
+
+  const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.5-flash',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!aiResponse.ok) {
+    if (aiResponse.status === 429) {
+      return new Response(
+        JSON.stringify({ error: 'Rate limits exceeded, please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (aiResponse.status === 402) {
+      return new Response(
+        JSON.stringify({ error: 'Payment required, please add funds to your workspace.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    throw new Error('AI API error');
+  }
+
+  const aiData = await aiResponse.json();
+  const content = aiData.choices?.[0]?.message?.content;
+
+  let parsedContent;
+  try {
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : content;
+    parsedContent = JSON.parse(jsonStr);
+  } catch (e) {
+    console.error('Failed to parse refine response:', content);
+    throw new Error('Failed to parse AI response');
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, refinedContent: parsedContent }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
 
 // Handler for refreshing a specific field
 async function handleRefreshField(
@@ -1167,6 +1561,9 @@ function buildContext(pppData: PPPData): string {
     }
     if (pppData.profile.differentiators?.length) {
       parts.push(`Diferenciais: ${pppData.profile.differentiators.join(', ')}`);
+    }
+    if (pppData.profile.benefits?.length) {
+      parts.push(`Benefícios: ${pppData.profile.benefits.join(', ')}`);
     }
     parts.push('');
   }
