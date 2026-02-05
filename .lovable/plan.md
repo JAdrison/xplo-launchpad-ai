@@ -1,25 +1,30 @@
 
 
-# Integrar Configuracoes de IA com Edge Function
+# Arquitetura de IA Dual: Cerebro (GPT-5.2) + Braco (Gemini Flash)
 
 ## Visao Geral
 
-Permitir alternar livremente entre **Lovable AI** e **API propria** (OpenAI/Gemini) a qualquer momento na pagina de Configuracoes. A geracao de conteudo usara automaticamente a configuracao ativa.
+Implementar selecao automatica de modelo baseada no tipo de tarefa:
+
+- **Motor Estrategico (GPT-5.2)**: Tarefas que exigem pensamento profundo
+- **Motor Operacional (Gemini 3 Flash)**: Tarefas de escala e variacao
 
 ---
 
-## O Que NAO Muda
+## Mapeamento de Tarefas por Modelo
 
-| Elemento | Status |
-|----------|--------|
-| Estrutura dos anuncios (6 videos + 10 estaticos) | Intacto |
-| Prompts e instrucoes da IA | Intacto |
-| Formato JSON de resposta | Intacto |
-| Video tipo "question_box" | Intacto |
-| Modelo Hormozi/Ladeira | Intacto |
-| Toda logica de negocios | Intacta |
-
-**Unica mudanca**: O "motor" que processa as requisicoes (qual API e modelo usar).
+| Tipo de Geracao | Modelo | Justificativa |
+|-----------------|--------|---------------|
+| `generate-icps` | GPT-5.2 | Estruturar perfis de clientes |
+| `generate-pains` | GPT-5.2 | Mapear dores reais |
+| `generate-buyer-pains` | GPT-5.2 | Mapear dores do comprador |
+| `generate-promise` | GPT-5.2 | Criar promessa estrategica |
+| `offer` | GPT-5.2 | Criar oferta Hormozi completa |
+| `lp` | GPT-5.2 | Escrever Landing Page |
+| `ads` | GPT-5.2 | Gerar anuncios principais |
+| `create-video-ad` | GPT-5.2 | Video personalizado principal |
+| `refine-ad` | Gemini Flash | Variacoes e refinamentos |
+| `refresh-field` | Gemini Flash | Gerar alternativas de campos |
 
 ---
 
@@ -27,55 +32,30 @@ Permitir alternar livremente entre **Lovable AI** e **API propria** (OpenAI/Gemi
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND                                 │
+│                      EDGE FUNCTION                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  Settings.tsx                                                   │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  localStorage:                                           │   │
-│  │  - xplo_ai_source: "lovable" | "custom"                  │   │
-│  │  - xplo_ai_provider: "gemini" | "openai"                 │   │
-│  │  - xplo_ai_model: "google/gemini-2.5-flash" | ...        │   │
-│  │  - xplo_api_key: "sk-..." | "AIza..."                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              │                                  │
-│                              ▼                                  │
-│  Componentes de Geracao (Generator.tsx, StepPromise.tsx, etc)  │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Leem localStorage e enviam no body:                     │   │
-│  │  {                                                       │   │
-│  │    type: "ads",                                          │   │
-│  │    clientId: "...",                                      │   │
-│  │    aiConfig: {                                           │   │
-│  │      source: "custom",                                   │   │
-│  │      provider: "openai",                                 │   │
-│  │      model: "gpt-4o",                                    │   │
-│  │      apiKey: "sk-..."                                    │   │
-│  │    }                                                     │   │
-│  │  }                                                       │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     EDGE FUNCTION                               │
-├─────────────────────────────────────────────────────────────────┤
-│  generate-content/index.ts                                      │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  1. Recebe aiConfig do body                              │   │
-│  │  2. Decide qual API chamar:                              │   │
-│  │                                                          │   │
-│  │  if (aiConfig.source === "custom") {                     │   │
-│  │    // Usa API direta do provedor                         │   │
-│  │    if (aiConfig.provider === "openai") {                 │   │
-│  │      → https://api.openai.com/v1/chat/completions        │   │
-│  │    } else {                                              │   │
-│  │      → https://generativelanguage.googleapis.com/...     │   │
-│  │    }                                                     │   │
-│  │  } else {                                                │   │
-│  │    // Usa Lovable AI Gateway (padrao)                    │   │
-│  │    → https://ai.gateway.lovable.dev/v1/chat/completions  │   │
-│  │  }                                                       │   │
-│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  Request { type: "offer", aiConfig: {...} }                     │
+│                          │                                      │
+│                          ▼                                      │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │  selectModelForTask(type, aiConfig)                       │ │
+│  │                                                           │ │
+│  │  if (aiConfig.source === "custom") {                      │ │
+│  │    → Usa modelo do usuario (respeita escolha)             │ │
+│  │  } else {                                                 │ │
+│  │    → Seleciona automaticamente:                           │ │
+│  │      ESTRATEGICO? → openai/gpt-5.2                        │ │
+│  │      OPERACIONAL? → google/gemini-3-flash-preview         │ │
+│  │  }                                                        │ │
+│  └───────────────────────────────────────────────────────────┘ │
+│                          │                                      │
+│                          ▼                                      │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │  ai(config, sys, prompt)                                  │ │
+│  │  → Chama Lovable Gateway ou API direta                    │ │
+│  └───────────────────────────────────────────────────────────┘ │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,241 +65,190 @@ Permitir alternar livremente entre **Lovable AI** e **API propria** (OpenAI/Gemi
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `supabase/functions/generate-content/index.ts` | Adicionar suporte a multiplos provedores |
-| `src/pages/Generator.tsx` | Enviar aiConfig nas chamadas |
-| `src/components/onboarding/StepGenerateOffer.tsx` | Enviar aiConfig |
-| `src/components/onboarding/steps/StepPromise.tsx` | Enviar aiConfig |
-| `src/components/onboarding/steps/StepICPs.tsx` | Enviar aiConfig |
-| `src/components/onboarding/steps/StepPains.tsx` | Enviar aiConfig |
-| `src/components/generator/OfferOptionsSelector.tsx` | Enviar aiConfig |
-| `src/components/generator/DemandPlanEditor.tsx` | Enviar aiConfig |
-| `src/components/generator/AdsRefinerChat.tsx` | Enviar aiConfig |
-| `src/components/generator/CreateVideoAdDialog.tsx` | Enviar aiConfig |
-| `src/lib/aiConfig.ts` | Novo arquivo - helper para ler config |
+| `supabase/functions/generate-content/index.ts` | Adicionar logica de selecao automatica de modelo |
+| `src/pages/Settings.tsx` | Adicionar opcao "Arquitetura XPLO" como fonte de IA |
+| `src/lib/aiConfig.ts` | Atualizar tipos para incluir "xplo" como source |
 
 ---
 
 ## Implementacao Detalhada
 
-### 1. Criar Helper para Ler Configuracao (novo arquivo)
+### 1. Nova Opcao de Fonte: "Arquitetura XPLO"
 
-**Arquivo**: `src/lib/aiConfig.ts`
+**Settings.tsx** - Adicionar terceira opcao:
+
+```text
+Fonte de IA:
+
+[○] Lovable AI
+    Usa um modelo unico para tudo (padrao)
+
+[●] Arquitetura XPLO (Recomendado)
+    GPT-5.2 para estrategia + Gemini Flash para escala
+    
+[○] API Propria
+    Use sua propria chave OpenAI ou Google
+```
+
+---
+
+### 2. Mapeamento de Tarefas na Edge Function
+
+```typescript
+// Tipos de tarefas estrategicas (cerebro)
+const STRATEGIC_TASKS = [
+  "generate-icps",
+  "generate-pains", 
+  "generate-buyer-pains",
+  "generate-promise",
+  "offer",
+  "lp",
+  "ads",
+  "create-video-ad"
+];
+
+// Tipos de tarefas operacionais (braco)
+const OPERATIONAL_TASKS = [
+  "refine-ad",
+  "refresh-field"
+];
+
+function selectModelForTask(type: string, aiConfig: AIConfig): AIConfig {
+  // Se usuario escolheu API propria, respeita
+  if (aiConfig.source === "custom") {
+    return aiConfig;
+  }
+  
+  // Se usuario escolheu Lovable padrao (modelo unico), respeita
+  if (aiConfig.source === "lovable") {
+    return aiConfig;
+  }
+  
+  // Arquitetura XPLO: selecao automatica
+  if (aiConfig.source === "xplo") {
+    if (STRATEGIC_TASKS.includes(type)) {
+      return {
+        source: "lovable",
+        provider: "openai",
+        model: "openai/gpt-5.2"
+      };
+    } else {
+      return {
+        source: "lovable",
+        provider: "gemini",
+        model: "google/gemini-3-flash-preview"
+      };
+    }
+  }
+  
+  return aiConfig;
+}
+```
+
+---
+
+### 3. Atualizar aiConfig.ts
 
 ```typescript
 export interface AIConfig {
-  source: "lovable" | "custom";
+  source: "lovable" | "xplo" | "custom"; // Adicionar "xplo"
   provider: "gemini" | "openai";
   model: string;
   apiKey?: string;
 }
 
 export function getAIConfig(): AIConfig {
-  const source = (localStorage.getItem("xplo_ai_source") || "lovable") as "lovable" | "custom";
-  const provider = (localStorage.getItem("xplo_ai_provider") || "gemini") as "gemini" | "openai";
-  const model = localStorage.getItem("xplo_ai_model") || "google/gemini-2.5-flash";
-  const apiKey = localStorage.getItem("xplo_api_key") || undefined;
-
-  return { source, provider, model, apiKey };
+  const source = (localStorage.getItem("xplo_ai_source") || "xplo") as AIConfig["source"];
+  // ... resto igual
 }
 ```
 
 ---
 
-### 2. Atualizar Edge Function
+### 4. Atualizar Settings.tsx
 
-**Arquivo**: `supabase/functions/generate-content/index.ts`
+Adicionar nova opcao visual:
 
-Adicionar interface e funcao para chamar diferentes provedores:
-
-```typescript
-interface AIConfig {
-  source: "lovable" | "custom";
-  provider: "gemini" | "openai";
-  model: string;
-  apiKey?: string;
-}
-
-async function ai(config: AIConfig, sys: string, usr: string, t = 0.7) {
-  const fullSys = `${sys}\n\nIMPORTANTE: Responda APENAS com JSON válido...`;
-  
-  let url: string;
-  let headers: Record<string, string>;
-  let body: Record<string, unknown>;
-
-  if (config.source === "custom" && config.apiKey) {
-    if (config.provider === "openai") {
-      // OpenAI API direta
-      url = "https://api.openai.com/v1/chat/completions";
-      headers = { 
-        "Authorization": `Bearer ${config.apiKey}`, 
-        "Content-Type": "application/json" 
-      };
-      body = {
-        model: config.model,
-        messages: [
-          { role: "system", content: fullSys },
-          { role: "user", content: usr }
-        ],
-        temperature: t,
-        response_format: { type: "json_object" }
-      };
-    } else {
-      // Google Gemini API direta
-      url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
-      headers = { "Content-Type": "application/json" };
-      body = {
-        contents: [{ parts: [{ text: `${fullSys}\n\n${usr}` }] }],
-        generationConfig: { 
-          temperature: t,
-          responseMimeType: "application/json"
-        }
-      };
-    }
-  } else {
-    // Lovable AI Gateway (padrao)
-    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    headers = { 
-      "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, 
-      "Content-Type": "application/json" 
-    };
-    body = {
-      model: config.model || "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: fullSys },
-        { role: "user", content: usr }
-      ],
-      temperature: t,
-      response_format: { type: "json_object" }
-    };
-  }
-
-  const r = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body)
-  });
-
-  if (!r.ok) {
-    const st = r.status;
-    throw { 
-      status: st, 
-      message: st === 429 ? "Rate limit" : st === 402 ? "Payment required" : `Error ${st}` 
-    };
-  }
-
-  const d = await r.json();
-  
-  // Extrair conteudo baseado no provedor
-  let content: string;
-  if (config.source === "custom" && config.provider === "gemini") {
-    content = d.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  } else {
-    content = d.choices?.[0]?.message?.content || "";
-  }
-  
-  if (!content) throw new Error("No AI content");
-  return extractJson(content);
-}
+```tsx
+<label
+  htmlFor="xplo"
+  className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer ${
+    source === "xplo" ? "border-primary bg-primary/5" : "border-border"
+  }`}
+>
+  <RadioGroupItem value="xplo" id="xplo" className="mt-1" />
+  <div className="flex-1 space-y-1">
+    <div className="flex items-center gap-2">
+      <Sparkles className="h-4 w-4 text-primary" />
+      <span className="font-medium">Arquitetura XPLO</span>
+      <Badge variant="default" className="text-xs">Pro</Badge>
+    </div>
+    <p className="text-sm text-muted-foreground">
+      GPT-5.2 para estrategia + Gemini Flash para escala
+    </p>
+    <div className="mt-2 text-xs text-muted-foreground space-y-1">
+      <p>🧠 <strong>Cerebro:</strong> ICPs, Dores, Promessa, Oferta, LP, Anuncios</p>
+      <p>⚡ <strong>Braco:</strong> Refinamentos, Variacoes, Alternativas</p>
+    </div>
+  </div>
+</label>
 ```
-
-Modificar o handler para receber aiConfig:
-
-```typescript
-interface ReqBody {
-  type: string; 
-  clientId: string; 
-  // ... campos existentes ...
-  aiConfig?: AIConfig; // NOVO
-}
-
-Deno.serve(async (req) => {
-  // ...
-  const b = await req.json() as ReqBody;
-  const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig } = b;
-  
-  // Usar config recebida ou padrao Lovable
-  const config: AIConfig = aiConfig || {
-    source: "lovable",
-    provider: "gemini", 
-    model: "google/gemini-2.5-flash"
-  };
-  
-  // Substituir todas as chamadas ai(KEY, ...) por ai(config, ...)
-  const res = await ai(config, sys, prompt);
-  // ...
-});
-```
-
----
-
-### 3. Atualizar Componentes do Frontend
-
-**Padrao para todos os componentes**:
-
-```typescript
-import { getAIConfig } from "@/lib/aiConfig";
-
-// Antes da chamada invoke:
-const aiConfig = getAIConfig();
-
-const { data, error } = await supabase.functions.invoke("generate-content", {
-  body: {
-    type: "ads",
-    clientId,
-    // ... outros campos ...
-    aiConfig, // Adicionar este campo
-  },
-});
-```
-
-**Componentes a atualizar** (9 arquivos):
-
-1. `src/pages/Generator.tsx` - linha 241
-2. `src/components/onboarding/StepGenerateOffer.tsx` - linha 63
-3. `src/components/onboarding/steps/StepPromise.tsx` - linha 65
-4. `src/components/onboarding/steps/StepICPs.tsx` - linha 86
-5. `src/components/onboarding/steps/StepPains.tsx` - linha 109
-6. `src/components/generator/OfferOptionsSelector.tsx` - linha 113
-7. `src/components/generator/DemandPlanEditor.tsx` - linha 152
-8. `src/components/generator/AdsRefinerChat.tsx` - linha 74
-9. `src/components/generator/CreateVideoAdDialog.tsx` - linha 45
 
 ---
 
 ## Fluxo de Uso
 
 ```text
-1. Usuario vai em Configuracoes
-   ├── Seleciona "Lovable AI" → Salva
-   │   └── Proximas geracoes usam Lovable Gateway
-   │
-   └── Seleciona "API Propria"
-       ├── Escolhe provedor (OpenAI ou Gemini)
-       ├── Escolhe modelo
-       ├── Cola API Key
-       └── Salva → Proximas geracoes usam API direta
+Usuario em Configuracoes:
+│
+├── Lovable AI (modelo unico)
+│   └── Todas as geracoes usam o modelo selecionado
+│
+├── Arquitetura XPLO ← NOVO (padrao recomendado)
+│   ├── Criar oferta? → GPT-5.2
+│   ├── Gerar LP? → GPT-5.2
+│   ├── Gerar anuncios? → GPT-5.2
+│   ├── Refinar anuncio? → Gemini Flash
+│   └── Variacoes de campo? → Gemini Flash
+│
+└── API Propria
+    └── Usa chave do usuario para tudo
 ```
 
 ---
 
-## Seguranca
+## Vantagens
 
-| Aspecto | Tratamento |
-|---------|------------|
-| API Key armazenada | localStorage (navegador do usuario) |
-| API Key em transito | HTTPS para Edge Function |
-| API Key no backend | Usada apenas na requisicao, nao persistida |
-| Fallback | Se custom falhar, nao tenta Lovable automaticamente |
+| Aspecto | Beneficio |
+|---------|-----------|
+| Qualidade estrategica | GPT-5.2 para decisoes importantes |
+| Custo otimizado | Gemini Flash para tarefas repetitivas |
+| Velocidade | Flash e mais rapido para refinamentos |
+| Flexibilidade | Usuario pode mudar a qualquer momento |
+| Transparencia | UI mostra qual modo esta ativo |
 
 ---
 
-## Resultado Esperado
+## Resultado na UI
 
-| Configuracao | Comportamento |
-|--------------|---------------|
-| Lovable AI selecionado | Usa gateway Lovable com LOVABLE_API_KEY |
-| API Propria + OpenAI | Chama api.openai.com com sk-... do usuario |
-| API Propria + Gemini | Chama googleapis.com com AIza... do usuario |
+A pagina de Configuracoes tera 3 opcoes:
 
-O usuario pode trocar a qualquer momento em Configuracoes e a proxima geracao ja usara a nova configuracao.
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  Fonte de IA                                                 │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ○ Lovable AI                                                │
+│    Usa um modelo unico para todas as geracoes                │
+│                                                              │
+│  ● Arquitetura XPLO                          [Pro]           │
+│    GPT-5.2 para estrategia + Gemini Flash para escala        │
+│    🧠 Cerebro: ICPs, Dores, Promessa, Oferta, LP, Ads        │
+│    ⚡ Braco: Refinamentos, Variacoes, Alternativas           │
+│                                                              │
+│  ○ API Propria                                               │
+│    Use sua propria chave OpenAI ou Google                    │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
 
