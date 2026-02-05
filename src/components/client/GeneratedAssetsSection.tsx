@@ -39,6 +39,7 @@ import {
   Award,
   Undo2,
   Trash2,
+  Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ import { LandingPageViewer } from "@/components/generator/LandingPageViewer";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
 import { VideoAdCard } from "@/components/generator/VideoAdCard";
 import { AdsRefinerChat } from "@/components/generator/AdsRefinerChat";
+import { CreateVideoAdDialog } from "@/components/generator/CreateVideoAdDialog";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -141,6 +143,9 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
   const [refinerOpen, setRefinerOpen] = useState(false);
   const [selectedAd, setSelectedAd] = useState<{ ad: Ad; type: "video" | "static" } | null>(null);
   const [adsRefreshKey, setAdsRefreshKey] = useState(0);
+  
+  // State for Create Video Ad Dialog
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -254,6 +259,12 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
     handleAdUpdate({ ...selectedAd.ad, ...updateData });
     setAdsRefreshKey((k) => k + 1);
     toast.success("Anúncio refinado com sucesso!");
+  };
+
+  // Handle new video ad created
+  const handleVideoAdCreated = (newAd: Ad) => {
+    setAds((prev) => [newAd, ...prev]);
+    setAdsRefreshKey((k) => k + 1);
   };
 
   const getRefinerContent = (): any => {
@@ -757,10 +768,20 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                 )}
 
                 {/* Video Ads */}
-                {videoAds.length > 0 && (
-                  <div className="space-y-3">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium">Scripts de Vídeo</h4>
-                    {videoAds.map((ad) => (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreateDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Criar Novo
+                    </Button>
+                  </div>
+                  {videoAds.length > 0 ? (
+                    videoAds.map((ad) => (
                       <VideoAdCard
                         key={ad.id}
                         ad={ad}
@@ -769,9 +790,13 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                         onUpdate={handleAdUpdate}
                         isDeleting={deletingId === ad.id}
                       />
-                    ))}
-                  </div>
-                )}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">
+                      Nenhum script de vídeo ainda. Clique em "Criar Novo" para gerar um com IA.
+                    </p>
+                  )}
+                </div>
               </AccordionContent>
             </AccordionItem>
           )}
@@ -792,6 +817,14 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
           onApply={handleApplyRefinement}
         />
       )}
+
+      {/* Create Video Ad Dialog */}
+      <CreateVideoAdDialog
+        isOpen={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        clientId={clientId}
+        onCreated={handleVideoAdCreated}
+      />
     </Card>
   );
 }

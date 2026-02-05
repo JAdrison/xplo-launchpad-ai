@@ -135,6 +135,50 @@ Deno.serve(async (req) => {
       prompt = `${ctx}\nCrie promessa.\nJSON: {"promise":""}`;
       const res = await ai(KEY, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, promise: res.promise }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "create-video-ad") {
+      const { instruction } = b;
+      if (!instruction || !clientId) {
+        return new Response(JSON.stringify({ error: 'Missing instruction or clientId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      
+      // Fetch client context
+      const { data: profile } = await supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle();
+      const { data: promise } = await supabase.from('client_promise').select('*').eq('client_id', clientId).maybeSingle();
+      const { data: client } = await supabase.from('clients').select('niche').eq('id', clientId).maybeSingle();
+      
+      // Build context
+      let adCtx = '';
+      if (client?.niche) adCtx += `Nicho: ${client.niche}\n`;
+      if (profile?.product_name) adCtx += `Produto: ${profile.product_name}\n`;
+      if (profile?.product_description) adCtx += `Descrição: ${profile.product_description}\n`;
+      if (profile?.main_pain) adCtx += `Dor principal: ${profile.main_pain}\n`;
+      if (profile?.desire_1) adCtx += `Desejo: ${profile.desire_1}\n`;
+      if (promise?.promise_text) adCtx += `Promessa: ${promise.promise_text}\n`;
+      
+      const videoSys = 'Copywriter especialista em anúncios de vídeo para redes sociais. Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), PROVA (credibilidade), CTA (chamada para ação). Duração 20-60s.';
+      const videoPrompt = `${adCtx}\n\nInstrução do usuário: ${instruction}\n\nCrie um roteiro de vídeo completo.\nJSON: {"video_type":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","proof":"","cta":"","visual_notes":""}`;
+      
+      const videoRes = await ai(KEY, videoSys, videoPrompt, 0.8);
+      
+      // Insert into database
+      const { data: newAd, error: insertError } = await supabase.from('ads').insert({
+        client_id: clientId,
+        asset_type: 'video_ad',
+        video_type: videoRes.video_type || 'Personalizado',
+        video_hook: videoRes.hook,
+        video_problem: videoRes.problem,
+        video_why_bad: videoRes.why_bad,
+        video_solution: videoRes.solution,
+        video_proof: videoRes.proof,
+        video_cta: videoRes.cta,
+        video_duration: videoRes.duration,
+        video_visual_notes: videoRes.visual_notes,
+        headline: videoRes.video_type || 'Anúncio Personalizado'
+      }).select().single();
+      
+      if (insertError) throw insertError;
+      
+      return new Response(JSON.stringify({ success: true, ad: newAd }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "ads") {
       let oCtx = '', vOid: string | null = null;
       if (offerId) {
