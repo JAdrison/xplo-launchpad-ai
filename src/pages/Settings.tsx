@@ -7,9 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Save, Sparkles, Key } from "lucide-react";
+import { Eye, EyeOff, Save, Sparkles, Key, Brain, Zap } from "lucide-react";
 
-type AISource = "lovable" | "custom";
+type AISource = "lovable" | "xplo" | "custom";
 type AIProvider = "gemini" | "openai";
 
 interface ModelOption {
@@ -47,7 +47,7 @@ const CUSTOM_MODELS: Record<AIProvider, ModelOption[]> = {
 
 export default function Settings() {
   const { toast } = useToast();
-  const [source, setSource] = useState<AISource>("lovable");
+  const [source, setSource] = useState<AISource>("xplo");
   const [provider, setProvider] = useState<AIProvider>("gemini");
   const [model, setModel] = useState("google/gemini-3-flash-preview");
   const [apiKey, setApiKey] = useState("");
@@ -66,8 +66,9 @@ export default function Settings() {
     if (savedKey) setApiKey(savedKey);
   }, []);
 
-  // Reset model when source or provider changes
+  // Reset model when source or provider changes (only for non-xplo sources)
   useEffect(() => {
+    if (source === "xplo") return; // XPLO gerencia modelos automaticamente
     const models = source === "lovable" ? LOVABLE_MODELS : CUSTOM_MODELS;
     const defaultModel = models[provider][0].value;
     setModel(defaultModel);
@@ -116,6 +117,37 @@ export default function Settings() {
               onValueChange={(value) => setSource(value as AISource)}
               className="grid gap-3"
             >
+              {/* Opção XPLO - Arquitetura Dual */}
+              <label
+                htmlFor="xplo"
+                className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
+                  source === "xplo" ? "border-primary bg-primary/5" : "border-border hover:bg-accent/50"
+                }`}
+              >
+                <RadioGroupItem value="xplo" id="xplo" className="mt-1" />
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Arquitetura XPLO</span>
+                    <Badge variant="default" className="text-xs">Pro</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    GPT-5.2 para estratégia + Gemini Flash para escala
+                  </p>
+                  <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                    <p className="flex items-center gap-1">
+                      <Brain className="h-3 w-3" />
+                      <strong>Cérebro:</strong> ICPs, Dores, Promessa, Oferta, LP, Anúncios
+                    </p>
+                    <p className="flex items-center gap-1">
+                      <Zap className="h-3 w-3" />
+                      <strong>Braço:</strong> Refinamentos, Variações, Alternativas
+                    </p>
+                  </div>
+                </div>
+              </label>
+
+              {/* Opção Lovable AI - Modelo único */}
               <label
                 htmlFor="lovable"
                 className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
@@ -125,16 +157,16 @@ export default function Settings() {
                 <RadioGroupItem value="lovable" id="lovable" className="mt-1" />
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
+                    <Sparkles className="h-4 w-4" />
                     <span className="font-medium">Lovable AI</span>
-                    <Badge variant="secondary" className="text-xs">Recomendado</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Sem configuração necessária. Usa créditos Lovable automaticamente.
+                    Usa um modelo único para todas as gerações.
                   </p>
                 </div>
               </label>
 
+              {/* Opção API Própria */}
               <label
                 htmlFor="custom"
                 className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
@@ -155,46 +187,50 @@ export default function Settings() {
             </RadioGroup>
           </div>
 
-          {/* Provider Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provedor</Label>
-            <Select value={provider} onValueChange={(value) => setProvider(value as AIProvider)}>
-              <SelectTrigger id="provider">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gemini">Google Gemini</SelectItem>
-                <SelectItem value="openai">OpenAI</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Provider Selection - apenas para Lovable e Custom */}
+          {source !== "xplo" && (
+            <div className="space-y-2">
+              <Label htmlFor="provider">Provedor</Label>
+              <Select value={provider} onValueChange={(value) => setProvider(value as AIProvider)}>
+                <SelectTrigger id="provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          {/* Model Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="model">Modelo</Label>
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger id="model">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {currentModels[provider].map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex items-center gap-2">
-                      <span>{m.label}</span>
-                      {m.badge && (
-                        <Badge 
-                          variant={m.badge === "Novo" ? "default" : "secondary"} 
-                          className="text-xs"
-                        >
-                          {m.badge}
-                        </Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Model Selection - apenas para Lovable e Custom */}
+          {source !== "xplo" && (
+            <div className="space-y-2">
+              <Label htmlFor="model">Modelo</Label>
+              <Select value={model} onValueChange={setModel}>
+                <SelectTrigger id="model">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentModels[provider].map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      <div className="flex items-center gap-2">
+                        <span>{m.label}</span>
+                        {m.badge && (
+                          <Badge 
+                            variant={m.badge === "Novo" ? "default" : "secondary"} 
+                            className="text-xs"
+                          >
+                            {m.badge}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* API Key (only for custom) */}
           {source === "custom" && (
@@ -225,12 +261,25 @@ export default function Settings() {
             </div>
           )}
 
+          {/* Info note for XPLO */}
+          {source === "xplo" && (
+            <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 text-sm text-foreground">
+              <p className="font-medium mb-2">🚀 Arquitetura Otimizada</p>
+              <p className="text-muted-foreground">
+                O sistema seleciona automaticamente o melhor modelo para cada tarefa:
+              </p>
+              <ul className="mt-2 text-xs text-muted-foreground space-y-1">
+                <li><strong>GPT-5.2</strong> → Oferta, LP, Anúncios, ICPs, Dores, Promessa</li>
+                <li><strong>Gemini Flash</strong> → Refinamentos, Variações, Alternativas</li>
+              </ul>
+            </div>
+          )}
+
           {/* Info note for Lovable AI */}
           {source === "lovable" && (
             <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
               <p>
-                <strong>Dica:</strong> Com Lovable AI você tem acesso aos modelos mais recentes 
-                (Gemini 3, GPT-5.2) sem precisar configurar API Key.
+                <strong>Dica:</strong> Com Lovable AI você escolhe um modelo único para todas as gerações.
               </p>
             </div>
           )}

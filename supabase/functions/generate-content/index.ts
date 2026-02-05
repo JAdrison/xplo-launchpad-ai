@@ -6,10 +6,56 @@ const corsHeaders = {
 };
 
 interface AIConfig {
-  source: "lovable" | "custom";
+  source: "lovable" | "xplo" | "custom";
   provider: "gemini" | "openai";
   model: string;
   apiKey?: string;
+}
+
+// Tipos de tarefas estratégicas (cérebro) - usam GPT-5.2
+const STRATEGIC_TASKS = [
+  "generate-icps",
+  "generate-pains", 
+  "generate-buyer-pains",
+  "generate-promise",
+  "offer",
+  "lp",
+  "ads",
+  "create-video-ad"
+];
+
+// Seleção automática de modelo baseada no tipo de tarefa
+function selectModelForTask(type: string, aiConfig: AIConfig): AIConfig {
+  // Se usuário escolheu API própria, respeita a escolha
+  if (aiConfig.source === "custom") {
+    return aiConfig;
+  }
+  
+  // Se usuário escolheu Lovable padrão (modelo único), respeita
+  if (aiConfig.source === "lovable") {
+    return aiConfig;
+  }
+  
+  // Arquitetura XPLO: seleção automática baseada no tipo de tarefa
+  if (aiConfig.source === "xplo") {
+    if (STRATEGIC_TASKS.includes(type)) {
+      console.log(`[AI] XPLO Architecture: Using strategic model (GPT-5.2) for ${type}`);
+      return {
+        source: "lovable",
+        provider: "openai",
+        model: "openai/gpt-5.2"
+      };
+    } else {
+      console.log(`[AI] XPLO Architecture: Using operational model (Gemini Flash) for ${type}`);
+      return {
+        source: "lovable",
+        provider: "gemini",
+        model: "google/gemini-3-flash-preview"
+      };
+    }
+  }
+  
+  return aiConfig;
 }
 
 interface PPPData {
@@ -203,12 +249,15 @@ Deno.serve(async (req) => {
     const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig } = b;
     console.log(`[generate-content] ${type} for ${clientId}`);
     
-    // Usar config recebida ou padrão Lovable
-    const config: AIConfig = aiConfig || {
-      source: "lovable",
+    // Usar config recebida ou padrão XPLO (arquitetura dual)
+    const baseConfig: AIConfig = aiConfig || {
+      source: "xplo",
       provider: "gemini", 
       model: "google/gemini-2.5-flash"
     };
+    
+    // Aplicar seleção automática de modelo baseada no tipo de tarefa
+    const config = selectModelForTask(type, baseConfig);
     
     const ctx = pppData ? buildCtx(pppData) : '';
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
