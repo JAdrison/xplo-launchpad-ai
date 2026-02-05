@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import type { Tables, Json } from "@/integrations/supabase/types";
 import { LandingPageViewer } from "@/components/generator/LandingPageViewer";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
+import { VideoAdCard } from "@/components/generator/VideoAdCard";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -199,6 +200,10 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
 
     setAds((prev) => prev.filter((a) => a.id !== adId));
     toast.success("Anúncio excluído com sucesso!");
+  };
+
+  const handleAdUpdate = (updatedAd: Ad) => {
+    setAds((prev) => prev.map((a) => (a.id === updatedAd.id ? updatedAd : a)));
   };
 
   const hasContent = offers.length > 0 || landingPages.length > 0 || ads.length > 0;
@@ -657,79 +662,16 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                 {videoAds.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium">Scripts de Vídeo</h4>
-                    {videoAds.map((ad) => {
-                      const script = ad.script as VideoScript;
-                      const angleLabels: Record<string, string> = {
-                        direct: "Direto",
-                        educational: "Educacional",
-                        question_box: "Caixinha de Perguntas",
-                      };
-                      return (
-                        <div key={ad.id} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline">{angleLabels[ad.ad_angle || ""] || ad.ad_angle}</Badge>
-                            <div className="flex items-center gap-2">
-                              {script?.duration && (
-                                <span className="text-xs text-muted-foreground">{script.duration}</span>
-                              )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => copyToClipboard(
-                                  `HOOK:\n${script?.hook}\n\nBODY:\n${script?.body}\n\nCTA:\n${script?.cta}`,
-                                  `Script ${ad.ad_angle}`
-                                )}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja excluir este script de vídeo? Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDeleteAd(ad.id)}
-                                      disabled={deletingId === ad.id}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      {deletingId === ad.id ? "Excluindo..." : "Excluir"}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-                          {script?.hook && (
-                            <div>
-                              <p className="text-xs text-muted-foreground font-medium">Hook (Gancho)</p>
-                              <p className="text-sm">{script.hook}</p>
-                            </div>
-                          )}
-                          {script?.body && (
-                            <div>
-                              <p className="text-xs text-muted-foreground font-medium">Desenvolvimento</p>
-                              <p className="text-sm">{script.body}</p>
-                            </div>
-                          )}
-                          {script?.cta && (
-                            <div>
-                              <p className="text-xs text-muted-foreground font-medium">CTA</p>
-                              <p className="text-sm font-medium text-primary">{script.cta}</p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {videoAds.map((ad) => (
+                      <VideoAdCard
+                        key={ad.id}
+                        ad={ad}
+                        onDelete={() => handleDeleteAd(ad.id)}
+                        onRefine={() => {}}
+                        onUpdate={handleAdUpdate}
+                        isDeleting={deletingId === ad.id}
+                      />
+                    ))}
                   </div>
                 )}
               </AccordionContent>
