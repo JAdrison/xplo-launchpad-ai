@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
@@ -63,10 +63,19 @@ export default function ClientDetails() {
   const { toast } = useToast();
 
   const [client, setClient] = useState<Client | null>(null);
+  const [clientProfile, setClientProfile] = useState<{
+    instagram_link?: string | null;
+    instagram_login?: string | null;
+    instagram_password?: string | null;
+    facebook_login?: string | null;
+    facebook_password?: string | null;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showInstagramPassword, setShowInstagramPassword] = useState(false);
+  const [showFacebookPassword, setShowFacebookPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -110,6 +119,17 @@ export default function ClientDetails() {
           product_description: data.product_description || "",
           notes: data.notes || "",
         });
+
+        // Buscar profile do cliente para credenciais Meta Ads
+        const { data: profileData } = await supabase
+          .from("client_profile")
+          .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password")
+          .eq("client_id", id)
+          .maybeSingle();
+
+        if (profileData) {
+          setClientProfile(profileData);
+        }
       }
       setIsLoading(false);
     }
@@ -348,6 +368,102 @@ export default function ClientDetails() {
           )}
         </CardContent>
       </Card>
+
+      {/* Credenciais Meta Ads */}
+      {clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Acesso às Redes Sociais (Meta Ads)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Instagram */}
+            {(clientProfile.instagram_link || clientProfile.instagram_login) && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Instagram className="h-4 w-4" />
+                  Instagram
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {clientProfile.instagram_link && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Link</p>
+                      <a 
+                        href={clientProfile.instagram_link.startsWith('http') ? clientProfile.instagram_link : `https://${clientProfile.instagram_link}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline break-all"
+                      >
+                        {clientProfile.instagram_link}
+                      </a>
+                    </div>
+                  )}
+                  {clientProfile.instagram_login && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Login</p>
+                      <p className="text-foreground">{clientProfile.instagram_login}</p>
+                    </div>
+                  )}
+                  {clientProfile.instagram_password && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-foreground">
+                          {showInstagramPassword ? clientProfile.instagram_password : "••••••••"}
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => setShowInstagramPassword(!showInstagramPassword)}
+                        >
+                          {showInstagramPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Facebook */}
+            {clientProfile.facebook_login && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Facebook className="h-4 w-4" />
+                  Facebook
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Login</p>
+                    <p className="text-foreground">{clientProfile.facebook_login}</p>
+                  </div>
+                  {clientProfile.facebook_password && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-foreground">
+                          {showFacebookPassword ? clientProfile.facebook_password : "••••••••"}
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => setShowFacebookPassword(!showFacebookPassword)}
+                        >
+                          {showFacebookPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Seção de Onboarding X1 */}
       <OnboardingX1Section client={client} onStatusChange={handleRefreshClient} />
