@@ -1,97 +1,163 @@
 
-# Correção: Scripts de Vídeo Não Aparecem
+# PDF de Anúncios + Refinar com IA na Página de Detalhes
 
-## Diagnóstico
+## Visão Geral
 
-O problema é que existem **dois componentes diferentes** renderizando anúncios de vídeo:
-
-| Componente | Usado Em | Status |
-|------------|----------|--------|
-| `GeneratedContentViewer.tsx` | Página Generator | Usa `VideoAdCard` - Funciona |
-| `GeneratedAssetsSection.tsx` | Página ClientDetails | Usa formato legado - NAO funciona |
-
-### Causa Raiz
-
-O `GeneratedAssetsSection.tsx` (linhas 660-732) ainda tenta ler os dados do campo `script` (formato antigo):
-
-```text
-const script = ad.script as VideoScript;
-// ...
-{script?.hook && <p>{script.hook}</p>}
-{script?.body && <p>{script.body}</p>}
-{script?.cta && <p>{script.cta}</p>}
-```
-
-Porém os novos anúncios armazenam os dados nas colunas diretas:
-- `video_hook`
-- `video_problem`
-- `video_why_bad`
-- `video_solution`
-- `video_proof`
-- `video_cta`
-- `video_visual_notes`
-- `video_duration`
-
-A consulta ao banco confirmou que o campo `script` está `nil` (nulo), enquanto as colunas `video_*` contêm o conteúdo.
+Adicionar duas funcionalidades na página de detalhes do cliente (`GeneratedAssetsSection.tsx`):
+1. **Botão PDF** - Exportar todos os anúncios (estáticos + vídeos) em documento profissional
+2. **Refinar com IA** - O botão "Refinar" abre o chat para enviar prompts à IA
 
 ---
 
-## Solucao
+## Parte 1: Botão de Exportar PDF
 
-Atualizar o `GeneratedAssetsSection.tsx` para usar o componente `VideoAdCard` que já funciona corretamente no `GeneratedContentViewer.tsx`.
+### Localização
 
-### Alteracoes no GeneratedAssetsSection.tsx
+O botão será adicionado no header da seção de Anúncios, similar ao que já existe no `GeneratedContentViewer.tsx`:
 
-1. **Importar o componente VideoAdCard**
-2. **Adicionar estado para gerenciar atualizações** (handleAdUpdate)
-3. **Substituir o renderizador de vídeos legado pelo VideoAdCard**
-
-### Codigo Atualizado
-
-**Imports:**
-```typescript
-import { VideoAdCard } from "@/components/generator/VideoAdCard";
+```text
+┌─────────────────────────────────────────────────────────┐
+│ ▼ Anúncios (5 estáticos, 5 vídeos) [Gerados]     [PDF] │
+├─────────────────────────────────────────────────────────┤
+│   ...conteúdo dos anúncios...                          │
+└─────────────────────────────────────────────────────────┘
 ```
 
-**Handler para atualizações:**
-```typescript
-const handleAdUpdate = (updatedAd: Ad) => {
-  setAds((prev) => prev.map((a) => (a.id === updatedAd.id ? updatedAd : a)));
+### Implementação
+
+1. Importar `PDFExportButton` (já está importado no arquivo)
+2. Adicionar estado `adsRefreshKey` para sincronização
+3. Adicionar o botão no AccordionTrigger ou logo após o AccordionContent abrir
+
+---
+
+## Parte 2: Integração do AdsRefinerChat
+
+### Problema Atual
+
+O componente `VideoAdCard` recebe `onRefine={() => {}}` - uma função vazia que não faz nada.
+
+### Solução
+
+1. Importar `AdsRefinerChat`
+2. Adicionar estados para controlar o dialog:
+   - `refinerOpen: boolean`
+   - `selectedAd: { ad: Ad; type: "video" | "static" } | null`
+3. Criar funções:
+   - `openRefiner(ad, type)` - abre o dialog
+   - `handleApplyRefinement(newContent)` - salva no banco e atualiza estado local
+4. Adicionar o componente `AdsRefinerChat` no final do JSX
+5. Passar `onRefine={() => openRefiner(ad, "video")}` para VideoAdCard
+
+---
+
+## Alterações Detalhadas
+
+### Estados a Adicionar
+
+```text
+const [refinerOpen, setRefinerOpen] = useState(false);
+const [selectedAd, setSelectedAd] = useState<{ ad: Ad; type: "video" | "static" } | null>(null);
+const [adsRefreshKey, setAdsRefreshKey] = useState(0);
+```
+
+### Funções a Adicionar
+
+```text
+const openRefiner = (ad: Ad, type: "video" | "static") => {
+  setSelectedAd({ ad, type });
+  setRefinerOpen(true);
+};
+
+const handleApplyRefinement = async (newContent: any) => {
+  if (!selectedAd) return;
+  
+  const updateData = selectedAd.type === "video" 
+    ? { video_hook: newContent.hook, video_problem: newContent.problem, ... }
+    : { headline: newContent.headline, subheadline: newContent.subheadline, ... };
+  
+  await supabase.from("ads").update(updateData).eq("id", selectedAd.ad.id);
+  
+  // Atualiza estado local
+  handleAdUpdate({ ...selectedAd.ad, ...updateData });
+  setAdsRefreshKey(k => k + 1);
+  toast.success("Anúncio refinado com sucesso!");
 };
 ```
 
-**Seção de Video Ads (substituir linhas 656-733):**
-```typescript
-{videoAds.length > 0 && (
-  <div className="space-y-3">
-    <h4 className="text-sm font-medium">Scripts de Vídeo</h4>
-    {videoAds.map((ad) => (
-      <VideoAdCard
-        key={ad.id}
-        ad={ad}
-        onDelete={() => handleDeleteAd(ad.id)}
-        onRefine={() => {}} // Refiner não disponível nesta view
-        onUpdate={handleAdUpdate}
-        isDeleting={deletingId === ad.id}
-      />
-    ))}
-  </div>
+### VideoAdCard - Atualizar onRefine
+
+De:
+```text
+onRefine={() => {}}
+```
+
+Para:
+```text
+onRefine={() => openRefiner(ad, "video")}
+```
+
+### Adicionar AdsRefinerChat no JSX
+
+Adicionar antes do fechamento do return, similar ao `GeneratedContentViewer`:
+
+```text
+{selectedAd && (
+  <AdsRefinerChat
+    isOpen={refinerOpen}
+    onClose={() => { setRefinerOpen(false); setSelectedAd(null); }}
+    adId={selectedAd.ad.id}
+    adType={selectedAd.type}
+    currentContent={...}
+    onApply={handleApplyRefinement}
+  />
 )}
+```
+
+### Adicionar Botão PDF
+
+Dentro do AccordionContent da seção de Anúncios:
+
+```text
+<AccordionContent className="space-y-4 pt-4">
+  {/* PDF Export Button */}
+  <div className="flex justify-end mb-2">
+    <PDFExportButton
+      type="ads"
+      clientName={clientName || "cliente"}
+      content={{ videoAds, staticAds }}
+      createdAt={new Date().toISOString()}
+      refreshKey={adsRefreshKey}
+    />
+  </div>
+  
+  {/* Static Ads */}
+  ...
+</AccordionContent>
 ```
 
 ---
 
-## Arquivos a Modificar
+## Arquivo a Modificar
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/client/GeneratedAssetsSection.tsx` | Usar `VideoAdCard` em vez do renderer legado |
+| Arquivo | Alterações |
+|---------|------------|
+| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar estados, funções, AdsRefinerChat, botão PDF |
+
+---
+
+## Imports a Adicionar
+
+```text
+import { AdsRefinerChat } from "@/components/generator/AdsRefinerChat";
+```
 
 ---
 
 ## Resultado Esperado
 
-1. Os scripts de vídeo aparecerao com todo o conteúdo (Hook, Problema, Por que é ruim, Solucao, Prova, CTA, Notas Visuais)
-2. Checkboxes para selecionar secoes ao copiar
-3. Edicao inline de cada secao
-4. Compatibilidade tanto com dados legados quanto novos
+1. Botão "PDF" visível na seção de Anúncios da página de detalhes do cliente
+2. Ao clicar no PDF, exporta todos os anúncios (estáticos e vídeos) com formatação profissional
+3. Ao clicar em "Refinar" em qualquer vídeo, abre dialog para digitar instruções
+4. Usuário digita "mais agressivo", IA refina o anúncio
+5. Ao aplicar, salva no banco e atualiza a visualização + PDF automaticamente
