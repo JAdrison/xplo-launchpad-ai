@@ -63,7 +63,7 @@ function extractText(value: unknown): string {
 
 function extractVisualNotes(res: Record<string, unknown>): string {
   const notes: string[] = [];
-  const fields = ['hook', 'problem', 'why_bad', 'solution', 'proof', 'cta'];
+  const fields = ['hook', 'problem', 'why_bad', 'solution', 'cta'];
   
   for (const f of fields) {
     if (typeof res[f] === 'object' && res[f] !== null) {
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
     if (type === "refine-ad") {
       const { adType, currentContent: c, instruction } = b;
       if (!c || !instruction) return new Response(JSON.stringify({ error: 'Missing' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      const p = adType === "video" ? `Refine vídeo:\nHOOK: ${c.hook}\nPROBLEMA: ${c.problem}\nPOR QUE: ${c.why_bad}\nSOLUÇÃO: ${c.solution}\nPROVA: ${c.proof}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"hook":"","problem":"","why_bad":"","solution":"","proof":"","cta":"","duration":"","visual_notes":""}`
+      const p = adType === "video" ? `Refine vídeo:\nHOOK: ${c.hook}\nPROBLEMA: ${c.problem}\nPOR QUE: ${c.why_bad}\nSOLUÇÃO: ${c.solution}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"hook":"","problem":"","why_bad":"","solution":"","cta":"","duration":"","visual_notes":""}`
         : `Refine estático:\nHEADLINE: ${c.headline}\nSUBHEADLINE: ${c.subheadline}\nCOPY: ${c.body_text}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}`;
       const res = await ai(KEY, 'Copywriter.', p);
       return new Response(JSON.stringify({ success: true, refinedContent: res }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -183,8 +183,8 @@ Deno.serve(async (req) => {
       if (profile?.desire_1) adCtx += `Desejo: ${profile.desire_1}\n`;
       if (promise?.promise_text) adCtx += `Promessa: ${promise.promise_text}\n`;
       
-      const videoSys = 'Copywriter especialista em anúncios de vídeo para redes sociais. Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), PROVA (credibilidade), CTA (chamada para ação). Duração 20-60s.';
-      const videoPrompt = `${adCtx}\n\nInstrução do usuário: ${instruction}\n\nIMPORTANTE: Retorne APENAS strings simples em cada campo, NÃO objetos.\nRetorne visual_notes como um único campo com todas as notas visuais combinadas.\n\nJSON (valores devem ser strings, não objetos):\n{\n  "video_type": "tipo do vídeo",\n  "duration": "duração em segundos",\n  "hook": "texto do hook",\n  "problem": "texto do problema",\n  "why_bad": "texto de por que é ruim",\n  "solution": "texto da solução",\n  "proof": "texto da prova",\n  "cta": "texto do CTA",\n  "visual_notes": "todas as notas visuais combinadas"\n}`;
+      const videoSys = 'Copywriter especialista em anúncios de vídeo para redes sociais. Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), CTA (chamada para ação). Duração 20-60s.';
+      const videoPrompt = `${adCtx}\n\nInstrução do usuário: ${instruction}\n\nIMPORTANTE: Retorne APENAS strings simples em cada campo, NÃO objetos.\nRetorne visual_notes como um único campo com todas as notas visuais combinadas.\n\nJSON (valores devem ser strings, não objetos):\n{\n  "video_type": "tipo do vídeo",\n  "duration": "duração em segundos",\n  "hook": "texto do hook",\n  "problem": "texto do problema",\n  "why_bad": "texto de por que é ruim",\n  "solution": "texto da solução",\n  "cta": "texto do CTA",\n  "visual_notes": "todas as notas visuais combinadas"\n}`;
       
       const videoRes = await ai(KEY, videoSys, videoPrompt, 0.8) as Record<string, unknown>;
       
@@ -197,7 +197,6 @@ Deno.serve(async (req) => {
         video_problem: extractText(videoRes.problem),
         video_why_bad: extractText(videoRes.why_bad),
         video_solution: extractText(videoRes.solution),
-        video_proof: extractText(videoRes.proof),
         video_cta: extractText(videoRes.cta),
         video_duration: extractText(videoRes.duration),
         video_visual_notes: extractVisualNotes(videoRes),
@@ -214,12 +213,12 @@ Deno.serve(async (req) => {
         if (o) { vOid = offerId; oCtx = `Oferta: ${o.promise || ''}`; }
       }
       const bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
-      sys = 'Ads expert. Crie 5 vídeos (6 seções: HOOK,PROBLEMA,POR QUE É RUIM,SOLUÇÃO,PROVA,CTA, 20-80s) + 10 estáticos (5 dor, 5 desejo).';
-      prompt = `${ctx}\n${oCtx}\n${bp}\nJSON: {"video_scripts":[{"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","proof":"","cta":"","visual_notes":""}],"static_ads":{"pain_based":[{"angle":"pain","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}],"desire_based":[{"angle":"desire","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}]}}`;
+      sys = 'Ads expert. Crie 5 vídeos (5 seções: HOOK,PROBLEMA,POR QUE É RUIM,SOLUÇÃO,CTA, 20-80s) + 10 estáticos (5 dor, 5 desejo).';
+      prompt = `${ctx}\n${oCtx}\n${bp}\nJSON: {"video_scripts":[{"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""}],"static_ads":{"pain_based":[{"angle":"pain","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}],"desire_based":[{"angle":"desire","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}]}}`;
       const res = await ai(KEY, sys, prompt);
       if (vOid) await supabase.from('ads').delete().eq('offer_id', vOid);
       else await supabase.from('ads').delete().eq('client_id', clientId).is('offer_id', null);
-      for (const v of res.video_scripts || []) await supabase.from('ads').insert({ client_id: clientId, offer_id: vOid, asset_type: 'video_ad', video_type: v.video_type, video_hook: v.hook, video_problem: v.problem, video_why_bad: v.why_bad, video_solution: v.solution, video_proof: v.proof, video_cta: v.cta, video_duration: v.duration, video_visual_notes: v.visual_notes, ad_angle: v.video_type, headline: v.title });
+      for (const v of res.video_scripts || []) await supabase.from('ads').insert({ client_id: clientId, offer_id: vOid, asset_type: 'video_ad', video_type: v.video_type, video_hook: v.hook, video_problem: v.problem, video_why_bad: v.why_bad, video_solution: v.solution, video_cta: v.cta, video_duration: v.duration, video_visual_notes: v.visual_notes, ad_angle: v.video_type, headline: v.title });
       for (const a of res.static_ads?.pain_based || []) await supabase.from('ads').insert({ client_id: clientId, offer_id: vOid, asset_type: 'static_ad', angle: a.angle, focus: a.focus, headline: a.headline, subheadline: a.subheadline, body_text: a.body_text, eliminators: a.eliminators, cta: a.cta, visual_suggestion: a.visual_suggestion, ad_angle: `${a.angle}_${a.focus}` });
       for (const a of res.static_ads?.desire_based || []) await supabase.from('ads').insert({ client_id: clientId, offer_id: vOid, asset_type: 'static_ad', angle: a.angle, focus: a.focus, headline: a.headline, subheadline: a.subheadline, body_text: a.body_text, eliminators: a.eliminators, cta: a.cta, visual_suggestion: a.visual_suggestion, ad_angle: `${a.angle}_${a.focus}` });
       return new Response(JSON.stringify({ success: true, data: res }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
