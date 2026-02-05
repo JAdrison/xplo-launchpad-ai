@@ -1,201 +1,325 @@
 
-# Adicionar Seção de Credenciais Meta Ads na Página de Detalhes do Cliente
+
+# Integrar Configuracoes de IA com Edge Function
 
 ## Visao Geral
 
-Adicionar uma nova seção **"Acesso as Redes Sociais (Meta Ads)"** logo abaixo do card de "Informacoes do Cliente", exibindo os logins e senhas do Instagram e Facebook com:
-- Senhas mascaradas com asteriscos por padrao
-- Botao "olhinho" para alternar visibilidade de cada senha
+Permitir alternar livremente entre **Lovable AI** e **API propria** (OpenAI/Gemini) a qualquer momento na pagina de Configuracoes. A geracao de conteudo usara automaticamente a configuracao ativa.
 
 ---
 
-## Dados Disponiveis
+## O Que NAO Muda
 
-Os dados estao armazenados na tabela `client_profile`:
+| Elemento | Status |
+|----------|--------|
+| Estrutura dos anuncios (6 videos + 10 estaticos) | Intacto |
+| Prompts e instrucoes da IA | Intacto |
+| Formato JSON de resposta | Intacto |
+| Video tipo "question_box" | Intacto |
+| Modelo Hormozi/Ladeira | Intacto |
+| Toda logica de negocios | Intacta |
 
-| Campo | Descricao |
-|-------|-----------|
-| `instagram_link` | Link do perfil do Instagram |
-| `instagram_login` | Login da conta do Instagram |
-| `instagram_password` | Senha da conta do Instagram |
-| `facebook_login` | Login da conta do Facebook |
-| `facebook_password` | Senha da conta do Facebook |
+**Unica mudanca**: O "motor" que processa as requisicoes (qual API e modelo usar).
 
 ---
 
-## Arquivo a Modificar
+## Arquitetura da Solucao
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Settings.tsx                                                   │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  localStorage:                                           │   │
+│  │  - xplo_ai_source: "lovable" | "custom"                  │   │
+│  │  - xplo_ai_provider: "gemini" | "openai"                 │   │
+│  │  - xplo_ai_model: "google/gemini-2.5-flash" | ...        │   │
+│  │  - xplo_api_key: "sk-..." | "AIza..."                    │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│                              ▼                                  │
+│  Componentes de Geracao (Generator.tsx, StepPromise.tsx, etc)  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Leem localStorage e enviam no body:                     │   │
+│  │  {                                                       │   │
+│  │    type: "ads",                                          │   │
+│  │    clientId: "...",                                      │   │
+│  │    aiConfig: {                                           │   │
+│  │      source: "custom",                                   │   │
+│  │      provider: "openai",                                 │   │
+│  │      model: "gpt-4o",                                    │   │
+│  │      apiKey: "sk-..."                                    │   │
+│  │    }                                                     │   │
+│  │  }                                                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     EDGE FUNCTION                               │
+├─────────────────────────────────────────────────────────────────┤
+│  generate-content/index.ts                                      │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  1. Recebe aiConfig do body                              │   │
+│  │  2. Decide qual API chamar:                              │   │
+│  │                                                          │   │
+│  │  if (aiConfig.source === "custom") {                     │   │
+│  │    // Usa API direta do provedor                         │   │
+│  │    if (aiConfig.provider === "openai") {                 │   │
+│  │      → https://api.openai.com/v1/chat/completions        │   │
+│  │    } else {                                              │   │
+│  │      → https://generativelanguage.googleapis.com/...     │   │
+│  │    }                                                     │   │
+│  │  } else {                                                │   │
+│  │    // Usa Lovable AI Gateway (padrao)                    │   │
+│  │    → https://ai.gateway.lovable.dev/v1/chat/completions  │   │
+│  │  }                                                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Arquivos a Modificar
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/ClientDetails.tsx` | Adicionar busca de client_profile e nova secao de credenciais |
+| `supabase/functions/generate-content/index.ts` | Adicionar suporte a multiplos provedores |
+| `src/pages/Generator.tsx` | Enviar aiConfig nas chamadas |
+| `src/components/onboarding/StepGenerateOffer.tsx` | Enviar aiConfig |
+| `src/components/onboarding/steps/StepPromise.tsx` | Enviar aiConfig |
+| `src/components/onboarding/steps/StepICPs.tsx` | Enviar aiConfig |
+| `src/components/onboarding/steps/StepPains.tsx` | Enviar aiConfig |
+| `src/components/generator/OfferOptionsSelector.tsx` | Enviar aiConfig |
+| `src/components/generator/DemandPlanEditor.tsx` | Enviar aiConfig |
+| `src/components/generator/AdsRefinerChat.tsx` | Enviar aiConfig |
+| `src/components/generator/CreateVideoAdDialog.tsx` | Enviar aiConfig |
+| `src/lib/aiConfig.ts` | Novo arquivo - helper para ler config |
 
 ---
 
-## Implementacao
+## Implementacao Detalhada
 
-### 1. Adicionar Estado para client_profile
+### 1. Criar Helper para Ler Configuracao (novo arquivo)
 
-```tsx
-const [clientProfile, setClientProfile] = useState<any>(null);
-const [showInstagramPassword, setShowInstagramPassword] = useState(false);
-const [showFacebookPassword, setShowFacebookPassword] = useState(false);
-```
+**Arquivo**: `src/lib/aiConfig.ts`
 
-### 2. Buscar Dados de client_profile
+```typescript
+export interface AIConfig {
+  source: "lovable" | "custom";
+  provider: "gemini" | "openai";
+  model: string;
+  apiKey?: string;
+}
 
-No `useEffect` existente, adicionar busca:
+export function getAIConfig(): AIConfig {
+  const source = (localStorage.getItem("xplo_ai_source") || "lovable") as "lovable" | "custom";
+  const provider = (localStorage.getItem("xplo_ai_provider") || "gemini") as "gemini" | "openai";
+  const model = localStorage.getItem("xplo_ai_model") || "google/gemini-2.5-flash";
+  const apiKey = localStorage.getItem("xplo_api_key") || undefined;
 
-```tsx
-// Buscar profile do cliente para credenciais Meta Ads
-const { data: profileData } = await supabase
-  .from("client_profile")
-  .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password")
-  .eq("client_id", id)
-  .maybeSingle();
-
-if (profileData) {
-  setClientProfile(profileData);
+  return { source, provider, model, apiKey };
 }
 ```
 
-### 3. Nova Secao Visual (apos card de Informacoes do Cliente)
+---
 
-```tsx
-{/* Credenciais Meta Ads */}
-{clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login) && (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Shield className="h-5 w-5" />
-        Acesso as Redes Sociais (Meta Ads)
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      {/* Instagram */}
-      {(clientProfile.instagram_link || clientProfile.instagram_login) && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Instagram className="h-4 w-4" />
-            Instagram
-          </h4>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {clientProfile.instagram_link && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Link</p>
-                <a href={clientProfile.instagram_link} target="_blank" className="text-primary hover:underline">
-                  {clientProfile.instagram_link}
-                </a>
-              </div>
-            )}
-            {clientProfile.instagram_login && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Login</p>
-                <p>{clientProfile.instagram_login}</p>
-              </div>
-            )}
-            {clientProfile.instagram_password && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Senha</p>
-                <div className="flex items-center gap-2">
-                  <p className="font-mono">
-                    {showInstagramPassword ? clientProfile.instagram_password : "••••••••"}
-                  </p>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6"
-                    onClick={() => setShowInstagramPassword(!showInstagramPassword)}
-                  >
-                    {showInstagramPassword ? <EyeOff /> : <Eye />}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+### 2. Atualizar Edge Function
 
-      {/* Facebook - mesma estrutura */}
-      {clientProfile.facebook_login && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Facebook className="h-4 w-4" />
-            Facebook
-          </h4>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Login</p>
-              <p>{clientProfile.facebook_login}</p>
-            </div>
-            {clientProfile.facebook_password && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Senha</p>
-                <div className="flex items-center gap-2">
-                  <p className="font-mono">
-                    {showFacebookPassword ? clientProfile.facebook_password : "••••••••"}
-                  </p>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6"
-                    onClick={() => setShowFacebookPassword(!showFacebookPassword)}
-                  >
-                    {showFacebookPassword ? <EyeOff /> : <Eye />}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </CardContent>
-  </Card>
-)}
+**Arquivo**: `supabase/functions/generate-content/index.ts`
+
+Adicionar interface e funcao para chamar diferentes provedores:
+
+```typescript
+interface AIConfig {
+  source: "lovable" | "custom";
+  provider: "gemini" | "openai";
+  model: string;
+  apiKey?: string;
+}
+
+async function ai(config: AIConfig, sys: string, usr: string, t = 0.7) {
+  const fullSys = `${sys}\n\nIMPORTANTE: Responda APENAS com JSON válido...`;
+  
+  let url: string;
+  let headers: Record<string, string>;
+  let body: Record<string, unknown>;
+
+  if (config.source === "custom" && config.apiKey) {
+    if (config.provider === "openai") {
+      // OpenAI API direta
+      url = "https://api.openai.com/v1/chat/completions";
+      headers = { 
+        "Authorization": `Bearer ${config.apiKey}`, 
+        "Content-Type": "application/json" 
+      };
+      body = {
+        model: config.model,
+        messages: [
+          { role: "system", content: fullSys },
+          { role: "user", content: usr }
+        ],
+        temperature: t,
+        response_format: { type: "json_object" }
+      };
+    } else {
+      // Google Gemini API direta
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+      headers = { "Content-Type": "application/json" };
+      body = {
+        contents: [{ parts: [{ text: `${fullSys}\n\n${usr}` }] }],
+        generationConfig: { 
+          temperature: t,
+          responseMimeType: "application/json"
+        }
+      };
+    }
+  } else {
+    // Lovable AI Gateway (padrao)
+    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    headers = { 
+      "Authorization": `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, 
+      "Content-Type": "application/json" 
+    };
+    body = {
+      model: config.model || "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: fullSys },
+        { role: "user", content: usr }
+      ],
+      temperature: t,
+      response_format: { type: "json_object" }
+    };
+  }
+
+  const r = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+
+  if (!r.ok) {
+    const st = r.status;
+    throw { 
+      status: st, 
+      message: st === 429 ? "Rate limit" : st === 402 ? "Payment required" : `Error ${st}` 
+    };
+  }
+
+  const d = await r.json();
+  
+  // Extrair conteudo baseado no provedor
+  let content: string;
+  if (config.source === "custom" && config.provider === "gemini") {
+    content = d.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } else {
+    content = d.choices?.[0]?.message?.content || "";
+  }
+  
+  if (!content) throw new Error("No AI content");
+  return extractJson(content);
+}
+```
+
+Modificar o handler para receber aiConfig:
+
+```typescript
+interface ReqBody {
+  type: string; 
+  clientId: string; 
+  // ... campos existentes ...
+  aiConfig?: AIConfig; // NOVO
+}
+
+Deno.serve(async (req) => {
+  // ...
+  const b = await req.json() as ReqBody;
+  const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig } = b;
+  
+  // Usar config recebida ou padrao Lovable
+  const config: AIConfig = aiConfig || {
+    source: "lovable",
+    provider: "gemini", 
+    model: "google/gemini-2.5-flash"
+  };
+  
+  // Substituir todas as chamadas ai(KEY, ...) por ai(config, ...)
+  const res = await ai(config, sys, prompt);
+  // ...
+});
 ```
 
 ---
 
-## Resultado Visual
+### 3. Atualizar Componentes do Frontend
+
+**Padrao para todos os componentes**:
+
+```typescript
+import { getAIConfig } from "@/lib/aiConfig";
+
+// Antes da chamada invoke:
+const aiConfig = getAIConfig();
+
+const { data, error } = await supabase.functions.invoke("generate-content", {
+  body: {
+    type: "ads",
+    clientId,
+    // ... outros campos ...
+    aiConfig, // Adicionar este campo
+  },
+});
+```
+
+**Componentes a atualizar** (9 arquivos):
+
+1. `src/pages/Generator.tsx` - linha 241
+2. `src/components/onboarding/StepGenerateOffer.tsx` - linha 63
+3. `src/components/onboarding/steps/StepPromise.tsx` - linha 65
+4. `src/components/onboarding/steps/StepICPs.tsx` - linha 86
+5. `src/components/onboarding/steps/StepPains.tsx` - linha 109
+6. `src/components/generator/OfferOptionsSelector.tsx` - linha 113
+7. `src/components/generator/DemandPlanEditor.tsx` - linha 152
+8. `src/components/generator/AdsRefinerChat.tsx` - linha 74
+9. `src/components/generator/CreateVideoAdDialog.tsx` - linha 45
+
+---
+
+## Fluxo de Uso
 
 ```text
-+-------------------------------------------------------+
-|  Informacoes do Cliente                               |
-|  [dados existentes...]                                |
-+-------------------------------------------------------+
-
-+-------------------------------------------------------+
-|  [Shield] Acesso as Redes Sociais (Meta Ads)          |
-|-------------------------------------------------------|
-|  [Instagram] Instagram                                |
-|  Link: https://instagram.com/exemplo                  |
-|  Login: usuario@exemplo.com                           |
-|  Senha: •••••••• [Eye]                                |
-|-------------------------------------------------------|
-|  [Facebook] Facebook                                  |
-|  Login: usuario@exemplo.com                           |
-|  Senha: •••••••• [Eye]                                |
-+-------------------------------------------------------+
+1. Usuario vai em Configuracoes
+   ├── Seleciona "Lovable AI" → Salva
+   │   └── Proximas geracoes usam Lovable Gateway
+   │
+   └── Seleciona "API Propria"
+       ├── Escolhe provedor (OpenAI ou Gemini)
+       ├── Escolhe modelo
+       ├── Cola API Key
+       └── Salva → Proximas geracoes usam API direta
 ```
 
 ---
 
-## Icones Necessarios
+## Seguranca
 
-Adicionar aos imports de `lucide-react`:
-- `Eye`
-- `EyeOff`
-- `Instagram`
-- `Facebook`
-- `Shield`
+| Aspecto | Tratamento |
+|---------|------------|
+| API Key armazenada | localStorage (navegador do usuario) |
+| API Key em transito | HTTPS para Edge Function |
+| API Key no backend | Usada apenas na requisicao, nao persistida |
+| Fallback | Se custom falhar, nao tenta Lovable automaticamente |
 
 ---
 
-## Comportamento
+## Resultado Esperado
 
-| Estado | Exibicao da Senha |
-|--------|-------------------|
-| Padrao | `••••••••` |
-| Apos clicar no olho | Senha visivel |
-| Clicar novamente | Volta para asteriscos |
+| Configuracao | Comportamento |
+|--------------|---------------|
+| Lovable AI selecionado | Usa gateway Lovable com LOVABLE_API_KEY |
+| API Propria + OpenAI | Chama api.openai.com com sk-... do usuario |
+| API Propria + Gemini | Chama googleapis.com com AIza... do usuario |
 
-A secao so aparece se houver pelo menos um login (Instagram ou Facebook) cadastrado.
+O usuario pode trocar a qualquer momento em Configuracoes e a proxima geracao ja usara a nova configuracao.
+
