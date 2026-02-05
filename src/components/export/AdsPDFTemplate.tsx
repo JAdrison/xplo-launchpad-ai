@@ -203,6 +203,21 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
 
   return (
     <div style={containerStyle}>
+      {/* Logo fixa em todas as páginas - canto superior direito */}
+      <img 
+        src={logoXplo} 
+        alt="XPLO" 
+        style={{ 
+          position: "fixed",
+          top: "5mm",
+          right: "5mm",
+          height: "20px",
+          width: "auto",
+          opacity: 0.7,
+          zIndex: 1000,
+        }} 
+      />
+
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", paddingBottom: "15px", borderBottom: "2px solid #1a1a1a" }}>
         <img src={logoXplo} alt="XPLO" style={{ height: "40px" }} />
