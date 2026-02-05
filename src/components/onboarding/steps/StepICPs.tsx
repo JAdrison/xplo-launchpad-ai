@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users, Sparkles, Info, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,27 +15,33 @@ interface StepICPsProps {
   onPrevious: () => void;
 }
 
-interface ICPForm {
+interface ProfileForm {
   id?: string;
   name: string;
-  profession: string;
-  age: string;
-  gender: string;
-  reason_needs_solution: string;
+  who_is: string;
+  when_seeks: string;
+  why_buys: string;
+  is_ideal: string;
 }
+
+const IS_IDEAL_OPTIONS = [
+  { value: "ideal", label: "Sim, é o ideal" },
+  { value: "good_not_ideal", label: "É bom, mas não ideal" },
+  { value: "no_more", label: "Não quero mais esse perfil" },
+];
 
 export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [icps, setIcps] = useState<ICPForm[]>([]);
+  const [profiles, setProfiles] = useState<ProfileForm[]>([]);
 
   useEffect(() => {
-    fetchICPs();
+    fetchProfiles();
   }, [clientId]);
 
-  const fetchICPs = async () => {
+  const fetchProfiles = async () => {
     const { data } = await supabase
       .from("icps")
       .select("*")
@@ -43,18 +49,18 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
       .order("sort_order");
 
     if (data && data.length > 0) {
-      setIcps(
-        data.map((icp) => ({
+      setProfiles(
+        data.map((icp: any) => ({
           id: icp.id,
           name: icp.name,
-          profession: icp.profession || "",
-          age: icp.age || "",
-          gender: icp.gender || "",
-          reason_needs_solution: icp.reason_needs_solution || "",
+          who_is: icp.who_is || "",
+          when_seeks: icp.when_seeks || "",
+          why_buys: icp.reason_needs_solution || "",
+          is_ideal: icp.is_ideal || "ideal",
         }))
       );
     } else {
-      setIcps([{ name: "", profession: "", age: "", gender: "", reason_needs_solution: "" }]);
+      setProfiles([{ name: "", who_is: "", when_seeks: "", why_buys: "", is_ideal: "ideal" }]);
     }
     setIsLoading(false);
   };
@@ -63,7 +69,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     setIsGenerating(true);
 
     try {
-      // Fetch ALL data to provide full context for ICP generation
       const [clientRes, profileRes, promiseRes] = await Promise.all([
         supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
         supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
@@ -90,26 +95,26 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         throw new Error(response.error.message);
       }
 
-      if (response.data?.icps && Array.isArray(response.data.icps)) {
-        setIcps(
-          response.data.icps.map((icp: any) => ({
-            name: icp.name || "",
-            profession: icp.profession || "",
-            age: icp.age || "",
-            gender: icp.gender || "",
-            reason_needs_solution: icp.reason_needs_solution || "",
+      if (response.data?.profiles && Array.isArray(response.data.profiles)) {
+        setProfiles(
+          response.data.profiles.map((p: any) => ({
+            name: p.name || "",
+            who_is: p.who_is || "",
+            when_seeks: p.when_seeks || "",
+            why_buys: p.why_buys || "",
+            is_ideal: p.is_ideal || "ideal",
           }))
         );
 
         toast({
-          title: "ICPs gerados!",
+          title: "Perfis gerados!",
           description: "3 perfis de cliente foram sugeridos com base nos dados do seu negócio.",
         });
       }
     } catch (error) {
-      console.error("Error generating ICPs:", error);
+      console.error("Error generating profiles:", error);
       toast({
-        title: "Erro ao gerar ICPs",
+        title: "Erro ao gerar perfis",
         description: "Tente novamente ou preencha manualmente.",
         variant: "destructive",
       });
@@ -118,30 +123,30 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     }
   };
 
-  const handleAddICP = () => {
-    if (icps.length < 3) {
-      setIcps([...icps, { name: "", profession: "", age: "", gender: "", reason_needs_solution: "" }]);
+  const handleAddProfile = () => {
+    if (profiles.length < 3) {
+      setProfiles([...profiles, { name: "", who_is: "", when_seeks: "", why_buys: "", is_ideal: "ideal" }]);
     }
   };
 
-  const handleRemoveICP = (index: number) => {
-    if (icps.length > 1) {
-      setIcps(icps.filter((_, i) => i !== index));
+  const handleRemoveProfile = (index: number) => {
+    if (profiles.length > 1) {
+      setProfiles(profiles.filter((_, i) => i !== index));
     }
   };
 
-  const handleChange = (index: number, field: keyof ICPForm, value: string) => {
-    const updated = [...icps];
+  const handleChange = (index: number, field: keyof ProfileForm, value: string) => {
+    const updated = [...profiles];
     updated[index] = { ...updated[index], [field]: value };
-    setIcps(updated);
+    setProfiles(updated);
   };
 
   const handleSubmit = async () => {
-    const validIcps = icps.filter((icp) => icp.name.trim());
-    if (validIcps.length === 0) {
+    const validProfiles = profiles.filter((p) => p.name.trim());
+    if (validProfiles.length === 0) {
       toast({
-        title: "ICP obrigatório",
-        description: "Adicione pelo menos um perfil de cliente ideal.",
+        title: "Perfil obrigatório",
+        description: "Adicione pelo menos um perfil de cliente.",
         variant: "destructive",
       });
       return;
@@ -150,7 +155,6 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     setIsSaving(true);
 
     try {
-      // 1. Buscar ICPs existentes para saber quais deletar
       const { data: existingIcps, error: fetchError } = await supabase
         .from("icps")
         .select("id")
@@ -159,10 +163,9 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
       if (fetchError) throw fetchError;
 
       const existingIds = existingIcps?.map((icp) => icp.id) || [];
-      const idsToKeep = validIcps.filter((icp) => icp.id).map((icp) => icp.id!);
+      const idsToKeep = validProfiles.filter((p) => p.id).map((p) => p.id!);
       const idsToDelete = existingIds.filter((id) => !idsToKeep.includes(id));
 
-      // 2. Deletar apenas os ICPs que foram removidos pelo usuário
       if (idsToDelete.length > 0) {
         const { error: deleteError } = await supabase
           .from("icps")
@@ -172,41 +175,38 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         if (deleteError) throw deleteError;
       }
 
-      // 3. Processar cada ICP (update se tem ID, insert se não tem)
-      for (let i = 0; i < validIcps.length; i++) {
-        const icp = validIcps[i];
-        const icpData = {
+      for (let i = 0; i < validProfiles.length; i++) {
+        const p = validProfiles[i];
+        const profileData = {
           client_id: clientId,
-          name: icp.name.trim(),
-          profession: icp.profession.trim() || null,
-          age: icp.age.trim() || null,
-          gender: icp.gender || null,
-          reason_needs_solution: icp.reason_needs_solution.trim() || null,
+          name: p.name.trim(),
+          who_is: p.who_is.trim() || null,
+          when_seeks: p.when_seeks.trim() || null,
+          reason_needs_solution: p.why_buys.trim() || null,
+          is_ideal: p.is_ideal || "ideal",
           sort_order: i,
         };
 
-        if (icp.id) {
-          // Atualizar existente
+        if (p.id) {
           const { error } = await supabase
             .from("icps")
-            .update(icpData)
-            .eq("id", icp.id);
+            .update(profileData)
+            .eq("id", p.id);
           if (error) throw error;
         } else {
-          // Inserir novo
-          const { error } = await supabase.from("icps").insert(icpData);
+          const { error } = await supabase.from("icps").insert(profileData);
           if (error) throw error;
         }
       }
 
       toast({
-        title: "ICPs salvos",
-        description: `${validIcps.length} perfil(is) de cliente salvo(s).`,
+        title: "Perfis de cliente salvos",
+        description: `${validProfiles.length} perfil(is) salvo(s).`,
       });
 
       onNext();
     } catch (error) {
-      console.error("Error saving ICPs:", error);
+      console.error("Error saving profiles:", error);
       toast({
         title: "Erro ao salvar",
         description: "Tente novamente.",
@@ -217,7 +217,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
     }
   };
 
-  const areICPsEmpty = icps.length === 1 && !icps[0].name.trim();
+  const areProfilesEmpty = profiles.length === 1 && !profiles[0].name.trim();
 
   if (isLoading) {
     return (
@@ -234,10 +234,10 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Perfis de Cliente Ideal (ICPs)
+          Perfil dos Principais Clientes
         </CardTitle>
         <CardDescription>
-          Defina até 3 perfis de clientes que você deseja atrair
+          Agora vamos entender quem são os clientes que mais compram de você hoje — ou que você gostaria de atrair com mais frequência.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -247,7 +247,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
             <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div className="space-y-2 flex-1">
               <h4 className="text-sm font-medium">
-                {areICPsEmpty ? "Você conhece bem seu cliente ideal?" : "Quer gerar novas sugestões?"}
+                {areProfilesEmpty ? "Você conhece bem seu cliente?" : "Quer gerar novas sugestões?"}
               </h4>
               <p className="text-sm text-muted-foreground">
                 Podemos sugerir 3 perfis baseados no seu produto, dores do comprador e promessa de valor.
@@ -264,7 +264,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Gerando...
                   </>
-                ) : areICPsEmpty ? (
+                ) : areProfilesEmpty ? (
                   <>
                     <Sparkles className="h-4 w-4" />
                     Gerar Sugestões com IA
@@ -280,16 +280,16 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
           </div>
         </div>
 
-        {icps.map((icp, index) => (
+        {profiles.map((profile, index) => (
           <div key={index} className="p-4 border rounded-lg space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">ICP {index + 1}</h4>
-              {icps.length > 1 && (
+              <h4 className="font-medium">Perfil {index + 1}</h4>
+              {profiles.length > 1 && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleRemoveICP(index)}
+                  onClick={() => handleRemoveProfile(index)}
                   className="text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -300,63 +300,66 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
             <div className="space-y-2">
               <Label>Nome do Perfil *</Label>
               <Input
-                placeholder="Ex: Carlos, o Empresário"
-                value={icp.name}
+                placeholder="Ex: Dono de empresa solar residencial"
+                value={profile.name}
                 onChange={(e) => handleChange(index, "name", e.target.value)}
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Profissão</Label>
-                <Input
-                  placeholder="Ex: Dono de academia"
-                  value={icp.profession}
-                  onChange={(e) => handleChange(index, "profession", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Idade</Label>
-                <Input
-                  placeholder="Ex: 35-45 anos"
-                  value={icp.age}
-                  onChange={(e) => handleChange(index, "age", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Sexo</Label>
-                <Select
-                  value={icp.gender}
-                  onValueChange={(value) => handleChange(index, "gender", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="feminino">Feminino</SelectItem>
-                    <SelectItem value="ambos">Ambos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Quem é esse cliente?</Label>
+              <Textarea
+                placeholder="O que ele faz, como trabalha, como decide compras..."
+                value={profile.who_is}
+                onChange={(e) => handleChange(index, "who_is", e.target.value)}
+                rows={2}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label>Por que precisa da solução?</Label>
+              <Label>Em que momento ele te procura hoje?</Label>
               <Textarea
-                placeholder="Qual problema ou situação leva essa pessoa a precisar do seu produto/serviço?"
-                value={icp.reason_needs_solution}
-                onChange={(e) => handleChange(index, "reason_needs_solution", e.target.value)}
+                placeholder="O que normalmente está acontecendo quando ele chega até você?"
+                value={profile.when_seeks}
+                onChange={(e) => handleChange(index, "when_seeks", e.target.value)}
                 rows={2}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Por que esse cliente compra de você?</Label>
+              <Textarea
+                placeholder="Motivo real: preço, rapidez, confiança, especialização, etc."
+                value={profile.why_buys}
+                onChange={(e) => handleChange(index, "why_buys", e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <Label>Esse é um cliente que você quer atrair mais?</Label>
+              <RadioGroup
+                value={profile.is_ideal}
+                onValueChange={(value) => handleChange(index, "is_ideal", value)}
+                className="space-y-2"
+              >
+                {IS_IDEAL_OPTIONS.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option.value} id={`${index}-${option.value}`} />
+                    <Label htmlFor={`${index}-${option.value}`} className="font-normal cursor-pointer">
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
           </div>
         ))}
 
-        {icps.length < 3 && (
-          <Button type="button" variant="outline" onClick={handleAddICP} className="w-full gap-2">
+        {profiles.length < 3 && (
+          <Button type="button" variant="outline" onClick={handleAddProfile} className="w-full gap-2">
             <Plus className="h-4 w-4" />
-            Adicionar ICP
+            Adicionar Outro Perfil
           </Button>
         )}
 

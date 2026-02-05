@@ -170,9 +170,9 @@ export default function Generator() {
       return;
     }
 
-    // Validate ICP selection for offer generation
+    // Validate profile selection for offer generation
     if (selectedTypes.has("offer") && !selectedIcpId) {
-      toast.error("Selecione um ICP para gerar a oferta");
+      toast.error("Selecione um perfil de cliente para gerar a oferta");
       return;
     }
 
@@ -363,7 +363,7 @@ export default function Generator() {
                   <div className="flex items-center gap-2">
                     <span>{client.name}</span>
                     <Badge variant="secondary" className="text-xs">
-                      {client.icps.length} ICP{client.icps.length > 1 ? "s" : ""}
+                      {client.icps.length} Perfil{client.icps.length > 1 ? "s" : ""}
                     </Badge>
                   </div>
                 </SelectItem>
@@ -387,23 +387,23 @@ export default function Generator() {
               )}
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 text-primary" />
-                {selectedClient.icps.length} ICP{selectedClient.icps.length > 1 ? "s" : ""}
+                {selectedClient.icps.length} Perfil{selectedClient.icps.length > 1 ? "s" : ""}
               </span>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* ICP Selection */}
+      {/* Profile Selection */}
       {selectedClientId && selectedClient && selectedClient.icps.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              2. Selecione um ICP
+              2. Selecione um Perfil de Cliente
             </CardTitle>
             <CardDescription>
-              A oferta será gerada especificamente para este perfil de cliente ideal
+              A oferta será gerada especificamente para este perfil
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -412,7 +412,7 @@ export default function Generator() {
               onValueChange={(value) => setSelectedIcpId(value || null)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione um ICP..." />
+                <SelectValue placeholder="Selecione um perfil..." />
               </SelectTrigger>
               <SelectContent>
                 {selectedClient.icps.map((icp) => (
@@ -467,7 +467,7 @@ export default function Generator() {
                   </p>
                   {!selectedIcpId && selectedTypes.has("offer") && (
                     <p className="text-sm text-destructive mt-1">
-                      ⚠️ Selecione um ICP acima para gerar a oferta
+                      ⚠️ Selecione um perfil de cliente acima para gerar a oferta
                     </p>
                   )}
                 </div>
