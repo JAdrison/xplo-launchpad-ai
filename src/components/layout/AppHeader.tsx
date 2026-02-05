@@ -1,7 +1,9 @@
-import { Menu, Plus, Moon, Sun } from "lucide-react";
+import { Menu, Plus, Moon, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 
 interface AppHeaderProps {
   onMenuClick: () => void;
@@ -9,6 +11,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ onMenuClick }: AppHeaderProps) {
   const { theme, toggleTheme } = useTheme();
+  const { user, isAdmin } = useAuth();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background px-4 md:px-6">
@@ -33,6 +36,19 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-2">
+        {/* User info */}
+        {user && (
+          <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span className="max-w-[150px] truncate">{user.email}</span>
+            {isAdmin && (
+              <Badge variant="default" className="text-xs">
+                Admin
+              </Badge>
+            )}
+          </div>
+        )}
+
         <Button
           variant="ghost"
           size="icon"

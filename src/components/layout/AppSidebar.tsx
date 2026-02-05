@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -7,9 +7,12 @@ import {
   FileStack,
   Settings,
   X,
+  Shield,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import logoXplo from "@/assets/logo-xplo.png";
 
 interface AppSidebarProps {
@@ -26,8 +29,19 @@ const navigation = [
   { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
+const adminNavigation = [
+  { name: "Usuários", href: "/admin/users", icon: Shield },
+];
+
 export function AppSidebar({ open, onClose }: AppSidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAdmin, signOut, user } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth", { replace: true });
+  };
 
   return (
     <>
@@ -83,10 +97,54 @@ export function AppSidebar({ open, onClose }: AppSidebarProps) {
               </Link>
             );
           })}
+
+          {/* Admin Navigation */}
+          {isAdmin && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                  Administração
+                </p>
+              </div>
+              {adminNavigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={onClose}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-sidebar-border p-4">
+        {/* Footer with user info and logout */}
+        <div className="border-t border-sidebar-border p-4 space-y-3">
+          {user && (
+            <div className="text-xs text-sidebar-foreground/60 truncate">
+              {user.email}
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
+          </Button>
           <p className="text-xs text-sidebar-foreground/60">
             XPLO Starter v1.0
           </p>
