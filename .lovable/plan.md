@@ -1,163 +1,275 @@
 
-# PDF de Anúncios + Refinar com IA na Página de Detalhes
+# Criar Novos Anúncios de Vídeo com IA
 
 ## Visão Geral
 
-Adicionar duas funcionalidades na página de detalhes do cliente (`GeneratedAssetsSection.tsx`):
-1. **Botão PDF** - Exportar todos os anúncios (estáticos + vídeos) em documento profissional
-2. **Refinar com IA** - O botão "Refinar" abre o chat para enviar prompts à IA
+Adicionar um botão "Criar Novo" na seção de Scripts de Vídeo que abre um dialog onde o usuário digita instruções em linguagem natural sobre como quer que o novo anúncio de vídeo seja criado.
 
 ---
 
-## Parte 1: Botão de Exportar PDF
+## Interface do Usuário
 
-### Localização
-
-O botão será adicionado no header da seção de Anúncios, similar ao que já existe no `GeneratedContentViewer.tsx`:
+### Botão no Header de Scripts de Vídeo
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│ ▼ Anúncios (5 estáticos, 5 vídeos) [Gerados]     [PDF] │
+│ Scripts de Vídeo                          [+ Criar Novo]│
 ├─────────────────────────────────────────────────────────┤
-│   ...conteúdo dos anúncios...                          │
+│   VideoAdCard 1...                                      │
+│   VideoAdCard 2...                                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Implementação
-
-1. Importar `PDFExportButton` (já está importado no arquivo)
-2. Adicionar estado `adsRefreshKey` para sincronização
-3. Adicionar o botão no AccordionTrigger ou logo após o AccordionContent abrir
-
----
-
-## Parte 2: Integração do AdsRefinerChat
-
-### Problema Atual
-
-O componente `VideoAdCard` recebe `onRefine={() => {}}` - uma função vazia que não faz nada.
-
-### Solução
-
-1. Importar `AdsRefinerChat`
-2. Adicionar estados para controlar o dialog:
-   - `refinerOpen: boolean`
-   - `selectedAd: { ad: Ad; type: "video" | "static" } | null`
-3. Criar funções:
-   - `openRefiner(ad, type)` - abre o dialog
-   - `handleApplyRefinement(newContent)` - salva no banco e atualiza estado local
-4. Adicionar o componente `AdsRefinerChat` no final do JSX
-5. Passar `onRefine={() => openRefiner(ad, "video")}` para VideoAdCard
-
----
-
-## Alterações Detalhadas
-
-### Estados a Adicionar
+### Dialog de Criação
 
 ```text
-const [refinerOpen, setRefinerOpen] = useState(false);
-const [selectedAd, setSelectedAd] = useState<{ ad: Ad; type: "video" | "static" } | null>(null);
-const [adsRefreshKey, setAdsRefreshKey] = useState(0);
+┌─────────────────────────────────────────────────────────┐
+│  ✨ Criar Novo Anúncio de Vídeo com IA                  │
+│─────────────────────────────────────────────────────────│
+│                                                         │
+│  Descreva como você quer o anúncio:                    │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ Ex: Quero um anúncio focado em urgência, para   │   │
+│  │ donos de pet shop, destacando a economia de     │   │
+│  │ tempo. Tom mais agressivo e direto.             │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                         │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │ [Cancelar]                          [Criar ✨]  │   │
+│  └─────────────────────────────────────────────────┘   │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Funções a Adicionar
+---
+
+## Arquitetura da Solução
+
+### 1. Novo Componente: CreateVideoAdDialog
+
+| Prop | Tipo | Descrição |
+|------|------|-----------|
+| `isOpen` | `boolean` | Controla visibilidade |
+| `onClose` | `() => void` | Fecha o dialog |
+| `clientId` | `string` | ID do cliente |
+| `onCreated` | `(ad: Ad) => void` | Callback quando anúncio é criado |
+
+### 2. Nova Rota na Edge Function
+
+Adicionar `type: "create-video-ad"` no `generate-content/index.ts`:
 
 ```text
-const openRefiner = (ad: Ad, type: "video" | "static") => {
-  setSelectedAd({ ad, type });
-  setRefinerOpen(true);
-};
+if (type === "create-video-ad") {
+  // Busca contexto do cliente (PPP, oferta, etc.)
+  // Envia para IA com instrução do usuário
+  // Retorna anúncio criado no formato padrão
+}
+```
 
-const handleApplyRefinement = async (newContent: any) => {
-  if (!selectedAd) return;
-  
-  const updateData = selectedAd.type === "video" 
-    ? { video_hook: newContent.hook, video_problem: newContent.problem, ... }
-    : { headline: newContent.headline, subheadline: newContent.subheadline, ... };
-  
-  await supabase.from("ads").update(updateData).eq("id", selectedAd.ad.id);
-  
-  // Atualiza estado local
-  handleAdUpdate({ ...selectedAd.ad, ...updateData });
+---
+
+## Fluxo de Criação
+
+```text
+1. Usuário clica [+ Criar Novo]
+          ↓
+2. Dialog abre com textarea
+          ↓
+3. Usuário digita: "Quero focado em economia, tom amigável"
+          ↓
+4. Clica [Criar]
+          ↓
+5. Edge Function:
+   - Busca dados do cliente (PPP, oferta)
+   - Monta prompt com contexto + instrução do usuário
+   - IA gera anúncio completo (6 seções)
+          ↓
+6. Insere no banco de dados (tabela ads)
+          ↓
+7. Retorna para frontend
+          ↓
+8. Dialog fecha, novo card aparece na lista
+```
+
+---
+
+## Alterações na Edge Function
+
+### Novo Handler `create-video-ad`
+
+Recebe:
+- `clientId` - ID do cliente
+- `instruction` - Descrição do usuário (ex: "focado em urgência, tom agressivo")
+- `offerId` (opcional) - Se quiser vincular a uma oferta específica
+
+Processo:
+1. Busca PPP do cliente para contexto
+2. Busca oferta se offerId fornecido
+3. Monta prompt combinando contexto + instrução
+4. Gera anúncio com 6 seções + duração + notas visuais
+5. Salva no banco
+6. Retorna anúncio criado
+
+---
+
+## Prompt para IA
+
+```text
+Sistema: Você é um copywriter especialista em anúncios de vídeo para redes sociais.
+Crie um roteiro completo seguindo a estrutura:
+- HOOK (captura atenção nos primeiros 3 segundos)
+- PROBLEMA (identifica a dor do público)
+- POR QUE É RUIM (agita o problema)
+- SOLUÇÃO (apresenta o produto/serviço)
+- PROVA (credibilidade, resultados)
+- CTA (chamada para ação)
+
+Contexto do Cliente:
+{contexto do PPP}
+
+Instrução do Usuário:
+{instrução digitada}
+
+Retorne JSON:
+{
+  "video_type": "tipo identificado",
+  "duration": "30s",
+  "hook": "...",
+  "problem": "...",
+  "why_bad": "...",
+  "solution": "...",
+  "proof": "...",
+  "cta": "...",
+  "visual_notes": "..."
+}
+```
+
+---
+
+## Arquivos a Criar
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/generator/CreateVideoAdDialog.tsx` | Dialog de criação |
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar botão e integrar dialog |
+| `supabase/functions/generate-content/index.ts` | Adicionar handler `create-video-ad` |
+
+---
+
+## Implementação Detalhada
+
+### CreateVideoAdDialog.tsx
+
+**Estados:**
+```text
+instruction: string        // Texto que o usuário digita
+isCreating: boolean        // Loading durante criação
+```
+
+**UI:**
+- Dialog com título e descrição
+- Textarea para instrução (placeholder com exemplos)
+- Botões Cancelar e Criar
+- Loading state durante criação
+
+### GeneratedAssetsSection.tsx
+
+**Adicionar estado:**
+```text
+const [createDialogOpen, setCreateDialogOpen] = useState(false);
+```
+
+**Adicionar no header de Scripts de Vídeo:**
+```text
+<div className="flex items-center justify-between">
+  <h4 className="text-sm font-medium">Scripts de Vídeo</h4>
+  <Button variant="outline" size="sm" onClick={() => setCreateDialogOpen(true)}>
+    <Plus className="h-4 w-4 mr-1" />
+    Criar Novo
+  </Button>
+</div>
+```
+
+**Adicionar callback:**
+```text
+const handleVideoAdCreated = (newAd: Ad) => {
+  setAds(prev => [...prev, newAd]);
   setAdsRefreshKey(k => k + 1);
-  toast.success("Anúncio refinado com sucesso!");
+  toast.success("Novo anúncio de vídeo criado!");
 };
 ```
 
-### VideoAdCard - Atualizar onRefine
-
-De:
-```text
-onRefine={() => {}}
-```
-
-Para:
-```text
-onRefine={() => openRefiner(ad, "video")}
-```
-
-### Adicionar AdsRefinerChat no JSX
-
-Adicionar antes do fechamento do return, similar ao `GeneratedContentViewer`:
+### Edge Function - Handler create-video-ad
 
 ```text
-{selectedAd && (
-  <AdsRefinerChat
-    isOpen={refinerOpen}
-    onClose={() => { setRefinerOpen(false); setSelectedAd(null); }}
-    adId={selectedAd.ad.id}
-    adType={selectedAd.type}
-    currentContent={...}
-    onApply={handleApplyRefinement}
-  />
-)}
-```
-
-### Adicionar Botão PDF
-
-Dentro do AccordionContent da seção de Anúncios:
-
-```text
-<AccordionContent className="space-y-4 pt-4">
-  {/* PDF Export Button */}
-  <div className="flex justify-end mb-2">
-    <PDFExportButton
-      type="ads"
-      clientName={clientName || "cliente"}
-      content={{ videoAds, staticAds }}
-      createdAt={new Date().toISOString()}
-      refreshKey={adsRefreshKey}
-    />
-  </div>
+if (type === "create-video-ad") {
+  const { instruction } = b;
+  if (!instruction || !clientId) {
+    return new Response(JSON.stringify({ error: 'Missing instruction or clientId' }), 
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
   
-  {/* Static Ads */}
-  ...
-</AccordionContent>
-```
-
----
-
-## Arquivo a Modificar
-
-| Arquivo | Alterações |
-|---------|------------|
-| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar estados, funções, AdsRefinerChat, botão PDF |
-
----
-
-## Imports a Adicionar
-
-```text
-import { AdsRefinerChat } from "@/components/generator/AdsRefinerChat";
+  // Busca contexto do cliente
+  const { data: profile } = await supabase
+    .from('client_profile')
+    .select('*')
+    .eq('client_id', clientId)
+    .maybeSingle();
+  
+  const { data: promise } = await supabase
+    .from('ppp_promise')
+    .select('*')
+    .eq('client_id', clientId)
+    .maybeSingle();
+  
+  // Monta contexto
+  let ctx = '';
+  if (profile?.product_name) ctx += `Produto: ${profile.product_name}\n`;
+  if (profile?.product_description) ctx += `Descrição: ${profile.product_description}\n`;
+  if (profile?.main_pain) ctx += `Dor principal: ${profile.main_pain}\n`;
+  if (promise?.promise_text) ctx += `Promessa: ${promise.promise_text}\n`;
+  
+  // Prompt
+  sys = 'Copywriter de anúncios de vídeo. Estrutura: HOOK, PROBLEMA, POR QUE É RUIM, SOLUÇÃO, PROVA, CTA. Duração 20-60s.';
+  prompt = `${ctx}\n\nInstrução: ${instruction}\n\nJSON: {"video_type":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","proof":"","cta":"","visual_notes":""}`;
+  
+  const res = await ai(KEY, sys, prompt, 0.8);
+  
+  // Insere no banco
+  const { data: newAd, error } = await supabase.from('ads').insert({
+    client_id: clientId,
+    asset_type: 'video_ad',
+    video_type: res.video_type,
+    video_hook: res.hook,
+    video_problem: res.problem,
+    video_why_bad: res.why_bad,
+    video_solution: res.solution,
+    video_proof: res.proof,
+    video_cta: res.cta,
+    video_duration: res.duration,
+    video_visual_notes: res.visual_notes,
+    headline: res.video_type
+  }).select().single();
+  
+  if (error) throw error;
+  
+  return new Response(JSON.stringify({ success: true, ad: newAd }), 
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
 ```
 
 ---
 
 ## Resultado Esperado
 
-1. Botão "PDF" visível na seção de Anúncios da página de detalhes do cliente
-2. Ao clicar no PDF, exporta todos os anúncios (estáticos e vídeos) com formatação profissional
-3. Ao clicar em "Refinar" em qualquer vídeo, abre dialog para digitar instruções
-4. Usuário digita "mais agressivo", IA refina o anúncio
-5. Ao aplicar, salva no banco e atualiza a visualização + PDF automaticamente
+1. Botão "Criar Novo" visível no header da seção de Scripts de Vídeo
+2. Ao clicar, abre dialog com textarea
+3. Usuário digita instruções em linguagem natural (ex: "focado em economia, tom mais leve")
+4. IA gera anúncio completo usando contexto do cliente + instrução
+5. Novo card aparece na lista com todas as 6 seções
+6. PDF é atualizado automaticamente com o novo anúncio
