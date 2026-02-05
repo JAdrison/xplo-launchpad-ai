@@ -1,10 +1,60 @@
 
 
-# Remover Bloco "PROVA" dos Anúncios de Vídeo
+# Refatorar "ICPs" para "Perfil dos Principais Clientes"
 
 ## Visão Geral
 
-Remover completamente a seção "PROVA" (proof) da estrutura de anúncios de vídeo em todos os componentes, templates e edge function.
+Substituir a terminologia técnica "ICP" (Perfil de Cliente Ideal) por uma linguagem mais acessível e natural focada em **"quem já compra de você"**, tornando o preenchimento mais intuitivo para o cliente.
+
+---
+
+## Nova Estrutura de Campos
+
+| Campo Atual | Novo Campo | Descrição |
+|-------------|------------|-----------|
+| `name` | `name` | Nome do Perfil (mantém) |
+| `profession` | *removido* | — |
+| `age` | *removido* | — |
+| `gender` | *removido* | — |
+| `reason_needs_solution` | `why_buys` | Por que esse cliente compra de você? |
+| *novo* | `who_is` | Quem é esse cliente? (O que faz, como trabalha, como decide) |
+| *novo* | `when_seeks` | Em que momento ele te procura hoje? |
+| *novo* | `is_ideal` | Esse é um cliente que você quer atrair mais? (enum) |
+
+---
+
+## Textos UX Propostos
+
+**Título da Etapa:**
+"Perfil dos Principais Clientes"
+
+**Texto Introdutório:**
+"Agora vamos entender quem são os clientes que mais compram de você hoje — ou que você gostaria de atrair com mais frequência."
+
+**Labels dos Campos:**
+
+| Campo | Label | Placeholder/Helper |
+|-------|-------|-------------------|
+| `name` | "Nome do Perfil" | "Ex: Dono de empresa solar residencial" |
+| `who_is` | "Quem é esse cliente?" | "O que ele faz, como trabalha, como decide compras..." |
+| `when_seeks` | "Em que momento ele te procura hoje?" | "O que normalmente está acontecendo quando ele chega até você?" |
+| `why_buys` | "Por que esse cliente compra de você?" | "Motivo real: preço, rapidez, confiança, especialização, etc." |
+| `is_ideal` | "Esse é um cliente que você quer atrair mais?" | Opções de seleção |
+
+---
+
+## Migração do Banco de Dados
+
+Adicionar 3 novas colunas à tabela `icps`:
+
+```sql
+ALTER TABLE icps 
+  ADD COLUMN who_is TEXT,
+  ADD COLUMN when_seeks TEXT,
+  ADD COLUMN is_ideal TEXT CHECK (is_ideal IN ('ideal', 'good_not_ideal', 'no_more'));
+```
+
+Os campos `profession`, `age` e `gender` podem ser mantidos no banco para retrocompatibilidade, mas não serão exibidos na interface.
 
 ---
 
@@ -12,151 +62,176 @@ Remover completamente a seção "PROVA" (proof) da estrutura de anúncios de ví
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/generator/VideoAdCard.tsx` | Remover "proof" do array SECTIONS, VideoContent, COLUMN_MAP e selectedSections |
-| `src/components/export/AdsPDFTemplate.tsx` | Remover bloco de renderização do video_proof |
-| `supabase/functions/generate-content/index.ts` | Remover "proof" dos prompts e mapeamentos |
+| `src/components/onboarding/steps/StepICPs.tsx` | Reformular completamente a UI com novos campos e textos |
+| `src/components/export/OnboardingPDFTemplate.tsx` | Atualizar título e exibição dos novos campos |
+| `supabase/functions/generate-content/index.ts` | Atualizar prompt de geração de perfis para usar nova estrutura |
+| `src/pages/Generator.tsx` | Atualizar labels de "ICP" para "Perfil de Cliente" |
+| `src/components/onboarding/StepGenerateOffer.tsx` | Atualizar labels de "ICP" para "Perfil de Cliente" |
 
 ---
 
 ## Alterações Detalhadas
 
-### 1. VideoAdCard.tsx
+### 1. StepICPs.tsx
 
-**Remover de SECTIONS (linha 61):**
-```text
-De:
-  { key: "solution", label: "SOLUÇÃO" },
-  { key: "proof", label: "PROVA" },
-  { key: "cta", label: "CTA" },
+**Interface ICPForm atualizada:**
 
-Para:
-  { key: "solution", label: "SOLUÇÃO" },
-  { key: "cta", label: "CTA" },
+```typescript
+interface ProfileForm {
+  id?: string;
+  name: string;
+  who_is: string;          // Quem é esse cliente?
+  when_seeks: string;      // Em que momento te procura?
+  why_buys: string;        // Por que compra de você?
+  is_ideal: string;        // ideal | good_not_ideal | no_more
+}
 ```
 
-**Remover de VideoContent (linha 48):**
-```text
-De:
-  solution: string;
-  proof: string;
-  cta: string;
+**Header do Card:**
+- Título: "Perfil dos Principais Clientes"
+- Ícone: Users (mantém)
+- Descrição: "Agora vamos entender quem são os clientes que mais compram de você hoje — ou que você gostaria de atrair com mais frequência."
 
-Para:
-  solution: string;
-  cta: string;
-```
+**Formulário por perfil:**
+1. Campo "Nome do Perfil" (Input)
+2. Campo "Quem é esse cliente?" (Textarea)
+3. Campo "Em que momento ele te procura hoje?" (Textarea)
+4. Campo "Por que esse cliente compra de você?" (Textarea)
+5. Radio Group "Esse é um cliente que você quer atrair mais?"
+   - ( ) Sim, é o ideal
+   - ( ) É bom, mas não ideal
+   - ( ) Não quero mais esse perfil
 
-**Remover de COLUMN_MAP (linha 71):**
-```text
-Remover: proof: "video_proof",
-```
+**Botão Adicionar:**
+- De: "Adicionar ICP"
+- Para: "Adicionar Outro Perfil"
 
-**Remover de videoContent (linha 94):**
-```text
-Remover: proof: ad.video_proof || "",
-```
+**Toast de sucesso:**
+- De: "ICPs salvos"
+- Para: "Perfis de cliente salvos"
 
-**Remover de selectedSections inicial (linha 105):**
+---
+
+### 2. Edge Function (generate-content/index.ts)
+
+**Atualizar handler `generate-icps`:**
+
 ```text
-Remover: proof: true,
+sys = 'Estrategista de perfis de clientes.';
+prompt = `Nicho: ${pppData?.niche}
+Produto: ${pppData?.profile?.product_name}
+Descrição: ${pppData?.profile?.product_description}
+Dor principal: ${pppData?.profile?.main_pain}
+
+Gere 3 perfis de clientes que compram esse produto.
+
+JSON: {"profiles":[{
+  "name": "Nome do perfil (ex: Dono de empresa solar residencial)",
+  "who_is": "Quem é, o que faz, como trabalha, como decide compras",
+  "when_seeks": "Em que momento procura esse tipo de solução",
+  "why_buys": "Motivo real pelo qual compra (preço, rapidez, confiança, etc)",
+  "is_ideal": "ideal"
+}]}`;
 ```
 
 ---
 
-### 2. AdsPDFTemplate.tsx
+### 3. OnboardingPDFTemplate.tsx
 
-**Remover bloco de renderização (linhas 189-194):**
-```text
-Remover:
-      {ad.video_proof && (
-        <div style={videoSectionStyle}>
-          <p style={...}>PROVA</p>
-          <p style={...}>{ad.video_proof}</p>
-        </div>
-      )}
+**Atualizar interface:**
+
+```typescript
+icps: Array<{
+  name: string;
+  who_is: string | null;
+  when_seeks: string | null;
+  why_buys: string | null;
+  is_ideal: string | null;
+}>;
 ```
+
+**Atualizar título da seção:**
+- De: "PERFIL DO CLIENTE IDEAL (ICPs)"
+- Para: "PERFIS DOS PRINCIPAIS CLIENTES"
+
+**Atualizar labels exibidas:**
+- "Quem é:" + who_is
+- "Quando procura:" + when_seeks
+- "Por que compra:" + why_buys
+- Badge: "Cliente Ideal" | "Bom, mas não ideal" | "Não quer mais"
 
 ---
 
-### 3. Edge Function (generate-content/index.ts)
+### 4. Generator.tsx
 
-**Remover de extractVisualNotes (linha 66):**
-```text
-De:
-  const fields = ['hook', 'problem', 'why_bad', 'solution', 'proof', 'cta'];
-
-Para:
-  const fields = ['hook', 'problem', 'why_bad', 'solution', 'cta'];
-```
-
-**Atualizar prompt refine-ad (linha 120):**
-```text
-De:
-  `Refine vídeo:\nHOOK: ${c.hook}\nPROBLEMA: ${c.problem}\nPOR QUE: ${c.why_bad}\nSOLUÇÃO: ${c.solution}\nPROVA: ${c.proof}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"hook":"","problem":"","why_bad":"","solution":"","proof":"","cta":"","duration":"","visual_notes":""}`
-
-Para:
-  `Refine vídeo:\nHOOK: ${c.hook}\nPROBLEMA: ${c.problem}\nPOR QUE: ${c.why_bad}\nSOLUÇÃO: ${c.solution}\nCTA: ${c.cta}\n\nInstrução: ${instruction}\nJSON: {"hook":"","problem":"","why_bad":"","solution":"","cta":"","duration":"","visual_notes":""}`
-```
-
-**Atualizar videoSys create-video-ad (linha 186):**
-```text
-De:
-  'Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), PROVA (credibilidade), CTA (chamada para ação).'
-
-Para:
-  'Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), CTA (chamada para ação).'
-```
-
-**Atualizar videoPrompt create-video-ad (linha 187):**
-```text
-Remover "proof" do JSON esperado
-```
-
-**Remover video_proof do insert (linha 200):**
-```text
-Remover: video_proof: extractText(videoRes.proof),
-```
-
-**Atualizar prompt ads batch (linha 217-218):**
-```text
-De:
-  'Crie 5 vídeos (6 seções: HOOK,PROBLEMA,POR QUE É RUIM,SOLUÇÃO,PROVA,CTA, 20-80s)'
-
-Para:
-  'Crie 5 vídeos (5 seções: HOOK,PROBLEMA,POR QUE É RUIM,SOLUÇÃO,CTA, 20-80s)'
-```
-
-**Remover proof do JSON template ads (linha 218):**
-```text
-Remover "proof" do objeto video_scripts no JSON
-```
-
-**Remover video_proof do insert em batch (linha 222):**
-```text
-Remover: video_proof: v.proof,
-```
+Atualizar textos de UI:
+- Badge: "{N} ICP{s}" → "{N} Perfil(s)"
+- Título seção: "Selecione um ICP" → "Selecione um Perfil de Cliente"
+- Descrição: atualizar referências a ICP
 
 ---
 
-## Nova Estrutura de Vídeo
+### 5. StepGenerateOffer.tsx
 
-| Antes (6 seções) | Depois (5 seções) |
-|------------------|-------------------|
-| HOOK | HOOK |
-| PROBLEMA | PROBLEMA |
-| POR QUE É RUIM | POR QUE É RUIM |
-| SOLUÇÃO | SOLUÇÃO |
-| ~~PROVA~~ | *(removido)* |
-| CTA | CTA |
-| NOTAS VISUAIS | NOTAS VISUAIS |
+Atualizar textos de UI:
+- Label: "Selecione o ICP para esta oferta" → "Selecione o perfil de cliente para esta oferta"
+- Placeholder: "Escolha um ICP..." → "Escolha um perfil..."
+- Helper text: atualizar referências a ICP
+
+---
+
+## Comparativo Visual
+
+**Antes (Campos técnicos):**
+```text
+┌────────────────────────────────────────┐
+│ ICP 1                                  │
+├────────────────────────────────────────┤
+│ Nome do Perfil: Carlos, o Empresário   │
+│ Profissão: Dono de academia            │
+│ Idade: 35-45 anos                      │
+│ Sexo: [Masculino ▼]                    │
+│ Por que precisa da solução?            │
+│ [________________________]             │
+└────────────────────────────────────────┘
+```
+
+**Depois (Linguagem natural):**
+```text
+┌────────────────────────────────────────┐
+│ Perfil 1                               │
+├────────────────────────────────────────┤
+│ Nome do Perfil                         │
+│ [Dono de empresa solar residencial   ] │
+│                                        │
+│ Quem é esse cliente?                   │
+│ [Empresário de 35-50 anos, dono de    ]│
+│ [empresa de energia solar, trabalha   ]│
+│ [focado em residencial...             ]│
+│                                        │
+│ Em que momento ele te procura hoje?    │
+│ [Quando quer escalar vendas, está com ]│
+│ [baixo fluxo de leads qualificados... ]│
+│                                        │
+│ Por que esse cliente compra de você?   │
+│ [Especialização no nicho solar,       ]│
+│ [rapidez na entrega, confiança...     ]│
+│                                        │
+│ Esse é um cliente que você quer       │
+│ atrair mais?                           │
+│ (●) Sim, é o ideal                     │
+│ ( ) É bom, mas não ideal               │
+│ ( ) Não quero mais esse perfil         │
+└────────────────────────────────────────┘
+```
 
 ---
 
 ## Resultado Esperado
 
-1. Anúncios de vídeo terão 5 seções em vez de 6
-2. O campo "PROVA" não aparecerá mais no card de vídeo
-3. O PDF não incluirá mais a seção "PROVA"
-4. Novos anúncios gerados pela IA não terão o campo proof
-5. O fluxo de refinamento não pedirá mais proof
+1. Cliente entende as perguntas sem precisar de explicações técnicas
+2. Respostas mais ricas e contextualizadas para geração de ofertas
+3. Identificação clara de quais perfis priorizar nas campanhas
+4. Campo "não quero mais esse perfil" ajuda a filtrar leads indesejados
+5. IA gera perfis mais práticos baseados em comportamento real de compra
 
