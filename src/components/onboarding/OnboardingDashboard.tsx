@@ -354,7 +354,7 @@ function ClientOnboardingCard({ client, onNavigate }: ClientOnboardingCardProps)
               {client.icps.length > 0 && (
                 <span className="flex items-center gap-1 text-muted-foreground">
                   <Users className="h-3 w-3" />
-                  {client.icps.length} ICP{client.icps.length > 1 ? "s" : ""}
+                  {client.icps.length} Perfil{client.icps.length > 1 ? "s" : ""}
                 </span>
               )}
               {client.client_promise?.promise_text && (

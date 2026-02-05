@@ -141,15 +141,15 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
         </ul>
       </div>
 
-      {/* Seleção de ICP */}
+      {/* Seleção de Perfil de Cliente */}
       <div className="space-y-3">
         <Label className="flex items-center gap-2">
           <Users className="h-4 w-4" />
-          Selecione o ICP para esta oferta
+          Selecione o perfil de cliente para esta oferta
         </Label>
         <Select value={selectedIcpId} onValueChange={setSelectedIcpId}>
           <SelectTrigger>
-            <SelectValue placeholder="Escolha um ICP..." />
+            <SelectValue placeholder="Escolha um perfil..." />
           </SelectTrigger>
           <SelectContent>
             {icps.map((icp) => (
@@ -160,7 +160,7 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Cada oferta é gerada especificamente para um ICP. Você pode gerar ofertas para outros ICPs depois.
+          Cada oferta é gerada especificamente para um perfil de cliente. Você pode gerar ofertas para outros perfis depois.
         </p>
       </div>
 

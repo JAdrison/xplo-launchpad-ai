@@ -53,12 +53,10 @@ interface OnboardingPDFTemplateProps {
   };
   icps: Array<{
     name: string;
-    segment: string | null;
-    characteristics: string | null;
-    current_situation: string | null;
-    age: string | null;
-    gender: string | null;
-    profession: string | null;
+    who_is: string | null;
+    when_seeks: string | null;
+    why_buys: string | null;
+    is_ideal: string | null;
   }>;
   promise: string | null;
 }
@@ -527,10 +525,10 @@ export function OnboardingPDFTemplate({
         </div>
       )}
 
-      {/* ICPs Section */}
+      {/* Perfis dos Principais Clientes Section */}
       {icps.length > 0 && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>PERFIL DO CLIENTE IDEAL (ICPs)</h2>
+          <h2 style={sectionTitleStyle}>PERFIS DOS PRINCIPAIS CLIENTES</h2>
           
           {icps.map((icp, index) => (
             <div
@@ -543,55 +541,50 @@ export function OnboardingPDFTemplate({
                 border: "1px solid #e5e7eb",
               }}
             >
-              <p
-                style={{
-                  fontSize: "12pt",
-                  fontWeight: 600,
-                  color: "#374151",
-                  marginBottom: "8px",
-                }}
-              >
-                {index + 1}. {icp.name}
-              </p>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-                {icp.segment && (
-                  <p style={valueStyle}>
-                    <span style={labelStyle}>Segmento: </span>
-                    {icp.segment}
-                  </p>
-                )}
-                {icp.profession && (
-                  <p style={valueStyle}>
-                    <span style={labelStyle}>Profissão: </span>
-                    {icp.profession}
-                  </p>
-                )}
-                {icp.age && (
-                  <p style={valueStyle}>
-                    <span style={labelStyle}>Idade: </span>
-                    {icp.age}
-                  </p>
-                )}
-                {icp.gender && (
-                  <p style={valueStyle}>
-                    <span style={labelStyle}>Gênero: </span>
-                    {icp.gender}
-                  </p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <p
+                  style={{
+                    fontSize: "12pt",
+                    fontWeight: 600,
+                    color: "#374151",
+                    margin: 0,
+                  }}
+                >
+                  {index + 1}. {icp.name}
+                </p>
+                {icp.is_ideal && (
+                  <span
+                    style={{
+                      fontSize: "9pt",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      backgroundColor: icp.is_ideal === "ideal" ? "#dcfce7" : icp.is_ideal === "good_not_ideal" ? "#fef3c7" : "#fee2e2",
+                      color: icp.is_ideal === "ideal" ? "#166534" : icp.is_ideal === "good_not_ideal" ? "#92400e" : "#991b1b",
+                    }}
+                  >
+                    {icp.is_ideal === "ideal" ? "Cliente Ideal" : icp.is_ideal === "good_not_ideal" ? "Bom, mas não ideal" : "Não quer mais"}
+                  </span>
                 )}
               </div>
 
-              {icp.characteristics && (
-                <p style={valueStyle}>
-                  <span style={labelStyle}>Características: </span>
-                  {icp.characteristics}
+              {icp.who_is && (
+                <p style={{ ...valueStyle, marginTop: "8px" }}>
+                  <span style={{ ...labelStyle, fontWeight: 600 }}>Quem é: </span>
+                  {icp.who_is}
                 </p>
               )}
 
-              {icp.current_situation && (
+              {icp.when_seeks && (
                 <p style={valueStyle}>
-                  <span style={labelStyle}>Situação Atual: </span>
-                  {icp.current_situation}
+                  <span style={{ ...labelStyle, fontWeight: 600 }}>Quando procura: </span>
+                  {icp.when_seeks}
+                </p>
+              )}
+
+              {icp.why_buys && (
+                <p style={valueStyle}>
+                  <span style={{ ...labelStyle, fontWeight: 600 }}>Por que compra: </span>
+                  {icp.why_buys}
                 </p>
               )}
             </div>

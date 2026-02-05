@@ -144,10 +144,25 @@ Deno.serve(async (req) => {
       sys = `Copywriter LP ${lpVariant || 'direta'}.`;
       prompt = `${ctx}\nCrie LP.\nJSON: {"hero":{"headline":"","subheadline":"","cta_button":""},"problem_agitation":{"problems":[]},"solution":{},"benefits":[],"how_it_works":{"steps":[]},"social_proof":{"testimonials":[],"stats":[]},"guarantee":{},"value_stack":{"items":[]},"faq":[],"final_cta":{}}`;
     } else if (type === "generate-icps") {
-      sys = 'Estrategista ICP.';
-      prompt = `Nicho: ${pppData?.niche}\nProduto: ${pppData?.profile?.product_name}\n\nGere 3 ICPs.\nJSON: {"icps":[{"name":"","profession":"","age":"","gender":"","reason_needs_solution":""}]}`;
+      sys = 'Estrategista de perfis de clientes.';
+      prompt = `Nicho: ${pppData?.niche}
+Produto: ${pppData?.profile?.product_name}
+Descrição: ${pppData?.profile?.product_description}
+Dor principal: ${pppData?.profile?.main_pain}
+Desejo: ${pppData?.profile?.desire_1}
+Promessa: ${pppData?.promise?.promise_text || ''}
+
+Gere 3 perfis de clientes que compram esse produto.
+
+JSON: {"profiles":[{
+  "name": "Nome do perfil (ex: Dono de empresa solar residencial)",
+  "who_is": "Quem é, o que faz, como trabalha, como decide compras",
+  "when_seeks": "Em que momento procura esse tipo de solução",
+  "why_buys": "Motivo real pelo qual compra (preço, rapidez, confiança, etc)",
+  "is_ideal": "ideal"
+}]}`;
       const res = await ai(KEY, sys, prompt, 0.8);
-      return new Response(JSON.stringify({ success: true, icps: res.icps }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ success: true, profiles: res.profiles }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "generate-pains") {
       sys = 'Mapeador dores.';
       prompt = `${ctx}\nPara cada ICP, identifique dores.\nJSON: {"pains":[{"icp_name":"","main_pain":"","secondary_pain":"","daily_impacts":[],"desire_1":"","desire_2":""}]}`;

@@ -407,12 +407,15 @@ export type Database = {
           current_situation: string | null
           gender: string | null
           id: string
+          is_ideal: string | null
           name: string
           profession: string | null
           reason_needs_solution: string | null
           segment: string | null
           sort_order: number
           updated_at: string
+          when_seeks: string | null
+          who_is: string | null
         }
         Insert: {
           age?: string | null
@@ -425,12 +428,15 @@ export type Database = {
           current_situation?: string | null
           gender?: string | null
           id?: string
+          is_ideal?: string | null
           name: string
           profession?: string | null
           reason_needs_solution?: string | null
           segment?: string | null
           sort_order?: number
           updated_at?: string
+          when_seeks?: string | null
+          who_is?: string | null
         }
         Update: {
           age?: string | null
@@ -443,12 +449,15 @@ export type Database = {
           current_situation?: string | null
           gender?: string | null
           id?: string
+          is_ideal?: string | null
           name?: string
           profession?: string | null
           reason_needs_solution?: string | null
           segment?: string | null
           sort_order?: number
           updated_at?: string
+          when_seeks?: string | null
+          who_is?: string | null
         }
         Relationships: [
           {

@@ -502,14 +502,12 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
       inspiration_company_1: parseCompetitor((onboardingData.profile as any)?.inspiration_company_1),
       inspiration_company_2: parseCompetitor((onboardingData.profile as any)?.inspiration_company_2),
     },
-    icps: onboardingData.icps.map((icp) => ({
+    icps: onboardingData.icps.map((icp: any) => ({
       name: icp.name,
-      segment: icp.segment,
-      characteristics: icp.characteristics,
-      current_situation: icp.current_situation,
-      age: icp.age,
-      gender: icp.gender,
-      profession: icp.profession,
+      who_is: icp.who_is || null,
+      when_seeks: icp.when_seeks || null,
+      why_buys: icp.reason_needs_solution || null,
+      is_ideal: icp.is_ideal || null,
     })),
     promise: onboardingData.promise?.promise_text || null,
   };
