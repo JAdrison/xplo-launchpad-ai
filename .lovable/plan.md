@@ -1,273 +1,97 @@
 
-# Atualização: VideoAdCard + Exportação PDF de Anúncios
+# Correção: Scripts de Vídeo Não Aparecem
 
-## Visão Geral
+## Diagnóstico
 
-Implementar três funcionalidades:
-1. **VideoAdCard**: Componente com checkboxes para selecionar seções + edição inline de texto
-2. **PDF de Anúncios**: Exportar todos os anúncios (estáticos e vídeos) em PDF profissional
-3. **Sincronização**: PDF atualiza automaticamente quando salvar, excluir ou personalizar textos
+O problema é que existem **dois componentes diferentes** renderizando anúncios de vídeo:
+
+| Componente | Usado Em | Status |
+|------------|----------|--------|
+| `GeneratedContentViewer.tsx` | Página Generator | Usa `VideoAdCard` - Funciona |
+| `GeneratedAssetsSection.tsx` | Página ClientDetails | Usa formato legado - NAO funciona |
+
+### Causa Raiz
+
+O `GeneratedAssetsSection.tsx` (linhas 660-732) ainda tenta ler os dados do campo `script` (formato antigo):
+
+```text
+const script = ad.script as VideoScript;
+// ...
+{script?.hook && <p>{script.hook}</p>}
+{script?.body && <p>{script.body}</p>}
+{script?.cta && <p>{script.cta}</p>}
+```
+
+Porém os novos anúncios armazenam os dados nas colunas diretas:
+- `video_hook`
+- `video_problem`
+- `video_why_bad`
+- `video_solution`
+- `video_proof`
+- `video_cta`
+- `video_visual_notes`
+- `video_duration`
+
+A consulta ao banco confirmou que o campo `script` está `nil` (nulo), enquanto as colunas `video_*` contêm o conteúdo.
 
 ---
 
-## Parte 1: VideoAdCard com Seleção e Edição
+## Solucao
 
-### Funcionalidades
+Atualizar o `GeneratedAssetsSection.tsx` para usar o componente `VideoAdCard` que já funciona corretamente no `GeneratedContentViewer.tsx`.
 
-| Funcionalidade | Descrição |
-|----------------|-----------|
-| Checkboxes por seção | Escolher quais seções incluir ao copiar |
-| Opacidade visual | Seções desmarcadas ficam esmaecidas |
-| Edição inline | Ícone de lápis abre textarea para editar |
-| Salvamento | Atualiza no banco e dispara refresh do PDF |
+### Alteracoes no GeneratedAssetsSection.tsx
 
-### Estrutura do Componente
+1. **Importar o componente VideoAdCard**
+2. **Adicionar estado para gerenciar atualizações** (handleAdUpdate)
+3. **Substituir o renderizador de vídeos legado pelo VideoAdCard**
 
-```text
-VideoAdCard
-├── Header (tipo, duração, botões)
-├── Seções (7 seções com checkbox + edição)
-│   ├── [✓] HOOK          [✏️]
-│   ├── [✓] PROBLEMA      [✏️]
-│   ├── [✓] POR QUE RUIM  [✏️]
-│   ├── [✓] SOLUÇÃO       [✏️]
-│   ├── [✓] PROVA         [✏️]
-│   ├── [✓] CTA           [✏️]
-│   └── [✓] NOTAS VISUAIS [✏️]
-└── Modo Edição (textarea + Salvar/Cancelar)
+### Codigo Atualizado
+
+**Imports:**
+```typescript
+import { VideoAdCard } from "@/components/generator/VideoAdCard";
 ```
 
-### Props do Componente
-
-| Prop | Tipo | Descrição |
-|------|------|-----------|
-| `ad` | `Ad` | Objeto do anúncio |
-| `onDelete` | `() => void` | Callback de exclusão |
-| `onRefine` | `() => void` | Abre chat de refinamento |
-| `onUpdate` | `(ad: Ad) => void` | Atualiza estado local após edição |
-
----
-
-## Parte 2: PDF de Anúncios
-
-### Estrutura do Template
-
-```text
-┌─────────────────────────────────────┐
-│  [LOGO XPLO]              [Data]   │
-│  ═══════════════════════════════   │
-│          ANÚNCIOS GERADOS          │
-│          Cliente: [Nome]            │
-├─────────────────────────────────────┤
-│                                     │
-│  ═══ ESTÁTICOS (DORES) ═══          │
-│  ┌─────────────────────────────┐    │
-│  │ Dor Principal               │    │
-│  │ Headline: ...               │    │
-│  │ Subheadline: ...            │    │
-│  │ Copy: ...                   │    │
-│  │ • SEM X • SEM Y • SEM Z     │    │
-│  │ CTA: ...                    │    │
-│  └─────────────────────────────┘    │
-│  (repete para cada anúncio)         │
-│                                     │
-│  ═══ ESTÁTICOS (DESEJOS) ═══        │
-│  (mesma estrutura)                  │
-│                                     │
-│  ═══ ROTEIROS DE VÍDEO ═══          │
-│  ┌─────────────────────────────┐    │
-│  │ [Quebra de Padrão] [30s]    │    │
-│  │ ─────────────────────────── │    │
-│  │ HOOK: ...                   │    │
-│  │ PROBLEMA: ...               │    │
-│  │ POR QUE RUIM: ...           │    │
-│  │ SOLUÇÃO: ...                │    │
-│  │ PROVA: ...                  │    │
-│  │ CTA: ...                    │    │
-│  │ ─────────────────────────── │    │
-│  │ NOTAS VISUAIS: ...          │    │
-│  └─────────────────────────────┘    │
-│                                     │
-└─────────────────────────────────────┘
-```
-
-### Controle de Quebra de Página
-
-| Elemento | Regra CSS |
-|----------|-----------|
-| Cada card de anúncio | `page-break-inside: avoid; break-inside: avoid` |
-| Seções principais | `margin-bottom: 15mm` (buffer de segurança) |
-| Título de categoria | `page-break-after: avoid` |
-| Container global | `padding: 15mm` (margens seguras) |
-
----
-
-## Parte 3: Sincronização com PDF
-
-### Mecanismo de Atualização
-
-```text
-Ação do Usuário         →    Dispara refreshKey    →    PDF Regenera
-─────────────────────────────────────────────────────────────────────
-Editar texto inline      →    setRefreshKey(+1)     →    Template atualiza
-Salvar via Refiner       →    setRefreshKey(+1)     →    Template atualiza
-Excluir anúncio          →    setAds(filtered)      →    Template atualiza
-```
-
-### Estado a Gerenciar
-
-```text
-// No GeneratedContentViewer
-const [adsRefreshKey, setAdsRefreshKey] = useState(0);
-
-// Passa como prop para VideoAdCard
-onUpdate={(updatedAd) => {
-  setAds(prev => prev.map(a => a.id === updatedAd.id ? updatedAd : a));
-  setAdsRefreshKey(k => k + 1);
-}}
-```
-
----
-
-## Arquivos a Criar
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/generator/VideoAdCard.tsx` | Card de vídeo com seleção e edição |
-| `src/components/export/AdsPDFTemplate.tsx` | Template PDF para anúncios |
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/export/PDFExportButton.tsx` | Adicionar type "ads" |
-| `src/components/generator/GeneratedContentViewer.tsx` | Usar VideoAdCard, adicionar botão PDF, gerenciar refreshKey |
-
----
-
-## Implementação Detalhada
-
-### 1. VideoAdCard.tsx
-
-**Estado Local:**
-```text
-selectedSections: Record<string, boolean>  // Quais seções estão marcadas
-editingSection: string | null              // Qual seção está em modo edição
-editValue: string                          // Valor temporário durante edição
-isSaving: boolean                          // Loading de salvamento
-```
-
-**Fluxo de Edição:**
-1. Clica no ícone de lápis → `setEditingSection("hook")`
-2. Digita no textarea → `setEditValue(novoTexto)`
-3. Clica Salvar → Chama `supabase.from('ads').update()` → `onUpdate(adAtualizado)`
-4. Clica Cancelar → `setEditingSection(null)`
-
-**Cópia Seletiva:**
-```text
-const copyScript = () => {
-  const parts = [];
-  if (selectedSections.hook) parts.push(`HOOK:\n${content.hook}`);
-  if (selectedSections.problem) parts.push(`PROBLEMA:\n${content.problem}`);
-  // ... etc
-  navigator.clipboard.writeText(parts.join('\n\n'));
+**Handler para atualizações:**
+```typescript
+const handleAdUpdate = (updatedAd: Ad) => {
+  setAds((prev) => prev.map((a) => (a.id === updatedAd.id ? updatedAd : a)));
 };
 ```
 
-### 2. AdsPDFTemplate.tsx
-
-**Props:**
-```text
-interface AdsPDFTemplateProps {
-  clientName: string;
-  createdAt: string;
-  videoAds: Ad[];
-  staticAds: Ad[];
-}
-```
-
-**Estilos para Evitar Quebra:**
-```text
-const cardStyle = {
-  pageBreakInside: "avoid",
-  breakInside: "avoid",
-  marginBottom: "10mm",
-  padding: "12px",
-  border: "1px solid #e5e7eb",
-  borderRadius: "6px"
-};
-
-const sectionDividerStyle = {
-  marginTop: "20px",
-  marginBottom: "15mm",
-  pageBreakAfter: "avoid"
-};
-```
-
-### 3. PDFExportButton.tsx
-
-**Adicionar novo tipo:**
-```text
-interface PDFExportButtonProps {
-  type: "offer" | "landing-page" | "onboarding" | "ads";  // ← Adiciona "ads"
-  // ...
-  ads?: Ad[];  // ← Nova prop para anúncios
-}
-
-// No template hidden
-{type === "ads" && (
-  <AdsPDFTemplate 
-    clientName={clientName}
-    createdAt={createdAt}
-    videoAds={content.videoAds}
-    staticAds={content.staticAds}
-  />
+**Seção de Video Ads (substituir linhas 656-733):**
+```typescript
+{videoAds.length > 0 && (
+  <div className="space-y-3">
+    <h4 className="text-sm font-medium">Scripts de Vídeo</h4>
+    {videoAds.map((ad) => (
+      <VideoAdCard
+        key={ad.id}
+        ad={ad}
+        onDelete={() => handleDeleteAd(ad.id)}
+        onRefine={() => {}} // Refiner não disponível nesta view
+        onUpdate={handleAdUpdate}
+        isDeleting={deletingId === ad.id}
+      />
+    ))}
+  </div>
 )}
 ```
 
-### 4. GeneratedContentViewer.tsx
+---
 
-**Adicionar no header da seção de anúncios:**
-```text
-<div className="flex items-center gap-1">
-  <PDFExportButton
-    type="ads"
-    clientName={clientName}
-    content={{
-      videoAds: videoAds,
-      staticAds: staticAds
-    }}
-    refreshKey={adsRefreshKey}
-  />
-</div>
-```
+## Arquivos a Modificar
 
-**Substituir `renderVideoAd` por componente:**
-```text
-{videoAds.map(ad => (
-  <VideoAdCard
-    key={ad.id}
-    ad={ad}
-    onDelete={() => handleDeleteAd(ad.id)}
-    onRefine={() => openRefiner(ad, "video")}
-    onUpdate={(updated) => {
-      setAds(prev => prev.map(a => a.id === updated.id ? updated : a));
-      setAdsRefreshKey(k => k + 1);
-    }}
-  />
-))}
-```
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/components/client/GeneratedAssetsSection.tsx` | Usar `VideoAdCard` em vez do renderer legado |
 
 ---
 
 ## Resultado Esperado
 
-1. Cada roteiro de vídeo tem checkboxes para selecionar seções
-2. Seções desmarcadas aparecem com opacidade reduzida
-3. Botão de copiar respeita apenas seções selecionadas
-4. Ícone de lápis em cada seção permite edição inline
-5. Edições salvam no banco e atualizam PDF automaticamente
-6. Botão "PDF" na seção de anúncios exporta documento profissional
-7. PDF inclui todos os estáticos (separados por Dores/Desejos) + vídeos
-8. Cada card no PDF não quebra entre páginas
-9. Margens seguras de 15mm no início e fim das páginas
+1. Os scripts de vídeo aparecerao com todo o conteúdo (Hook, Problema, Por que é ruim, Solucao, Prova, CTA, Notas Visuais)
+2. Checkboxes para selecionar secoes ao copiar
+3. Edicao inline de cada secao
+4. Compatibilidade tanto com dados legados quanto novos
