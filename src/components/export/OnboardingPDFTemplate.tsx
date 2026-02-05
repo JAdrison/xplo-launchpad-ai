@@ -179,6 +179,21 @@ export function OnboardingPDFTemplate({
         lineHeight: 1.5,
       }}
     >
+      {/* Logo fixa em todas as páginas - canto superior direito */}
+      <img 
+        src={logoXplo} 
+        alt="XPLO" 
+        style={{ 
+          position: "fixed",
+          top: "5mm",
+          right: "5mm",
+          height: "20px",
+          width: "auto",
+          opacity: 0.7,
+          zIndex: 1000,
+        }} 
+      />
+
       {/* Header */}
       <div
         style={{
