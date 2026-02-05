@@ -46,6 +46,7 @@ import type { Tables, Json } from "@/integrations/supabase/types";
 import { LandingPageViewer } from "@/components/generator/LandingPageViewer";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
 import { VideoAdCard } from "@/components/generator/VideoAdCard";
+import { AdsRefinerChat } from "@/components/generator/AdsRefinerChat";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -135,6 +136,11 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  
+  // States for AI Refiner
+  const [refinerOpen, setRefinerOpen] = useState(false);
+  const [selectedAd, setSelectedAd] = useState<{ ad: Ad; type: "video" | "static" } | null>(null);
+  const [adsRefreshKey, setAdsRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -204,6 +210,87 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
 
   const handleAdUpdate = (updatedAd: Ad) => {
     setAds((prev) => prev.map((a) => (a.id === updatedAd.id ? updatedAd : a)));
+  };
+
+  // AI Refiner functions
+  const openRefiner = (ad: Ad, type: "video" | "static") => {
+    setSelectedAd({ ad, type });
+    setRefinerOpen(true);
+  };
+
+  const handleApplyRefinement = async (newContent: any) => {
+    if (!selectedAd) return;
+
+    const updateData = selectedAd.type === "video"
+      ? {
+          video_hook: newContent.hook,
+          video_problem: newContent.problem,
+          video_why_bad: newContent.why_bad,
+          video_solution: newContent.solution,
+          video_proof: newContent.proof,
+          video_cta: newContent.cta,
+          video_duration: newContent.duration,
+          video_visual_notes: newContent.visual_notes,
+        }
+      : {
+          headline: newContent.headline,
+          subheadline: newContent.subheadline,
+          body_text: newContent.body_text,
+          eliminators: newContent.eliminators,
+          cta: newContent.cta,
+          visual_suggestion: newContent.visual_suggestion,
+        };
+
+    const { error } = await supabase
+      .from("ads")
+      .update(updateData)
+      .eq("id", selectedAd.ad.id);
+
+    if (error) {
+      toast.error("Erro ao salvar anúncio refinado");
+      return;
+    }
+
+    handleAdUpdate({ ...selectedAd.ad, ...updateData });
+    setAdsRefreshKey((k) => k + 1);
+    toast.success("Anúncio refinado com sucesso!");
+  };
+
+  const getRefinerContent = (): any => {
+    if (!selectedAd) {
+      return {
+        hook: "",
+        problem: "",
+        why_bad: "",
+        solution: "",
+        proof: "",
+        cta: "",
+        duration: "",
+        visual_notes: "",
+      };
+    }
+    
+    if (selectedAd.type === "video") {
+      return {
+        hook: selectedAd.ad.video_hook || "",
+        problem: selectedAd.ad.video_problem || "",
+        why_bad: selectedAd.ad.video_why_bad || "",
+        solution: selectedAd.ad.video_solution || "",
+        proof: selectedAd.ad.video_proof || "",
+        cta: selectedAd.ad.video_cta || "",
+        duration: selectedAd.ad.video_duration || "",
+        visual_notes: selectedAd.ad.video_visual_notes || "",
+      };
+    }
+    
+    return {
+      headline: selectedAd.ad.headline || "",
+      subheadline: selectedAd.ad.subheadline || "",
+      body_text: selectedAd.ad.body_text || "",
+      eliminators: selectedAd.ad.eliminators || [],
+      cta: selectedAd.ad.cta || "",
+      visual_suggestion: selectedAd.ad.visual_suggestion || "",
+    };
   };
 
   const hasContent = offers.length > 0 || landingPages.length > 0 || ads.length > 0;
@@ -607,6 +694,17 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                 </div>
               </AccordionTrigger>
               <AccordionContent className="space-y-4 pt-4">
+                {/* PDF Export Button */}
+                <div className="flex justify-end mb-2">
+                  <PDFExportButton
+                    type="ads"
+                    clientName={clientName || "cliente"}
+                    content={{ videoAds, staticAds }}
+                    createdAt={new Date().toISOString()}
+                    refreshKey={adsRefreshKey}
+                  />
+                </div>
+
                 {/* Static Ads */}
                 {staticAds.length > 0 && (
                   <div className="space-y-3">
@@ -667,7 +765,7 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                         key={ad.id}
                         ad={ad}
                         onDelete={() => handleDeleteAd(ad.id)}
-                        onRefine={() => {}}
+                        onRefine={() => openRefiner(ad, "video")}
                         onUpdate={handleAdUpdate}
                         isDeleting={deletingId === ad.id}
                       />
@@ -679,6 +777,21 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
           )}
         </Accordion>
       </CardContent>
+
+      {/* AI Refiner Dialog */}
+      {selectedAd && (
+        <AdsRefinerChat
+          isOpen={refinerOpen}
+          onClose={() => {
+            setRefinerOpen(false);
+            setSelectedAd(null);
+          }}
+          adId={selectedAd.ad.id}
+          adType={selectedAd.type}
+          currentContent={getRefinerContent()}
+          onApply={handleApplyRefinement}
+        />
+      )}
     </Card>
   );
 }
