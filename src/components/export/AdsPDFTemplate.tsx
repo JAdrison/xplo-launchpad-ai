@@ -186,6 +186,12 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
           <p style={{ fontSize: "11px" }}>{ad.video_solution}</p>
         </div>
       )}
+      {ad.video_proof && (
+        <div style={videoSectionStyle}>
+          <p style={{ fontSize: "10px", color: "#6b7280", fontWeight: 500, marginBottom: "2px" }}>PROVA</p>
+          <p style={{ fontSize: "11px" }}>{ad.video_proof}</p>
+        </div>
+      )}
       {ad.video_cta && (
         <div style={{ ...videoSectionStyle, backgroundColor: "#dbeafe" }}>
           <p style={{ fontSize: "10px", color: "#1e40af", fontWeight: 500, marginBottom: "2px" }}>CTA</p>
