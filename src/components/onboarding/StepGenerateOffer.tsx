@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getAIConfig } from "@/lib/aiConfig";
 import { toast } from "sonner";
 
 interface ICP {
@@ -60,12 +61,14 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
         niche: clientRes.data?.niche || null,
       };
 
+      const aiConfig = getAIConfig();
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           type: "offer",
           clientId,
           icpId: selectedIcpId,
           pppData,
+          aiConfig,
         },
       });
 

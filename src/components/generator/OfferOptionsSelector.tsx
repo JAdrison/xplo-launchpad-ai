@@ -6,6 +6,7 @@ import { EditableOptionCard } from "./EditableOptionCard";
 import { RefreshCw, Save, Target, Sparkles, Shield, Award, Undo2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getAIConfig } from "@/lib/aiConfig";
 
 type OfferField = "promise" | "unique_mechanism" | "guarantee" | "proof" | "risk_reversal" | "main_cta";
 
@@ -110,6 +111,7 @@ export function OfferOptionsSelector({
   const handleRefreshField = async (field: OfferField) => {
     setRefreshingField(field);
     try {
+      const aiConfig = getAIConfig();
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
           type: "refresh-field",
@@ -117,6 +119,7 @@ export function OfferOptionsSelector({
           offerId,
           field,
           pppData,
+          aiConfig,
         },
       });
 

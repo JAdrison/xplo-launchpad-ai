@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users, Sparkles, Info, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getAIConfig } from "@/lib/aiConfig";
 
 interface StepICPsProps {
   clientId: string;
@@ -83,11 +84,13 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         promise: promiseRes.data || null,
       };
 
+      const aiConfig = getAIConfig();
       const response = await supabase.functions.invoke("generate-content", {
         body: {
           type: "generate-icps",
           clientId,
           pppData,
+          aiConfig,
         },
       });
 

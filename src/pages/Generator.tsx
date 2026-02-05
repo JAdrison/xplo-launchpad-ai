@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 import { GeneratedContentViewer } from "@/components/generator/GeneratedContentViewer";
+import { getAIConfig } from "@/lib/aiConfig";
 
 type LPVariant = "direct" | "consultive" | "aggressive";
 
@@ -217,10 +218,12 @@ export default function Generator() {
       // Generate each selected type
       for (const type of selectedTypes) {
         try {
+          const aiConfig = getAIConfig();
           const body: Record<string, unknown> = {
             type,
             clientId: selectedClientId,
             pppData,
+            aiConfig,
           };
 
           // Add ICP for offer generation (AI will decide channels automatically)
