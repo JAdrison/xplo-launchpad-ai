@@ -52,6 +52,7 @@ import { DemandPlanEditor } from "./DemandPlanEditor";
 import { LandingPageViewer } from "./LandingPageViewer";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
 import { AdsRefinerChat } from "./AdsRefinerChat";
+import { VideoAdCard } from "./VideoAdCard";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -155,6 +156,9 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
   // State for refiner chat
   const [refinerOpen, setRefinerOpen] = useState(false);
   const [selectedAd, setSelectedAd] = useState<{ ad: Ad; type: "video" | "static" } | null>(null);
+  
+  // State for ads PDF sync
+  const [adsRefreshKey, setAdsRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -253,7 +257,14 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
     }
 
     setAds((prev) => prev.filter((a) => a.id !== adId));
+    setAdsRefreshKey((k) => k + 1);
     toast.success("Anúncio excluído com sucesso!");
+  };
+
+  // Handler for video ad updates (inline editing)
+  const handleAdUpdate = (updatedAd: Ad) => {
+    setAds((prev) => prev.map((a) => (a.id === updatedAd.id ? updatedAd : a)));
+    setAdsRefreshKey((k) => k + 1);
   };
 
   const openRefiner = (ad: Ad, type: "video" | "static") => {
@@ -300,6 +311,7 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
         ad.id === selectedAd.ad.id ? { ...ad, ...updateData } : ad
       )
     );
+    setAdsRefreshKey((k) => k + 1);
     toast.success("Anúncio atualizado com sucesso!");
   };
 
@@ -1098,6 +1110,20 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4">
+                  {/* PDF Export Button for Ads */}
+                  <div className="flex justify-end mb-4">
+                    <PDFExportButton
+                      type="ads"
+                      clientName={clientName}
+                      content={{
+                        videoAds,
+                        staticAds,
+                      }}
+                      createdAt={new Date().toISOString()}
+                      refreshKey={adsRefreshKey}
+                    />
+                  </div>
+                  
                   <Tabs defaultValue="statics" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="statics" className="gap-2">
@@ -1152,7 +1178,16 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                     {/* Tab Vídeos */}
                     <TabsContent value="videos" className="space-y-4 mt-4">
                       <div className="grid gap-4">
-                        {videoAds.map(renderVideoAd)}
+                        {videoAds.map((ad) => (
+                          <VideoAdCard
+                            key={ad.id}
+                            ad={ad}
+                            onDelete={() => handleDeleteAd(ad.id)}
+                            onRefine={() => openRefiner(ad, "video")}
+                            onUpdate={handleAdUpdate}
+                            isDeleting={deletingId === ad.id}
+                          />
+                        ))}
                       </div>
                     </TabsContent>
                   </Tabs>

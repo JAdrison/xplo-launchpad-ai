@@ -4,9 +4,10 @@ import { FileDown } from "lucide-react";
 import { OfferPDFTemplate } from "./OfferPDFTemplate";
 import { LandingPagePDFTemplate } from "./LandingPagePDFTemplate";
 import { OnboardingPDFTemplate } from "./OnboardingPDFTemplate";
+import { AdsPDFTemplate } from "./AdsPDFTemplate";
 
 interface PDFExportButtonProps {
-  type: "offer" | "landing-page" | "onboarding";
+  type: "offer" | "landing-page" | "onboarding" | "ads";
   clientName: string;
   content: any;
   variant?: string;
@@ -41,6 +42,7 @@ export function PDFExportButton({
     offer: "oferta",
     "landing-page": "landing-page",
     onboarding: "onboarding-x1",
+    ads: "anuncios",
   };
   
   const filename = `${typeLabels[type]}-${sanitizedClientName}-${dateStr}.pdf`;
@@ -103,6 +105,14 @@ export function PDFExportButton({
             market={content.market}
             icps={content.icps}
             promise={content.promise}
+          />
+        )}
+        {type === "ads" && (
+          <AdsPDFTemplate 
+            clientName={clientName}
+            createdAt={createdAt}
+            videoAds={content.videoAds || []}
+            staticAds={content.staticAds || []}
           />
         )}
       </div>
