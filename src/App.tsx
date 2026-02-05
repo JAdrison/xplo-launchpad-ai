@@ -3,7 +3,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import Auth from "./pages/Auth";
+import PendingApproval from "./pages/PendingApproval";
+import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
@@ -24,25 +29,46 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Public routes (no layout) */}
-          <Route path="/register" element={<ClientRegister />} />
-          <Route path="/onboarding/external/:token" element={<OnboardingExternal />} />
+        <AuthProvider>
+          <Routes>
+            {/* Public routes (no auth required) */}
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/pending" element={<PendingApproval />} />
+            <Route path="/register" element={<ClientRegister />} />
+            <Route path="/onboarding/external/:token" element={<OnboardingExternal />} />
 
-          {/* Internal routes (with layout) */}
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/clients/new" element={<ClientNew />} />
-            <Route path="/clients/:id" element={<ClientDetails />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/generator" element={<Generator />} />
-            <Route path="/assets" element={<Assets />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Protected routes (with layout) */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/clients/new" element={<ClientNew />} />
+              <Route path="/clients/:id" element={<ClientDetails />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/generator" element={<Generator />} />
+              <Route path="/assets" element={<Assets />} />
+              <Route path="/settings" element={<Settings />} />
+              
+              {/* Admin only route */}
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminUsers />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
