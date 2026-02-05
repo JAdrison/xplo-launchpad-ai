@@ -51,6 +51,34 @@ function extractJson(text: string): unknown {
   return JSON.parse(text);
 }
 
+function extractText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null) {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.text === 'string') return obj.text;
+    return JSON.stringify(value);
+  }
+  return '';
+}
+
+function extractVisualNotes(res: Record<string, unknown>): string {
+  const notes: string[] = [];
+  const fields = ['hook', 'problem', 'why_bad', 'solution', 'proof', 'cta'];
+  
+  for (const f of fields) {
+    if (typeof res[f] === 'object' && res[f] !== null) {
+      const vn = (res[f] as Record<string, unknown>).visual_notes;
+      if (vn) notes.push(`${f.toUpperCase()}: ${extractText(vn)}`);
+    }
+  }
+  
+  if (res.visual_notes) {
+    notes.push(extractText(res.visual_notes));
+  }
+  
+  return notes.join('\n\n') || '';
+}
+
 async function ai(key: string, sys: string, usr: string, t = 0.7) {
   const fullSys = `${sys}\n\nIMPORTANTE: Responda APENAS com JSON válido. Sem explicações, sem texto antes ou depois. Apenas o JSON puro.`;
   const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -156,24 +184,24 @@ Deno.serve(async (req) => {
       if (promise?.promise_text) adCtx += `Promessa: ${promise.promise_text}\n`;
       
       const videoSys = 'Copywriter especialista em anúncios de vídeo para redes sociais. Estrutura: HOOK (captura atenção nos primeiros 3s), PROBLEMA (identifica a dor), POR QUE É RUIM (agita o problema), SOLUÇÃO (apresenta o produto), PROVA (credibilidade), CTA (chamada para ação). Duração 20-60s.';
-      const videoPrompt = `${adCtx}\n\nInstrução do usuário: ${instruction}\n\nCrie um roteiro de vídeo completo.\nJSON: {"video_type":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","proof":"","cta":"","visual_notes":""}`;
+      const videoPrompt = `${adCtx}\n\nInstrução do usuário: ${instruction}\n\nIMPORTANTE: Retorne APENAS strings simples em cada campo, NÃO objetos.\nRetorne visual_notes como um único campo com todas as notas visuais combinadas.\n\nJSON (valores devem ser strings, não objetos):\n{\n  "video_type": "tipo do vídeo",\n  "duration": "duração em segundos",\n  "hook": "texto do hook",\n  "problem": "texto do problema",\n  "why_bad": "texto de por que é ruim",\n  "solution": "texto da solução",\n  "proof": "texto da prova",\n  "cta": "texto do CTA",\n  "visual_notes": "todas as notas visuais combinadas"\n}`;
       
-      const videoRes = await ai(KEY, videoSys, videoPrompt, 0.8);
+      const videoRes = await ai(KEY, videoSys, videoPrompt, 0.8) as Record<string, unknown>;
       
-      // Insert into database
+      // Insert into database with text extraction for robustness
       const { data: newAd, error: insertError } = await supabase.from('ads').insert({
         client_id: clientId,
         asset_type: 'video_ad',
-        video_type: videoRes.video_type || 'Personalizado',
-        video_hook: videoRes.hook,
-        video_problem: videoRes.problem,
-        video_why_bad: videoRes.why_bad,
-        video_solution: videoRes.solution,
-        video_proof: videoRes.proof,
-        video_cta: videoRes.cta,
-        video_duration: videoRes.duration,
-        video_visual_notes: videoRes.visual_notes,
-        headline: videoRes.video_type || 'Anúncio Personalizado'
+        video_type: extractText(videoRes.video_type) || 'Personalizado',
+        video_hook: extractText(videoRes.hook),
+        video_problem: extractText(videoRes.problem),
+        video_why_bad: extractText(videoRes.why_bad),
+        video_solution: extractText(videoRes.solution),
+        video_proof: extractText(videoRes.proof),
+        video_cta: extractText(videoRes.cta),
+        video_duration: extractText(videoRes.duration),
+        video_visual_notes: extractVisualNotes(videoRes),
+        headline: extractText(videoRes.video_type) || 'Anúncio Personalizado'
       }).select().single();
       
       if (insertError) throw insertError;
