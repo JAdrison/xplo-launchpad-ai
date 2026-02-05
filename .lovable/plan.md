@@ -1,117 +1,156 @@
 
+# Adicionar Seção de Credenciais Meta Ads na Página de Detalhes do Cliente
 
-# Adicionar Logo XPLO em Todas as Páginas dos PDFs
+## Visao Geral
 
-## Visão Geral
-
-Adicionar a logo XPLO em **todas as páginas** dos documentos PDF exportados, posicionada no **canto superior direito** de forma pequena e discreta.
-
----
-
-## Solução Técnica
-
-Utilizar `position: fixed` com CSS de impressão para garantir que a logo apareça em todas as páginas do documento, não apenas na primeira.
-
-### Estilo da Logo em Todas as Páginas
-
-```css
-position: fixed;
-top: 5mm;
-right: 5mm;
-height: 20px;
-opacity: 0.7;
-```
+Adicionar uma nova seção **"Acesso as Redes Sociais (Meta Ads)"** logo abaixo do card de "Informacoes do Cliente", exibindo os logins e senhas do Instagram e Facebook com:
+- Senhas mascaradas com asteriscos por padrao
+- Botao "olhinho" para alternar visibilidade de cada senha
 
 ---
 
-## Arquivos a Modificar
+## Dados Disponiveis
 
-| Arquivo | Alteração |
+Os dados estao armazenados na tabela `client_profile`:
+
+| Campo | Descricao |
+|-------|-----------|
+| `instagram_link` | Link do perfil do Instagram |
+| `instagram_login` | Login da conta do Instagram |
+| `instagram_password` | Senha da conta do Instagram |
+| `facebook_login` | Login da conta do Facebook |
+| `facebook_password` | Senha da conta do Facebook |
+
+---
+
+## Arquivo a Modificar
+
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/export/AdsPDFTemplate.tsx` | Adicionar logo fixa no canto superior direito |
-| `src/components/export/OfferPDFTemplate.tsx` | Adicionar logo fixa no canto superior direito |
-| `src/components/export/OnboardingPDFTemplate.tsx` | Adicionar logo fixa no canto superior direito |
-| `src/components/export/LandingPagePDFTemplate.tsx` | Adicionar logo fixa no canto superior direito |
+| `src/pages/ClientDetails.tsx` | Adicionar busca de client_profile e nova secao de credenciais |
 
 ---
 
-## Implementação
+## Implementacao
 
-### Componente de Logo Fixa (a ser adicionado em todos os templates)
+### 1. Adicionar Estado para client_profile
 
 ```tsx
-{/* Logo fixa em todas as páginas - canto superior direito */}
-<img 
-  src={logoXplo} 
-  alt="XPLO" 
-  style={{ 
-    position: "fixed",
-    top: "5mm",
-    right: "5mm",
-    height: "20px",
-    width: "auto",
-    opacity: 0.7,
-    zIndex: 1000,
-  }} 
-/>
+const [clientProfile, setClientProfile] = useState<any>(null);
+const [showInstagramPassword, setShowInstagramPassword] = useState(false);
+const [showFacebookPassword, setShowFacebookPassword] = useState(false);
 ```
 
-Este elemento será inserido **logo após a abertura do container principal** de cada template, antes do header existente.
+### 2. Buscar Dados de client_profile
 
----
+No `useEffect` existente, adicionar busca:
 
-## Detalhes por Template
-
-### 1. AdsPDFTemplate.tsx
-
-**Linha 205** - Após `<div style={containerStyle}>`:
 ```tsx
-{/* Logo fixa em todas as páginas */}
-<img src={logoXplo} alt="XPLO" style={{ 
-  position: "fixed", top: "5mm", right: "5mm", 
-  height: "20px", width: "auto", opacity: 0.7 
-}} />
+// Buscar profile do cliente para credenciais Meta Ads
+const { data: profileData } = await supabase
+  .from("client_profile")
+  .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password")
+  .eq("client_id", id)
+  .maybeSingle();
+
+if (profileData) {
+  setClientProfile(profileData);
+}
 ```
 
-O header existente (linha 207-210) permanece intacto na primeira página.
+### 3. Nova Secao Visual (apos card de Informacoes do Cliente)
 
----
-
-### 2. OfferPDFTemplate.tsx
-
-**Linha 155** - Após `<div style={{...}}>`:
 ```tsx
-{/* Logo fixa em todas as páginas */}
-<img src={logoXplo} alt="XPLO" style={{ 
-  position: "fixed", top: "5mm", right: "5mm", 
-  height: "20px", width: "auto", opacity: 0.7 
-}} />
-```
+{/* Credenciais Meta Ads */}
+{clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login) && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <Shield className="h-5 w-5" />
+        Acesso as Redes Sociais (Meta Ads)
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {/* Instagram */}
+      {(clientProfile.instagram_link || clientProfile.instagram_login) && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Instagram className="h-4 w-4" />
+            Instagram
+          </h4>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {clientProfile.instagram_link && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Link</p>
+                <a href={clientProfile.instagram_link} target="_blank" className="text-primary hover:underline">
+                  {clientProfile.instagram_link}
+                </a>
+              </div>
+            )}
+            {clientProfile.instagram_login && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Login</p>
+                <p>{clientProfile.instagram_login}</p>
+              </div>
+            )}
+            {clientProfile.instagram_password && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono">
+                    {showInstagramPassword ? clientProfile.instagram_password : "••••••••"}
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6"
+                    onClick={() => setShowInstagramPassword(!showInstagramPassword)}
+                  >
+                    {showInstagramPassword ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
----
-
-### 3. OnboardingPDFTemplate.tsx
-
-**Linha 169** - Após `<div style={{...}}>`:
-```tsx
-{/* Logo fixa em todas as páginas */}
-<img src={logoXplo} alt="XPLO" style={{ 
-  position: "fixed", top: "5mm", right: "5mm", 
-  height: "20px", width: "auto", opacity: 0.7 
-}} />
-```
-
----
-
-### 4. LandingPagePDFTemplate.tsx
-
-**Linha 148** - Após `<div style={{...}}>`:
-```tsx
-{/* Logo fixa em todas as páginas */}
-<img src={logoXplo} alt="XPLO" style={{ 
-  position: "fixed", top: "5mm", right: "5mm", 
-  height: "20px", width: "auto", opacity: 0.7 
-}} />
+      {/* Facebook - mesma estrutura */}
+      {clientProfile.facebook_login && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Facebook className="h-4 w-4" />
+            Facebook
+          </h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Login</p>
+              <p>{clientProfile.facebook_login}</p>
+            </div>
+            {clientProfile.facebook_password && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono">
+                    {showFacebookPassword ? clientProfile.facebook_password : "••••••••"}
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6"
+                    onClick={() => setShowFacebookPassword(!showFacebookPassword)}
+                  >
+                    {showFacebookPassword ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+)}
 ```
 
 ---
@@ -119,31 +158,44 @@ O header existente (linha 207-210) permanece intacto na primeira página.
 ## Resultado Visual
 
 ```text
-┌──────────────────────────────────────────┐
-│                                   [XPLO] │ ← Logo pequena (20px)
-│  ┌────────────────────────────────────┐  │
-│  │  XPLO (grande)      05 fev 2026    │  │ ← Header normal (1ª página)
-│  └────────────────────────────────────┘  │
-│                                          │
-│              CONTEÚDO                    │
-│                                          │
-└──────────────────────────────────────────┘
++-------------------------------------------------------+
+|  Informacoes do Cliente                               |
+|  [dados existentes...]                                |
++-------------------------------------------------------+
 
-┌──────────────────────────────────────────┐
-│                                   [XPLO] │ ← Logo aparece aqui também
-│                                          │
-│              PÁGINA 2                    │
-│                                          │
-└──────────────────────────────────────────┘
++-------------------------------------------------------+
+|  [Shield] Acesso as Redes Sociais (Meta Ads)          |
+|-------------------------------------------------------|
+|  [Instagram] Instagram                                |
+|  Link: https://instagram.com/exemplo                  |
+|  Login: usuario@exemplo.com                           |
+|  Senha: •••••••• [Eye]                                |
+|-------------------------------------------------------|
+|  [Facebook] Facebook                                  |
+|  Login: usuario@exemplo.com                           |
+|  Senha: •••••••• [Eye]                                |
++-------------------------------------------------------+
 ```
 
 ---
 
-## Resultado Esperado
+## Icones Necessarios
 
-| Antes | Depois |
-|-------|--------|
-| Logo apenas no header da 1ª página | Logo em **todas as páginas** no canto superior direito |
-| — | Logo pequena (20px) e semi-transparente (70% opacidade) |
-| — | Não interfere com o conteúdo existente |
+Adicionar aos imports de `lucide-react`:
+- `Eye`
+- `EyeOff`
+- `Instagram`
+- `Facebook`
+- `Shield`
 
+---
+
+## Comportamento
+
+| Estado | Exibicao da Senha |
+|--------|-------------------|
+| Padrao | `••••••••` |
+| Apos clicar no olho | Senha visivel |
+| Clicar novamente | Volta para asteriscos |
+
+A secao so aparece se houver pelo menos um login (Instagram ou Facebook) cadastrado.
