@@ -45,7 +45,6 @@ interface VideoContent {
   problem: string;
   why_bad: string;
   solution: string;
-  proof: string;
   cta: string;
   duration: string;
   visual_notes: string;
@@ -58,7 +57,6 @@ const SECTIONS: { key: SectionKey; label: string; icon?: React.ReactNode }[] = [
   { key: "problem", label: "PROBLEMA" },
   { key: "why_bad", label: "POR QUE ISSO É RUIM", icon: <AlertTriangle className="h-3 w-3" /> },
   { key: "solution", label: "SOLUÇÃO" },
-  { key: "proof", label: "PROVA" },
   { key: "cta", label: "CTA" },
   { key: "visual_notes", label: "NOTAS VISUAIS" },
 ];
@@ -68,7 +66,6 @@ const COLUMN_MAP: Record<SectionKey, keyof Ad> = {
   problem: "video_problem",
   why_bad: "video_why_bad",
   solution: "video_solution",
-  proof: "video_proof",
   cta: "video_cta",
   visual_notes: "video_visual_notes",
 };
@@ -90,7 +87,6 @@ export function VideoAdCard({ ad, onDelete, onRefine, onUpdate, isDeleting }: Vi
     problem: ad.video_problem || "",
     why_bad: ad.video_why_bad || "",
     solution: ad.video_solution || "",
-    proof: ad.video_proof || "",
     cta: ad.video_cta || "",
     duration: ad.video_duration || "",
     visual_notes: ad.video_visual_notes || "",
@@ -102,7 +98,6 @@ export function VideoAdCard({ ad, onDelete, onRefine, onUpdate, isDeleting }: Vi
     problem: true,
     why_bad: true,
     solution: true,
-    proof: true,
     cta: true,
     visual_notes: true,
   });
