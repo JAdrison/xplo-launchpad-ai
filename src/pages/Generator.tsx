@@ -562,7 +562,7 @@ export default function Generator() {
                     )}
                   </Label>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Gera 2 anúncios estáticos + 3 scripts de vídeo (Direto, Educacional, Caixinha de Perguntas)
+                    Gera <strong>15 anúncios</strong>: 5 roteiros de vídeo (com estrutura de 6 seções) + 10 estáticos de promessa (5 baseados em dores, 5 em desejos)
                   </p>
                   {offers.length === 0 ? (
                     <p className="text-sm text-destructive mt-2">
