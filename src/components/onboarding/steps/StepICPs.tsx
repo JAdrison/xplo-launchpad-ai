@@ -167,6 +167,12 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
       const idsToDelete = existingIds.filter((id) => !idsToKeep.includes(id));
 
       if (idsToDelete.length > 0) {
+        // First, unlink any offers that reference these ICPs
+        await supabase
+          .from("offers_hormozi")
+          .update({ icp_id: null })
+          .in("icp_id", idsToDelete);
+
         const { error: deleteError } = await supabase
           .from("icps")
           .delete()
