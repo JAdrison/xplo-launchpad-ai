@@ -228,8 +228,28 @@ JSON: {"profiles":[{
         if (o) { vOid = offerId; oCtx = `Oferta: ${o.promise || ''}`; }
       }
       const bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
-      sys = 'Ads expert. Crie 5 vídeos (5 seções: HOOK,PROBLEMA,POR QUE É RUIM,SOLUÇÃO,CTA, 20-80s) + 10 estáticos (5 dor, 5 desejo).';
-      prompt = `${ctx}\n${oCtx}\n${bp}\nJSON: {"video_scripts":[{"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""}],"static_ads":{"pain_based":[{"angle":"pain","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}],"desire_based":[{"angle":"desire","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}]}}`;
+      sys = `Ads expert brasileiro. Crie 6 anúncios de vídeo:
+- 5 vídeos criativos com estilos variados (20-80s cada)
+- 1 vídeo OBRIGATÓRIO tipo "question_box" (Caixinha de Perguntas): O HOOK deve ser uma pergunta real do cotidiano que muitas pessoas se fazem, uma dúvida genuína que abre margem para responder e naturalmente promover o produto.
+
+Cada vídeo: 5 seções (HOOK, PROBLEMA, POR QUE É RUIM, SOLUÇÃO, CTA).
++ 10 anúncios estáticos (5 baseados em dor, 5 baseados em desejo).`;
+      prompt = `${ctx}\n${oCtx}\n${bp}
+
+IMPORTANTE para o 6º vídeo (question_box):
+- O HOOK deve ser uma PERGUNTA genuína do cotidiano (ex: "Por que eu nunca consigo...", "Será que é normal...", "Como fazer para...")
+- A pergunta deve ser algo que o público-alvo realmente se pergunta
+- A resposta deve abrir margem natural para apresentar o produto como solução
+- video_type DEVE ser "question_box" para este vídeo
+
+JSON: {"video_scripts":[
+  {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
+  {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
+  {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
+  {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
+  {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
+  {"video_type":"question_box","title":"Caixinha de Perguntas","duration":"","hook":"[PERGUNTA DO COTIDIANO]","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""}
+],"static_ads":{"pain_based":[{"angle":"pain","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}],"desire_based":[{"angle":"desire","focus":"","headline":"","subheadline":"","body_text":"","eliminators":[],"cta":"","visual_suggestion":""}]}}`;
       const res = await ai(KEY, sys, prompt);
       if (vOid) await supabase.from('ads').delete().eq('offer_id', vOid);
       else await supabase.from('ads').delete().eq('client_id', clientId).is('offer_id', null);
