@@ -40,17 +40,39 @@ function buildCtx(p: PPPData): string {
   return s;
 }
 
+function extractJson(text: string): unknown {
+  // Try code block first
+  const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlock) return JSON.parse(codeBlock[1]);
+  // Try to find JSON object or array in text
+  const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) return JSON.parse(jsonMatch[1]);
+  // Last resort: try parsing as-is
+  return JSON.parse(text);
+}
+
 async function ai(key: string, sys: string, usr: string, t = 0.7) {
+  const fullSys = `${sys}\n\nIMPORTANTE: Responda APENAS com JSON válido. Sem explicações, sem texto antes ou depois. Apenas o JSON puro.`;
   const r = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'google/gemini-2.5-flash', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }], temperature: t }),
+    body: JSON.stringify({ 
+      model: 'google/gemini-2.5-flash', 
+      messages: [{ role: 'system', content: fullSys }, { role: 'user', content: usr }], 
+      temperature: t,
+      response_format: { type: "json_object" }
+    }),
   });
   if (!r.ok) { const st = r.status; throw { status: st, message: st === 429 ? 'Rate limit' : st === 402 ? 'Payment required' : `Error ${st}` }; }
   const d = await r.json();
   const c = d.choices?.[0]?.message?.content;
   if (!c) throw new Error('No AI content');
-  const m = c.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  return JSON.parse(m ? m[1] : c);
+  console.log('AI response length:', c.length);
+  try {
+    return extractJson(c);
+  } catch (e) {
+    console.error('Failed to parse JSON, raw content:', c.substring(0, 500));
+    throw new Error('Invalid JSON from AI');
+  }
 }
 
 Deno.serve(async (req) => {
