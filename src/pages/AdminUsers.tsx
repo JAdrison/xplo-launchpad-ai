@@ -67,9 +67,29 @@ export default function AdminUsers() {
 
       if (error) throw error;
 
-      // Fetch emails from auth.users via edge function would be ideal
-      // For now, we show user_id as identifier
-      setUsers(data || []);
+      if (!data || data.length === 0) {
+        setUsers([]);
+        return;
+      }
+
+      // Fetch emails from edge function
+      const userIds = data.map((u) => u.user_id);
+      const { data: emailMapping, error: emailError } = await supabase.functions.invoke(
+        "get-user-emails",
+        { body: { userIds } }
+      );
+
+      if (emailError) {
+        console.error("Error fetching emails:", emailError);
+      }
+
+      // Combine users with emails
+      const usersWithEmails = data.map((user) => ({
+        ...user,
+        email: emailMapping?.[user.user_id] || "Email não disponível",
+      }));
+
+      setUsers(usersWithEmails);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
@@ -226,8 +246,8 @@ export default function AdminUsers() {
                   className="flex items-center justify-between p-4 rounded-lg border bg-card"
                 >
                   <div className="space-y-1">
-                    <p className="font-medium text-foreground font-mono text-sm">
-                      {user.user_id.slice(0, 8)}...
+                    <p className="font-medium text-foreground">
+                      {user.email}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Cadastro:{" "}
@@ -313,8 +333,8 @@ export default function AdminUsers() {
                   className="flex items-center justify-between p-4 rounded-lg border bg-card"
                 >
                   <div className="space-y-1">
-                    <p className="font-medium text-foreground font-mono text-sm">
-                      {user.user_id.slice(0, 8)}...
+                    <p className="font-medium text-foreground">
+                      {user.email}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Desde:{" "}
