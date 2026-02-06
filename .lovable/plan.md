@@ -1,82 +1,71 @@
 
-# Animacao Suave nos Icones da Sidebar
+# Corrigir Logo XPLO Aparecendo no Canto Superior Direito
 
-## O Que Sera Feito
+## Problema Identificado
 
-### 1. Animacao nos Icones
-Adicionar transicoes suaves nos icones quando a sidebar colapsar/expandir:
-- Scale (escala) - icones aumentam levemente quando colapsados para melhor visibilidade
-- Transicao de posicao - movimento suave ao centralizar
+Os templates de PDF (usados para exportar documentos) contêm uma logo XPLO com `position: fixed`. Quando esses templates são renderizados na página para gerar o PDF, a logo com posição fixa "escapa" do container escondido e aparece no canto superior direito da viewport.
 
-### 2. Scroll da Sidebar
-A sidebar ja esta configurada como elemento estatico (nao `fixed`), entao ela ja desce junto com o scroll da pagina. Vou verificar se esta funcionando corretamente.
+```
+Container escondido (left: -9999px)
+┌─────────────────────┐
+│  Template PDF       │      ┌──────────────────────┐
+│  ...conteúdo...     │      │   Viewport           │
+│                     │  --> │                XPLO  │ <-- Logo aparece aqui!
+│  [Logo position:fixed] ────┼──────────────────────┤
+└─────────────────────┘      │   Página normal      │
+                             └──────────────────────┘
+```
+
+## Solução
+
+Alterar `position: fixed` para `position: absolute` nas logos dos templates PDF. Isso fará com que as logos se posicionem relativas ao container do template, mantendo-as escondidas junto com o resto do conteúdo.
 
 ---
 
-## Alteracoes no AppSidebar.tsx
+## Arquivos a Modificar
 
-### Icones com Animacao
+### 1. src/components/export/OnboardingPDFTemplate.tsx
 
-```tsx
-// Antes:
-<item.icon className="h-5 w-5 shrink-0" />
+Linha ~187: Alterar de `position: "fixed"` para `position: "absolute"`
 
-// Depois:
-<item.icon 
-  className={cn(
-    "shrink-0 transition-all duration-300",
-    collapsed ? "h-6 w-6" : "h-5 w-5"
-  )} 
-/>
-```
+### 2. src/components/export/AdsPDFTemplate.tsx
 
-### Transicoes no Container do Link
+Linha ~211: Alterar de `position: "fixed"` para `position: "absolute"`
 
-```tsx
-// Antes:
-className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
+### 3. src/components/export/OfferPDFTemplate.tsx
 
-// Depois:
-className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300"
-```
+Linha ~170: Alterar de `position: "fixed"` para `position: "absolute"`
 
-### Logo com Animacao
+### 4. src/components/export/LandingPagePDFTemplate.tsx
 
-```tsx
-// Antes:
-<img src={logoXplo} alt="XPLO" className="h-8 w-auto" />
-
-// Depois:
-<img 
-  src={logoXplo} 
-  alt="XPLO" 
-  className={cn(
-    "w-auto transition-all duration-300",
-    collapsed ? "h-10" : "h-8"
-  )} 
-/>
-```
+Linha ~163: Alterar de `position: "fixed"` para `position: "absolute"`
 
 ---
 
-## Comportamento Visual
+## Mudança em Cada Arquivo
 
-```text
-EXPANDIDA                    COLAPSADA
-┌────────────────────┐       ┌────────┐
-│ [Logo] Starter     │  -->  │ [Logo] │
-│ 🏠 Dashboard       │       │   🏠   │  <- icone maior
-│ 👥 Clientes        │       │   👥   │
-│ 📋 Onboarding      │       │   📋   │
-└────────────────────┘       └────────┘
+```typescript
+// ANTES:
+style={{ 
+  position: "fixed",
+  top: "5mm",
+  right: "5mm",
+  ...
+}}
 
-Animacao: 300ms ease-out
+// DEPOIS:
+style={{ 
+  position: "absolute",
+  top: "5mm",
+  right: "5mm",
+  ...
+}}
 ```
 
 ---
 
-## Arquivo a Modificar
+## Resultado
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/layout/AppSidebar.tsx` | Adicionar transicoes CSS nos icones e elementos |
+- A logo XPLO não aparecerá mais no canto superior direito da tela
+- Os PDFs exportados continuarão funcionando normalmente com a logo no lugar correto
+- A experiência de visualização da página será limpa e sem elementos estranhos
