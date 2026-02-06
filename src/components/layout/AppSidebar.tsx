@@ -63,20 +63,23 @@ function SidebarContent({
 
   const NavItem = ({ item, isActive }: { item: typeof navigation[0]; isActive: boolean }) => {
     const content = (
-      <Link
-        to={item.href}
-        onClick={onClose}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-          collapsed && "justify-center px-2",
-          isActive
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        )}
-      >
-        <item.icon className="h-5 w-5 shrink-0" />
-        {!collapsed && item.name}
-      </Link>
+        <Link
+          to={item.href}
+          onClick={onClose}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300",
+            collapsed && "justify-center px-2",
+            isActive
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          )}
+        >
+          <item.icon className={cn(
+            "shrink-0 transition-all duration-300",
+            collapsed ? "h-6 w-6" : "h-5 w-5"
+          )} />
+          {!collapsed && <span className="transition-opacity duration-300">{item.name}</span>}
+        </Link>
     );
 
     if (collapsed) {
@@ -101,7 +104,14 @@ function SidebarContent({
         collapsed && "justify-center px-2"
       )}>
         <Link to="/" className="flex items-center gap-3" onClick={onClose}>
-          <img src={logoXplo} alt="XPLO" className="h-8 w-auto" />
+          <img 
+            src={logoXplo} 
+            alt="XPLO" 
+            className={cn(
+              "w-auto transition-all duration-300",
+              collapsed ? "h-10" : "h-8"
+            )} 
+          />
           {!collapsed && (
             <span className="text-lg font-semibold text-sidebar-foreground">Starter</span>
           )}
@@ -167,7 +177,7 @@ function SidebarContent({
                 className="w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 onClick={handleSignOut}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4 transition-all duration-300" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">Sair</TooltipContent>
@@ -179,7 +189,7 @@ function SidebarContent({
             className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={handleSignOut}
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="h-4 w-4 mr-2 transition-all duration-300" />
             Sair
           </Button>
         )}
