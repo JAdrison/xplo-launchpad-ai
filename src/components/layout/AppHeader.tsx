@@ -1,6 +1,5 @@
-import { Menu, Plus, Moon, Sun, User } from "lucide-react";
+import { Menu, Plus, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/hooks/use-theme";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,6 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ onMenuClick }: AppHeaderProps) {
-  const { theme, toggleTheme } = useTheme();
   const { user, isAdmin } = useAuth();
 
   return (
@@ -46,20 +44,6 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
             )}
           </div>
         )}
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-          <span className="sr-only">Alternar tema</span>
-        </Button>
 
         <Button asChild size="sm" className="gap-2">
           <Link to="/clients/new">
