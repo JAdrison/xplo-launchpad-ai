@@ -160,7 +160,7 @@ export function LandingPagePDFTemplate({ sections, variant, clientName, createdA
         src={logoXplo} 
         alt="XPLO" 
         style={{ 
-          position: "fixed",
+          position: "absolute",
           top: "5mm",
           right: "5mm",
           height: "20px",

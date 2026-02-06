@@ -208,7 +208,7 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
         src={logoXplo} 
         alt="XPLO" 
         style={{ 
-          position: "fixed",
+          position: "absolute",
           top: "5mm",
           right: "5mm",
           height: "20px",
