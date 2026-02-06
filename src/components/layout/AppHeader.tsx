@@ -26,10 +26,8 @@ export function AppHeader({ onMenuClick }: AppHeaderProps) {
         <span className="sr-only">Abrir menu</span>
       </Button>
 
-      {/* Title - hidden on mobile, shown on desktop */}
-      <div className="hidden md:block">
-        <h1 className="text-lg font-semibold text-foreground">XPLO Starter</h1>
-      </div>
+      {/* Spacer for mobile alignment */}
+      <div className="hidden md:block" />
 
       {/* Spacer */}
       <div className="flex-1" />
