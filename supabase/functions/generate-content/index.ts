@@ -477,17 +477,36 @@ JSON: {"profiles":[{
       const bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
       sys = `Ads expert brasileiro. Crie 6 anúncios de vídeo:
 - 5 vídeos criativos com estilos variados (20-80s cada)
-- 1 vídeo OBRIGATÓRIO tipo "question_box" (Caixinha de Perguntas): O HOOK deve ser uma pergunta real do cotidiano que muitas pessoas se fazem, uma dúvida genuína que abre margem para responder e naturalmente promover o produto.
+- 1 vídeo OBRIGATÓRIO tipo "question_box" (Caixinha de Perguntas)
+
+IMPORTANTE SOBRE O FORMATO "CAIXINHA DE PERGUNTAS":
+Este é um formato de ANÚNCIO ONLINE PAGO para Facebook/Meta Ads. NÃO é um story de Instagram.
+O HOOK deve simular uma PERGUNTA REAL enviada por uma pessoa do público-alvo, como se alguém tivesse mandado essa dúvida numa caixinha de perguntas.
+A pergunta deve ser:
+- Escrita em PRIMEIRA PESSOA, linguagem coloquial e informal (como um comentário de WhatsApp ou rede social)
+- Sobre um TEMA COTIDIANO que muitas pessoas do público-alvo realmente têm
+- ESPONTÂNEA e SINCERA — NÃO pode parecer marketing disfarçado ou headline de vendas
+Exemplos de BOAS perguntas de hook:
+- "Minha conta de luz tá vindo absurda, alguém sabe se energia solar realmente compensa?"
+- "Tô com uma dor nas costas há semanas, será que é coluna ou músculo?"
+- "Meu filho não quer comer nada, alguém já passou por isso?"
+- "Gente, meu cachorro não para de se coçar, será que é alergia?"
+- "Alguém mais tem problema com infiltração no banheiro?"
+Exemplos de perguntas RUINS (NUNCA usar):
+- "Você sabia que nosso produto resolve seu problema?" (marketing disfarçado)
+- "Quer economizar 50% na conta de luz?" (headline de vendas, não dúvida real)
+- "Descubra como resolver X" (tom de anúncio, não de pessoa real)
+As seções seguintes (Problema, Por que é Ruim, Solução, CTA) devem RESPONDER essa dúvida de forma natural, como se fosse um especialista respondendo a pergunta de um seguidor.
 
 Cada vídeo: 5 seções (HOOK, PROBLEMA, POR QUE É RUIM, SOLUÇÃO, CTA).
 + 10 anúncios estáticos (5 baseados em dor, 5 baseados em desejo).`;
       prompt = `${ctx}\n${oCtx}\n${bp}
 
-IMPORTANTE para o 6º vídeo (question_box):
-- O HOOK deve ser uma PERGUNTA genuína do cotidiano (ex: "Por que eu nunca consigo...", "Será que é normal...", "Como fazer para...")
-- A pergunta deve ser algo que o público-alvo realmente se pergunta
-- A resposta deve abrir margem natural para apresentar o produto como solução
-- video_type DEVE ser "question_box" para este vídeo
+REGRAS DO 6º VÍDEO (question_box):
+- video_type DEVE ser "question_box"
+- O HOOK deve ser uma DÚVIDA REAL escrita em primeira pessoa, com linguagem coloquial e sincera, sobre um problema cotidiano do público-alvo
+- NÃO pode ser uma pergunta retórica de vendas — deve parecer que uma pessoa real mandou essa dúvida
+- O restante do roteiro responde essa dúvida naturalmente, guiando para o produto
 
 JSON: {"video_scripts":[
   {"video_type":"","title":"","duration":"","hook":"","problem":"","why_bad":"","solution":"","cta":"","visual_notes":""},
