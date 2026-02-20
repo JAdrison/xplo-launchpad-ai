@@ -286,8 +286,107 @@ Deno.serve(async (req) => {
 
     let sys = '', prompt = '';
     if (type === "offer") {
-      sys = 'Estrategista Hormozi + Facebook Ads.';
-      prompt = `${ctx}\nCrie oferta com 2 opções cada campo + plano demanda.\nJSON: {"options":{"promise":[],"unique_mechanism":[],"guarantee":[],"proof":[],"risk_reversal":[],"main_cta":[]},"value_stack":[{"name":"","perceived_value":""}],"demand_plan":{"primary_strategy":{"channel":"Facebook Ads","audiences":[]},"acquisition_funnel":{"tofu":{},"mofu":{},"bofu":{}}}}`;
+      sys = `Você é um estrategista de marketing sênior especialista no método Hormozi ($100M Offers) e em geração de demanda via Facebook/Meta Ads. Sua função é criar ofertas irresistíveis E um plano completo e detalhado de geração de demanda. Cada campo deve ter conteúdo rico e detalhado (mínimo 2-3 frases por campo). O plano de demanda deve ser prático, específico para o nicho do cliente e pronto para implementação.`;
+      prompt = `${ctx}
+
+Crie uma oferta Hormozi completa com 2 opções por campo E um plano de geração de demanda DETALHADO e EXTENSO.
+
+IMPORTANTE: Cada campo do plano de demanda deve ter conteúdo rico e detalhado. Não use respostas curtas de 1 linha. Escreva parágrafos completos com estratégias específicas para o nicho.
+
+JSON com a seguinte estrutura EXATA:
+{
+  "options": {
+    "promise": ["opção 1 detalhada", "opção 2 detalhada"],
+    "unique_mechanism": ["opção 1 detalhada", "opção 2 detalhada"],
+    "guarantee": ["opção 1 detalhada", "opção 2 detalhada"],
+    "proof": ["opção 1 detalhada", "opção 2 detalhada"],
+    "risk_reversal": ["opção 1 detalhada", "opção 2 detalhada"],
+    "main_cta": ["opção 1 detalhada", "opção 2 detalhada"]
+  },
+  "value_stack": [
+    {"name": "Item de valor 1", "perceived_value": "R$ X.XXX"},
+    {"name": "Item de valor 2", "perceived_value": "R$ X.XXX"},
+    {"name": "Item de valor 3", "perceived_value": "R$ X.XXX"}
+  ],
+  "demand_plan": {
+    "context_analysis": {
+      "niche": "Análise detalhada do nicho, tendências de mercado, oportunidades e ameaças (mínimo 3 frases)",
+      "icp_profile": "Perfil comportamental completo do ICP: como consome conteúdo, onde busca soluções, gatilhos de compra, objeções principais (mínimo 3 frases)",
+      "key_insight": "Insight estratégico principal que diferencia esta campanha - a grande sacada que vai fazer o público parar e prestar atenção (mínimo 2 frases)",
+      "market_challenges": "Principais desafios e objeções do mercado que a campanha precisa superar (mínimo 2 frases)"
+    },
+    "primary_strategy": {
+      "channel": "Facebook/Meta Ads",
+      "campaign_type": "Tipo de campanha detalhado (ex: Conversão com otimização para leads qualificados via formulário nativo)",
+      "audiences": [
+        {"name": "Nome do público 1", "geo": "Região geográfica", "source": "Interesse/Lookalike/Custom", "exclusions": "Exclusões aplicadas"},
+        {"name": "Nome do público 2", "geo": "Região geográfica", "source": "Interesse/Lookalike/Custom", "exclusions": "Exclusões aplicadas"},
+        {"name": "Nome do público 3", "geo": "Região geográfica", "source": "Interesse/Lookalike/Custom", "exclusions": "Exclusões aplicadas"}
+      ],
+      "creative_types": ["Vídeo UGC", "Carrossel de dor", "Imagem estática com headline forte", "Vídeo depoimento"],
+      "budget_percentage": 60,
+      "expected_cpl": "R$ XX,XX - estimativa baseada no nicho",
+      "kpis": ["CPA alvo", "ROAS esperado", "Taxa de conversão LP", "CTR mínimo"]
+    },
+    "complementary_strategies": [
+      {
+        "channel": "Instagram Orgânico",
+        "role": "Descrição detalhada do papel deste canal na estratégia geral - como ele complementa os ads pagos (mínimo 2 frases)",
+        "integration": "Como este canal se integra com o Facebook Ads - fluxo específico de retargeting e nutrição (mínimo 2 frases)",
+        "budget_percentage": 15,
+        "tactics": "Táticas específicas: tipos de conteúdo, frequência de postagem, formatos prioritários"
+      },
+      {
+        "channel": "Google Ads (Search)",
+        "role": "Papel de captura de demanda ativa - como capturar quem já está buscando a solução (mínimo 2 frases)",
+        "integration": "Integração com Meta Ads para capturar leads que pesquisam após ver os anúncios (mínimo 2 frases)",
+        "budget_percentage": 20,
+        "tactics": "Palavras-chave principais, tipos de campanha, estratégia de lances"
+      },
+      {
+        "channel": "Email Marketing / WhatsApp",
+        "role": "Nutrição e conversão de leads capturados - como transformar leads frios em clientes (mínimo 2 frases)",
+        "integration": "Sequência de follow-up automatizada pós-captura via ads (mínimo 2 frases)",
+        "budget_percentage": 5,
+        "tactics": "Sequência de emails, scripts de WhatsApp, automações"
+      }
+    ],
+    "acquisition_funnel": {
+      "tofu": {
+        "objective": "Objetivo detalhado do topo de funil - gerar consciência e atrair público frio (mínimo 2 frases)",
+        "channels": "Canais específicos utilizados nesta etapa",
+        "message": "Tipo de mensagem e abordagem - foco em dor ou curiosidade (mínimo 2 frases)",
+        "metrics": "Métricas de sucesso: CPM, alcance, frequência, CTR",
+        "content_types": "Tipos de conteúdo: vídeos curtos, carrosséis educativos, posts de dor"
+      },
+      "mofu": {
+        "objective": "Objetivo do meio de funil - nutrir e qualificar leads (mínimo 2 frases)",
+        "channels": "Canais específicos utilizados nesta etapa",
+        "message": "Mensagem focada em autoridade e prova social (mínimo 2 frases)",
+        "metrics": "Métricas: taxa de engajamento, leads capturados, custo por lead",
+        "content_types": "Tipos de conteúdo: cases, depoimentos, webinars, materiais ricos"
+      },
+      "bofu": {
+        "objective": "Objetivo do fundo de funil - converter leads em clientes (mínimo 2 frases)",
+        "channels": "Canais específicos utilizados nesta etapa",
+        "message": "Mensagem com urgência, escassez e oferta direta (mínimo 2 frases)",
+        "metrics": "Métricas: taxa de conversão, CPA, ROAS, ticket médio",
+        "content_types": "Tipos de conteúdo: ofertas diretas, remarketing agressivo, comparativos"
+      }
+    },
+    "channel_synergies": [
+      "Sinergia 1: Descrição detalhada de como dois canais trabalham juntos para potencializar resultados (mínimo 2 frases)",
+      "Sinergia 2: Descrição detalhada (mínimo 2 frases)",
+      "Sinergia 3: Descrição detalhada (mínimo 2 frases)",
+      "Sinergia 4: Descrição detalhada (mínimo 2 frases)"
+    ],
+    "implementation_timeline": {
+      "week_1_2": "Semanas 1-2: Setup completo - criação de contas, pixels, públicos, criativos iniciais, configuração de automações. Detalhamento das ações dia a dia.",
+      "week_3_4": "Semanas 3-4: Lançamento e otimização - início das campanhas, testes A/B de criativos e públicos, ajuste de lances e orçamentos. Análise dos primeiros dados.",
+      "week_5_8": "Semanas 5-8: Escala e refinamento - escalar campanhas vencedoras, cortar perdedoras, expandir para novos públicos, implementar canais complementares. Meta de ROAS."
+    }
+  }
+}`;
     } else if (type === "lp") {
       sys = `Copywriter LP ${lpVariant || 'direta'}.`;
       prompt = `${ctx}\nCrie LP.\nJSON: {"hero":{"headline":"","subheadline":"","cta_button":""},"problem_agitation":{"problems":[]},"solution":{},"benefits":[],"how_it_works":{"steps":[]},"social_proof":{"testimonials":[],"stats":[]},"guarantee":{},"value_stack":{"items":[]},"faq":[],"final_cta":{}}`;
