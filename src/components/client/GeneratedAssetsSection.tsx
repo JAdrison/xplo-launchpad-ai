@@ -569,7 +569,9 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                                   <p className="text-sm font-medium">Públicos:</p>
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {demandPlan.primary_strategy.audiences.map((aud, i) => (
-                                      <Badge key={i} variant="secondary" className="text-xs">{aud}</Badge>
+                                      <Badge key={i} variant="secondary" className="text-xs">
+                                        {typeof aud === "string" ? aud : (aud as any)?.name || JSON.stringify(aud)}
+                                      </Badge>
                                     ))}
                                   </div>
                                 </div>
