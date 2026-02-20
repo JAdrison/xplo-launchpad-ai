@@ -1,83 +1,51 @@
 
+# Melhorar o Formato "Caixinha de Perguntas"
 
-# Corrigir PDF da Oferta e Expandir Estrategia de Publicos
+## Problema
 
-## Problemas Identificados
+O prompt atual trata o anuncio "Caixinha de Perguntas" como se fosse para stories do Instagram. Na verdade, e um formato de **anuncio online pago** (Facebook/Meta Ads) onde:
 
-### 1. "[object Object]" nos Publicos do PDF
-Na linha 347 do `OfferPDFTemplate.tsx`, o codigo faz `audiences.join(", ")` mas os publicos sao objetos com campos `name`, `geo`, `interests`, `filters`, `sources`, `exclusions` -- nao strings simples. Isso gera `[object Object]` no PDF.
+- O **HOOK e uma pergunta que parece ter sido feita por uma pessoa real** -- como se alguem tivesse mandado essa duvida numa caixinha de perguntas
+- A pergunta precisa ser **cotidiana, sincera, e comum** -- algo que muita gente se pergunta no dia a dia
+- O restante do roteiro responde essa duvida de forma natural, guiando para o produto
 
-### 2. PDF incompleto -- faltam secoes do plano de demanda
-O template PDF tem secoes para `context_analysis`, `complementary_strategies`, `channel_synergies` e `implementation_timeline`, mas os dados reais no banco nao possuem esses campos. O que existe e uma estrutura diferente e mais rica:
-- `primary_strategy.audiences` com objetos detalhados (interesses, filtros, geo, fontes)
-- `acquisition_funnel` com `tofu.creatives`, `tofu.lead_capture`, `tofu.offers`, `mofu.nurture_assets`, `mofu.retargeting_logic`, `mofu.sales_motion`, `bofu.closing_offers`, `bofu.objection_killers`, `bofu.remarketing_assets`
+## Alteracao
 
-O template espera campos como `tofu.objective`, `tofu.channels`, `tofu.message` mas os dados reais tem campos diferentes.
+### Arquivo: `supabase/functions/generate-content/index.ts`
 
-### 3. Falta detalhe de interesses e publicos na visualizacao
+Reescrever as instrucoes do system prompt e do prompt especifico para o 6o video (question_box), deixando claro:
 
----
+**System prompt** -- adicionar contexto sobre o formato:
+- "Caixinha de Perguntas" e um formato de anuncio pago onde o HOOK simula uma pergunta enviada por uma pessoa real
+- NAO e um story de Instagram, e um anuncio de video para Facebook/Meta Ads
+- A pergunta deve parecer que foi escrita por alguem do publico-alvo, com linguagem informal e natural
 
-## Alteracoes Planejadas
+**Instrucoes detalhadas para o question_box:**
+- O HOOK deve ser escrito **em primeira pessoa**, como se fosse uma duvida real enviada por alguem (ex: "Gente, meu cachorro nao para de se cocar, sera que e alergia?", "Alguem mais tem problema com infiltracao no banheiro?", "To pensando em colocar energia solar mas sera que vale a pena mesmo?")
+- A pergunta deve ser sobre um **tema cotidiano** que muitas pessoas do publico-alvo realmente tem
+- Deve parecer **espontanea e sincera**, nao uma pergunta de marketing
+- Usar linguagem coloquial, como se fosse um comentario ou mensagem de WhatsApp
+- As secoes seguintes (Problema, Por que e Ruim, Solucao, CTA) devem responder essa duvida de forma natural, como se fosse um especialista respondendo
 
-### Arquivo 1: `src/components/export/OfferPDFTemplate.tsx`
+**Exemplos de boas perguntas:**
+- "Minha conta de luz ta vindo absurda, alguem sabe se energia solar realmente compensa?"
+- "To com uma dor nas costas ha semanas, sera que e coluna ou musculo?"
+- "Meu filho nao quer comer nada, alguem ja passou por isso?"
 
-**a) Corrigir interfaces `DemandPlan` e `primary_strategy`**
-- Atualizar `audiences` de `string[]` para `Array<string | { name?; geo?; interests?; filters?; sources?; exclusions?; source?; message? }>`
-- Atualizar interfaces do funil (`tofu`, `mofu`, `bofu`) para refletir os campos reais: `offers`, `creatives`, `lead_capture`, `nurture_assets`, `retargeting_logic`, `sales_motion`, `closing_offers`, `objection_killers`, `remarketing_assets`
-
-**b) Corrigir renderizacao dos publicos (linha ~345-348)**
-- Em vez de `.join(", ")`, renderizar cada publico como um bloco com nome, geo, interesses, filtros e exclusoes
-- Cada publico vira um mini-card no PDF
-
-**c) Expandir o funil de aquisicao no PDF**
-- TOPO: mostrar `objective`, `offers`, `creatives`, `lead_capture` (campos do formulario, destino, regra de qualificacao)
-- MEIO: mostrar `objective`, `nurture_assets`, `retargeting_logic`, `sales_motion` (passos)
-- FUNDO: mostrar `objective`, `closing_offers`, `objection_killers`, `remarketing_assets`
-
-**d) Remover secoes que nao existem nos dados**
-- Remover ou tornar opcionais: `context_analysis`, `complementary_strategies`, `channel_synergies`, `implementation_timeline` (so renderizar se existirem)
-
-### Arquivo 2: `src/components/client/GeneratedAssetsSection.tsx`
-
-**a) Expandir exibicao dos publicos na tela**
-- Adicionar campo `interests` (array de interesses) e `filters` na renderizacao de cada publico
-- Mostrar tambem `sources` e `message` para publicos de remarketing
-
-**b) Expandir o funil de aquisicao na tela**
-- Mesma logica do PDF: mostrar os campos reais (`creatives`, `lead_capture`, `nurture_assets`, `retargeting_logic`, `sales_motion`, `closing_offers`, `objection_killers`)
+**Exemplos de perguntas ruins (evitar):**
+- "Voce sabia que nosso produto resolve seu problema?" (marketing disfarado)
+- "Quer economizar 50% na conta de luz?" (headline de vendas, nao duvida real)
 
 ---
 
 ## Secao Tecnica
 
-### Estrutura real dos dados (do banco)
+Linhas afetadas: 478-499 do `supabase/functions/generate-content/index.ts`
 
-```text
-primary_strategy.audiences = [
-  { name, geo, source (lista), exclusions (lista) },           // Lookalike
-  { name, geo, interests (lista), filters (lista) },           // Interesse
-  { name, sources (lista), message }                           // Remarketing
-]
+O system prompt (linha 478-483) sera expandido para incluir as instrucoes detalhadas do formato Caixinha de Perguntas.
 
-acquisition_funnel.tofu = {
-  objective, offers (lista), creatives (lista),
-  lead_capture: { destination, form_fields, qualification_rule }
-}
-acquisition_funnel.mofu = {
-  objective, nurture_assets (lista), retargeting_logic (lista),
-  sales_motion: { step_1, step_2, step_3, step_4 }
-}
-acquisition_funnel.bofu = {
-  objective, closing_offers (lista), objection_killers (lista),
-  remarketing_assets (lista)
-}
-```
-
-### Arquivos modificados
+O bloco de instrucoes do question_box (linhas 486-490) sera reescrito com os exemplos e regras acima.
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/export/OfferPDFTemplate.tsx` | Corrigir [object Object], expandir publicos com interesses, expandir funil com dados reais |
-| `src/components/client/GeneratedAssetsSection.tsx` | Expandir publicos com interesses/filtros, expandir funil com dados reais |
-
+| `supabase/functions/generate-content/index.ts` | Reescrever prompt do question_box com instrucoes claras de que e um anuncio online (nao story), com exemplos de perguntas boas e ruins |
