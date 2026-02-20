@@ -1,67 +1,83 @@
 
-# Expandir o Plano de Geracao de Demanda
 
-## Problema Atual
+# Corrigir PDF da Oferta e Expandir Estrategia de Publicos
 
-O plano de demanda esta simples porque:
-1. O prompt enviado para a IA e muito curto e vago (apenas 1 linha)
-2. A tela so mostra 3 das 6 secoes possiveis (faltam estrategias complementares, funil de aquisicao e sinergias)
-3. O JSON de exemplo no prompt nao detalha os campos necessarios
+## Problemas Identificados
 
-## Alteracoes
+### 1. "[object Object]" nos Publicos do PDF
+Na linha 347 do `OfferPDFTemplate.tsx`, o codigo faz `audiences.join(", ")` mas os publicos sao objetos com campos `name`, `geo`, `interests`, `filters`, `sources`, `exclusions` -- nao strings simples. Isso gera `[object Object]` no PDF.
 
-### 1. Edge Function - Prompt mais detalhado (`supabase/functions/generate-content/index.ts`)
+### 2. PDF incompleto -- faltam secoes do plano de demanda
+O template PDF tem secoes para `context_analysis`, `complementary_strategies`, `channel_synergies` e `implementation_timeline`, mas os dados reais no banco nao possuem esses campos. O que existe e uma estrutura diferente e mais rica:
+- `primary_strategy.audiences` com objetos detalhados (interesses, filtros, geo, fontes)
+- `acquisition_funnel` com `tofu.creatives`, `tofu.lead_capture`, `tofu.offers`, `mofu.nurture_assets`, `mofu.retargeting_logic`, `mofu.sales_motion`, `bofu.closing_offers`, `bofu.objection_killers`, `bofu.remarketing_assets`
 
-Expandir o prompt do tipo "offer" (linha 288-290) para incluir instrucoes detalhadas sobre o plano de demanda:
+O template espera campos como `tofu.objective`, `tofu.channels`, `tofu.message` mas os dados reais tem campos diferentes.
 
-- **System prompt**: Adicionar que a IA e uma estrategista de geracao de demanda especialista em Facebook/Meta Ads
-- **Demand plan JSON schema**: Expandir com todos os campos completos:
-  - `context_analysis`: nicho, perfil ICP detalhado, insight principal, desafios do mercado
-  - `primary_strategy`: canal, tipo campanha, publicos detalhados (com nome, geo, fonte, exclusoes), tipos criativos, budget %, CPL esperado, KPIs
-  - `complementary_strategies`: 2-3 canais complementares com papel, integracao e budget
-  - `acquisition_funnel`: TOFU, MOFU, BOFU com objetivo, canais, mensagem e metricas
-  - `channel_synergies`: 3-5 sinergias entre canais
-  - `implementation_timeline`: detalhamento por semana com acoes especificas
-- Instruir a IA a gerar textos longos e detalhados em cada campo (minimo 2-3 frases por campo)
+### 3. Falta detalhe de interesses e publicos na visualizacao
 
-### 2. Exibicao no Frontend (`src/components/client/GeneratedAssetsSection.tsx`)
+---
 
-Adicionar as secoes que estao faltando na visualizacao do plano, entre a Estrategia Principal e o Cronograma:
+## Alteracoes Planejadas
 
-- **Tipos de Criativos**: badges com os tipos de criativo sugeridos
-- **Estrategias Complementares**: cards para cada canal complementar com papel, integracao e budget
-- **Funil de Aquisicao**: 3 blocos visuais (TOPO, MEIO, FUNDO) com objetivo, canais e mensagem
-- **Sinergias entre Canais**: lista de sinergias com icones
+### Arquivo 1: `src/components/export/OfferPDFTemplate.tsx`
 
-### 3. Tratamento robusto de dados de publico
+**a) Corrigir interfaces `DemandPlan` e `primary_strategy`**
+- Atualizar `audiences` de `string[]` para `Array<string | { name?; geo?; interests?; filters?; sources?; exclusions?; source?; message? }>`
+- Atualizar interfaces do funil (`tofu`, `mofu`, `bofu`) para refletir os campos reais: `offers`, `creatives`, `lead_capture`, `nurture_assets`, `retargeting_logic`, `sales_motion`, `closing_offers`, `objection_killers`, `remarketing_assets`
 
-Garantir que o campo `audiences` funcione tanto com strings simples quanto com objetos complexos (evitar o erro React #31 que ja corrigimos parcialmente).
+**b) Corrigir renderizacao dos publicos (linha ~345-348)**
+- Em vez de `.join(", ")`, renderizar cada publico como um bloco com nome, geo, interesses, filtros e exclusoes
+- Cada publico vira um mini-card no PDF
+
+**c) Expandir o funil de aquisicao no PDF**
+- TOPO: mostrar `objective`, `offers`, `creatives`, `lead_capture` (campos do formulario, destino, regra de qualificacao)
+- MEIO: mostrar `objective`, `nurture_assets`, `retargeting_logic`, `sales_motion` (passos)
+- FUNDO: mostrar `objective`, `closing_offers`, `objection_killers`, `remarketing_assets`
+
+**d) Remover secoes que nao existem nos dados**
+- Remover ou tornar opcionais: `context_analysis`, `complementary_strategies`, `channel_synergies`, `implementation_timeline` (so renderizar se existirem)
+
+### Arquivo 2: `src/components/client/GeneratedAssetsSection.tsx`
+
+**a) Expandir exibicao dos publicos na tela**
+- Adicionar campo `interests` (array de interesses) e `filters` na renderizacao de cada publico
+- Mostrar tambem `sources` e `message` para publicos de remarketing
+
+**b) Expandir o funil de aquisicao na tela**
+- Mesma logica do PDF: mostrar os campos reais (`creatives`, `lead_capture`, `nurture_assets`, `retargeting_logic`, `sales_motion`, `closing_offers`, `objection_killers`)
 
 ---
 
 ## Secao Tecnica
 
-### Prompt expandido (edge function linha ~288-290)
+### Estrutura real dos dados (do banco)
 
-O prompt atual:
+```text
+primary_strategy.audiences = [
+  { name, geo, source (lista), exclusions (lista) },           // Lookalike
+  { name, geo, interests (lista), filters (lista) },           // Interesse
+  { name, sources (lista), message }                           // Remarketing
+]
+
+acquisition_funnel.tofu = {
+  objective, offers (lista), creatives (lista),
+  lead_capture: { destination, form_fields, qualification_rule }
+}
+acquisition_funnel.mofu = {
+  objective, nurture_assets (lista), retargeting_logic (lista),
+  sales_motion: { step_1, step_2, step_3, step_4 }
+}
+acquisition_funnel.bofu = {
+  objective, closing_offers (lista), objection_killers (lista),
+  remarketing_assets (lista)
+}
 ```
-sys = 'Estrategista Hormozi + Facebook Ads.';
-prompt = `${ctx}\nCrie oferta com 2 opcoes cada campo + plano demanda.\nJSON: {"options":{...},"demand_plan":{"primary_strategy":{"channel":"Facebook Ads","audiences":[]},...}}`;
-```
-
-Sera expandido para ~30 linhas com instrucoes detalhadas sobre cada secao do plano de demanda, incluindo o JSON schema completo com todos os campos e exemplos.
-
-### Novas secoes no frontend (GeneratedAssetsSection.tsx)
-
-Adicionar entre a linha 582 (fim da Estrategia Principal) e 585 (Cronograma):
-- Secao de creative_types com badges
-- Secao de complementary_strategies com cards
-- Secao de acquisition_funnel com 3 blocos TOFU/MOFU/BOFU
-- Secao de channel_synergies com lista
 
 ### Arquivos modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/generate-content/index.ts` | Expandir prompt do tipo "offer" com instrucoes detalhadas para o demand plan |
-| `src/components/client/GeneratedAssetsSection.tsx` | Adicionar secoes de estrategias complementares, funil, sinergias e criativos |
+| `src/components/export/OfferPDFTemplate.tsx` | Corrigir [object Object], expandir publicos com interesses, expandir funil com dados reais |
+| `src/components/client/GeneratedAssetsSection.tsx` | Expandir publicos com interesses/filtros, expandir funil com dados reais |
+
