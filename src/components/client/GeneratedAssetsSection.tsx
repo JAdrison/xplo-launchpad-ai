@@ -81,6 +81,45 @@ interface VideoScript {
   duration?: string;
 }
 
+interface AudienceObj {
+  name?: string;
+  geo?: string;
+  source?: string | string[];
+  sources?: string[];
+  exclusions?: string[];
+  interests?: string[];
+  filters?: string[];
+  message?: string;
+}
+
+interface LeadCapture {
+  destination?: string | string[];
+  form_fields?: string[];
+  qualification_rule?: string;
+}
+
+interface SalesMotion {
+  step_1?: string;
+  step_2?: string;
+  step_3?: string;
+  step_4?: string;
+}
+
+interface FunnelStage {
+  objective?: string;
+  channels?: string[];
+  message?: string;
+  offers?: string[];
+  creatives?: string[];
+  lead_capture?: LeadCapture;
+  nurture_assets?: string[];
+  retargeting_logic?: string[];
+  sales_motion?: SalesMotion;
+  closing_offers?: string[];
+  objection_killers?: string[];
+  remarketing_assets?: string[];
+}
+
 interface DemandPlan {
   context_analysis?: {
     niche?: string;
@@ -91,7 +130,7 @@ interface DemandPlan {
   primary_strategy?: {
     channel?: string;
     campaign_type?: string;
-    audiences?: Array<string | { name?: string; geo?: string; source?: string; exclusions?: string }>;
+    audiences?: Array<string | AudienceObj>;
     creative_types?: string[];
     budget_percentage?: number;
     expected_cpl?: string;
@@ -105,9 +144,9 @@ interface DemandPlan {
     tactics?: string;
   }>;
   acquisition_funnel?: {
-    tofu?: { objective?: string; channels?: string; message?: string; metrics?: string; content_types?: string };
-    mofu?: { objective?: string; channels?: string; message?: string; metrics?: string; content_types?: string };
-    bofu?: { objective?: string; channels?: string; message?: string; metrics?: string; content_types?: string };
+    tofu?: FunnelStage;
+    mofu?: FunnelStage;
+    bofu?: FunnelStage;
   };
   channel_synergies?: string[];
   implementation_timeline?: {
@@ -578,13 +617,24 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                                       if (typeof aud === "string") {
                                         return <Badge key={i} variant="secondary" className="text-xs mr-1">{aud}</Badge>;
                                       }
-                                      const audObj = aud as { name?: string; geo?: string; source?: string; exclusions?: string };
+                                      const audObj = aud as AudienceObj;
                                       return (
                                         <div key={i} className="bg-background/50 rounded p-2 text-xs space-y-1">
                                           <p className="font-medium">{audObj.name || `Público ${i + 1}`}</p>
                                           {audObj.geo && <p><strong>Geo:</strong> {audObj.geo}</p>}
-                                          {audObj.source && <p><strong>Fonte:</strong> {audObj.source}</p>}
-                                          {audObj.exclusions && <p><strong>Exclusões:</strong> {audObj.exclusions}</p>}
+                                          {audObj.interests && audObj.interests.length > 0 && (
+                                            <p><strong>Interesses:</strong> {audObj.interests.join(", ")}</p>
+                                          )}
+                                          {audObj.filters && audObj.filters.length > 0 && (
+                                            <p><strong>Filtros:</strong> {audObj.filters.join(", ")}</p>
+                                          )}
+                                          {(audObj.source || audObj.sources) && (
+                                            <p><strong>Fonte:</strong> {Array.isArray(audObj.sources) ? audObj.sources.join(", ") : Array.isArray(audObj.source) ? audObj.source.join(", ") : audObj.source}</p>
+                                          )}
+                                          {audObj.exclusions && audObj.exclusions.length > 0 && (
+                                            <p><strong>Exclusões:</strong> {audObj.exclusions.join(", ")}</p>
+                                          )}
+                                          {audObj.message && <p className="text-primary italic">"{audObj.message}"</p>}
                                         </div>
                                       );
                                     })}
@@ -653,7 +703,7 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                                 <ArrowRight className="h-4 w-4" />
                                 Funil de Aquisição
                               </h5>
-                              <div className="grid gap-3 sm:grid-cols-3">
+                              <div className="space-y-3">
                                 {[
                                   { key: "tofu" as const, label: "TOPO", color: "border-blue-500/30 bg-blue-500/5" },
                                   { key: "mofu" as const, label: "MEIO", color: "border-yellow-500/30 bg-yellow-500/5" },
@@ -662,13 +712,88 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                                   const stage = demandPlan.acquisition_funnel?.[key];
                                   if (!stage) return null;
                                   return (
-                                    <div key={key} className={`rounded-lg border p-3 space-y-2 ${color}`}>
+                                    <div key={key} className={`rounded-lg border p-4 space-y-3 ${color}`}>
                                       <Badge variant="outline" className="text-xs font-bold">{label}</Badge>
                                       {stage.objective && <p className="text-xs"><strong>Objetivo:</strong> {stage.objective}</p>}
-                                      {stage.channels && <p className="text-xs"><strong>Canais:</strong> {typeof stage.channels === 'string' ? stage.channels : (stage.channels as unknown as string[])?.join(', ')}</p>}
-                                      {stage.message && <p className="text-xs"><strong>Mensagem:</strong> {stage.message}</p>}
-                                      {stage.metrics && <p className="text-xs"><strong>Métricas:</strong> {stage.metrics}</p>}
-                                      {stage.content_types && <p className="text-xs"><strong>Conteúdo:</strong> {stage.content_types}</p>}
+                                      
+                                      {/* TOFU fields */}
+                                      {stage.offers && stage.offers.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Ofertas:</p>
+                                          {stage.offers.map((o, i) => <p key={i} className="ml-3">• {typeof o === 'string' ? o : JSON.stringify(o)}</p>)}
+                                        </div>
+                                      )}
+                                      {stage.creatives && stage.creatives.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Criativos:</p>
+                                          {stage.creatives.map((c, i) => <p key={i} className="ml-3">• {typeof c === 'string' ? c : JSON.stringify(c)}</p>)}
+                                        </div>
+                                      )}
+                                      {stage.lead_capture && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Captura de Leads:</p>
+                                          {stage.lead_capture.destination && (
+                                            <p className="ml-3"><strong>Destino:</strong> {Array.isArray(stage.lead_capture.destination) ? stage.lead_capture.destination.join(", ") : stage.lead_capture.destination}</p>
+                                          )}
+                                          {stage.lead_capture.form_fields && stage.lead_capture.form_fields.length > 0 && (
+                                            <p className="ml-3"><strong>Campos:</strong> {stage.lead_capture.form_fields.join(", ")}</p>
+                                          )}
+                                          {stage.lead_capture.qualification_rule && (
+                                            <p className="ml-3"><strong>Regra:</strong> {stage.lead_capture.qualification_rule}</p>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* MOFU fields */}
+                                      {stage.nurture_assets && stage.nurture_assets.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Ativos de Nutrição:</p>
+                                          {stage.nurture_assets.map((a, i) => <p key={i} className="ml-3">• {typeof a === 'string' ? a : JSON.stringify(a)}</p>)}
+                                        </div>
+                                      )}
+                                      {stage.retargeting_logic && stage.retargeting_logic.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Lógica de Retargeting:</p>
+                                          {stage.retargeting_logic.map((r, i) => <p key={i} className="ml-3">• {typeof r === 'string' ? r : JSON.stringify(r)}</p>)}
+                                        </div>
+                                      )}
+                                      {stage.sales_motion && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Processo Comercial:</p>
+                                          {stage.sales_motion.step_1 && <p className="ml-3">1. {stage.sales_motion.step_1}</p>}
+                                          {stage.sales_motion.step_2 && <p className="ml-3">2. {stage.sales_motion.step_2}</p>}
+                                          {stage.sales_motion.step_3 && <p className="ml-3">3. {stage.sales_motion.step_3}</p>}
+                                          {stage.sales_motion.step_4 && <p className="ml-3">4. {stage.sales_motion.step_4}</p>}
+                                        </div>
+                                      )}
+
+                                      {/* BOFU fields */}
+                                      {stage.closing_offers && stage.closing_offers.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Ofertas de Fechamento:</p>
+                                          {stage.closing_offers.map((c, i) => <p key={i} className="ml-3">• {typeof c === 'string' ? c : JSON.stringify(c)}</p>)}
+                                        </div>
+                                      )}
+                                      {stage.objection_killers && stage.objection_killers.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Quebra de Objeções:</p>
+                                          {stage.objection_killers.map((o, i) => <p key={i} className="ml-3">• {typeof o === 'string' ? o : JSON.stringify(o)}</p>)}
+                                        </div>
+                                      )}
+                                      {stage.remarketing_assets && stage.remarketing_assets.length > 0 && (
+                                        <div className="text-xs space-y-1">
+                                          <p className="font-medium">Ativos de Remarketing:</p>
+                                          {stage.remarketing_assets.map((r, i) => <p key={i} className="ml-3">• {typeof r === 'string' ? r : JSON.stringify(r)}</p>)}
+                                        </div>
+                                      )}
+
+                                      {/* Fallback for old format */}
+                                      {stage.channels && !stage.creatives && !stage.nurture_assets && !stage.closing_offers && (
+                                        <p className="text-xs"><strong>Canais:</strong> {Array.isArray(stage.channels) ? stage.channels.join(', ') : stage.channels}</p>
+                                      )}
+                                      {stage.message && !stage.sales_motion && (
+                                        <p className="text-xs italic">"{stage.message}"</p>
+                                      )}
                                     </div>
                                   );
                                 })}
