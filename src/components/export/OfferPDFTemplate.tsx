@@ -23,30 +23,75 @@ interface SelectedOptions {
   main_cta?: number[];
 }
 
+interface AudienceObj {
+  name?: string;
+  geo?: string;
+  source?: string | string[];
+  sources?: string[];
+  exclusions?: string[];
+  interests?: string[];
+  filters?: string[];
+  message?: string;
+}
+
+interface LeadCapture {
+  destination?: string | string[];
+  form_fields?: string[];
+  qualification_rule?: string;
+}
+
+interface SalesMotion {
+  step_1?: string;
+  step_2?: string;
+  step_3?: string;
+  step_4?: string;
+}
+
+interface FunnelStage {
+  objective?: string;
+  channels?: string[];
+  message?: string;
+  // TOFU
+  offers?: string[];
+  creatives?: string[];
+  lead_capture?: LeadCapture;
+  // MOFU
+  nurture_assets?: string[];
+  retargeting_logic?: string[];
+  sales_motion?: SalesMotion;
+  // BOFU
+  closing_offers?: string[];
+  objection_killers?: string[];
+  remarketing_assets?: string[];
+}
+
 interface DemandPlan {
   context_analysis?: {
     niche?: string;
     icp_profile?: string;
     key_insight?: string;
+    market_challenges?: string;
   };
   primary_strategy?: {
     channel?: string;
     campaign_type?: string;
-    audiences?: string[];
+    audiences?: Array<string | AudienceObj>;
     creative_types?: string[];
     budget_percentage?: number;
     expected_cpl?: string;
+    kpis?: string[];
   };
   complementary_strategies?: Array<{
     channel?: string;
     role?: string;
     integration?: string;
     budget_percentage?: number;
+    tactics?: string;
   }>;
   acquisition_funnel?: {
-    tofu?: { objective?: string; channels?: string[]; message?: string };
-    mofu?: { objective?: string; channels?: string[]; message?: string };
-    bofu?: { objective?: string; channels?: string[]; message?: string };
+    tofu?: FunnelStage;
+    mofu?: FunnelStage;
+    bofu?: FunnelStage;
   };
   channel_synergies?: string[];
   implementation_timeline?: {
@@ -71,25 +116,20 @@ interface OfferPDFTemplateProps {
     created_at: string;
   };
   clientName: string;
-  // Allow passing live-edited options directly
   liveOptions?: GeneratedOptions;
   liveSelected?: SelectedOptions;
 }
 
 export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected }: OfferPDFTemplateProps) {
-  // Use live options if provided, otherwise fall back to offer data
   const generatedOptions = liveOptions || (offer.generated_options as GeneratedOptions) || {};
   const selectedOptions = liveSelected || (offer.selected_options as SelectedOptions) || {};
 
   const getSelectedText = (field: keyof GeneratedOptions): string => {
     const options = generatedOptions[field];
     const selected = selectedOptions[field];
-    
     if (options && selected && selected.length > 0) {
       return selected.map(idx => options[idx]).filter(Boolean).join("\n\n");
     }
-    
-    // Fallback to direct field value
     return (offer as any)[field] || "";
   };
 
@@ -151,6 +191,135 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
     marginRight: "6px"
   };
 
+  const renderStringArray = (arr: unknown): string => {
+    if (!arr) return "";
+    if (Array.isArray(arr)) return arr.filter(v => typeof v === "string").join(", ");
+    if (typeof arr === "string") return arr;
+    return "";
+  };
+
+  const renderAudience = (aud: string | AudienceObj, idx: number) => {
+    if (typeof aud === "string") {
+      return (
+        <div key={idx} style={{ ...itemStyle, padding: "8px", backgroundColor: "#f9fafb", borderRadius: "6px", marginBottom: "6px" }}>
+          <p style={{ fontSize: "11pt", margin: 0 }}>{aud}</p>
+        </div>
+      );
+    }
+    const audObj = aud as AudienceObj;
+    return (
+      <div key={idx} style={{ ...itemStyle, padding: "10px", backgroundColor: "#f9fafb", borderRadius: "6px", marginBottom: "6px", border: "1px solid #e5e7eb" }}>
+        <p style={{ fontSize: "11pt", fontWeight: "600", marginBottom: "4px" }}>{audObj.name || `Público ${idx + 1}`}</p>
+        {audObj.geo && <p style={{ fontSize: "10pt", marginBottom: "2px" }}><strong>Geo:</strong> {audObj.geo}</p>}
+        {audObj.interests && audObj.interests.length > 0 && (
+          <p style={{ fontSize: "10pt", marginBottom: "2px" }}><strong>Interesses:</strong> {audObj.interests.join(", ")}</p>
+        )}
+        {audObj.filters && audObj.filters.length > 0 && (
+          <p style={{ fontSize: "10pt", marginBottom: "2px" }}><strong>Filtros:</strong> {audObj.filters.join(", ")}</p>
+        )}
+        {(audObj.source || audObj.sources) && (
+          <p style={{ fontSize: "10pt", marginBottom: "2px" }}>
+            <strong>Fonte:</strong> {renderStringArray(audObj.sources) || renderStringArray(audObj.source)}
+          </p>
+        )}
+        {audObj.exclusions && audObj.exclusions.length > 0 && (
+          <p style={{ fontSize: "10pt", marginBottom: "2px" }}><strong>Exclusões:</strong> {audObj.exclusions.join(", ")}</p>
+        )}
+        {audObj.message && <p style={{ fontSize: "10pt", color: "#7c3aed", fontStyle: "italic" }}>"{audObj.message}"</p>}
+      </div>
+    );
+  };
+
+  const renderFunnelStage = (stage: FunnelStage, label: string, emoji: string) => {
+    return (
+      <div style={{ ...itemStyle, backgroundColor: "#f9fafb", padding: "12px", borderRadius: "6px", marginBottom: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+          <span style={badgeOutlineStyle}>{emoji} {label}</span>
+        </div>
+        {stage.objective && <p style={{ fontSize: "11pt", fontWeight: "500", marginBottom: "6px" }}>{stage.objective}</p>}
+        
+        {/* TOFU specific */}
+        {stage.offers && stage.offers.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Ofertas:</p>
+            {stage.offers.map((o, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {o}</p>)}
+          </div>
+        )}
+        {stage.creatives && stage.creatives.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Criativos:</p>
+            {stage.creatives.map((c, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {c}</p>)}
+          </div>
+        )}
+        {stage.lead_capture && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Captura de Leads:</p>
+            {stage.lead_capture.destination && (
+              <p style={{ fontSize: "10pt", marginLeft: "12px" }}><strong>Destino:</strong> {renderStringArray(stage.lead_capture.destination)}</p>
+            )}
+            {stage.lead_capture.form_fields && stage.lead_capture.form_fields.length > 0 && (
+              <p style={{ fontSize: "10pt", marginLeft: "12px" }}><strong>Campos:</strong> {stage.lead_capture.form_fields.join(", ")}</p>
+            )}
+            {stage.lead_capture.qualification_rule && (
+              <p style={{ fontSize: "10pt", marginLeft: "12px" }}><strong>Regra:</strong> {stage.lead_capture.qualification_rule}</p>
+            )}
+          </div>
+        )}
+
+        {/* MOFU specific */}
+        {stage.nurture_assets && stage.nurture_assets.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Ativos de Nutrição:</p>
+            {stage.nurture_assets.map((a, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {a}</p>)}
+          </div>
+        )}
+        {stage.retargeting_logic && stage.retargeting_logic.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Lógica de Retargeting:</p>
+            {stage.retargeting_logic.map((r, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {r}</p>)}
+          </div>
+        )}
+        {stage.sales_motion && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Processo Comercial:</p>
+            {stage.sales_motion.step_1 && <p style={{ fontSize: "10pt", marginLeft: "12px" }}>1. {stage.sales_motion.step_1}</p>}
+            {stage.sales_motion.step_2 && <p style={{ fontSize: "10pt", marginLeft: "12px" }}>2. {stage.sales_motion.step_2}</p>}
+            {stage.sales_motion.step_3 && <p style={{ fontSize: "10pt", marginLeft: "12px" }}>3. {stage.sales_motion.step_3}</p>}
+            {stage.sales_motion.step_4 && <p style={{ fontSize: "10pt", marginLeft: "12px" }}>4. {stage.sales_motion.step_4}</p>}
+          </div>
+        )}
+
+        {/* BOFU specific */}
+        {stage.closing_offers && stage.closing_offers.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Ofertas de Fechamento:</p>
+            {stage.closing_offers.map((c, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {c}</p>)}
+          </div>
+        )}
+        {stage.objection_killers && stage.objection_killers.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Quebra de Objeções:</p>
+            {stage.objection_killers.map((o, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {o}</p>)}
+          </div>
+        )}
+        {stage.remarketing_assets && stage.remarketing_assets.length > 0 && (
+          <div style={{ marginBottom: "6px" }}>
+            <p style={{ fontSize: "10pt", fontWeight: "600", marginBottom: "2px" }}>Ativos de Remarketing:</p>
+            {stage.remarketing_assets.map((r, i) => <p key={i} style={{ fontSize: "10pt", marginLeft: "12px", marginBottom: "2px" }}>• {r}</p>)}
+          </div>
+        )}
+
+        {/* Fallback for old format */}
+        {stage.channels && !stage.creatives && !stage.nurture_assets && !stage.closing_offers && (
+          <p style={{ fontSize: "10pt" }}><strong>Canais:</strong> {renderStringArray(stage.channels)}</p>
+        )}
+        {stage.message && !stage.sales_motion && (
+          <p style={{ fontSize: "10pt", fontStyle: "italic" }}>"{stage.message}"</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ 
       width: "210mm", 
@@ -162,7 +331,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
       lineHeight: "1.6",
       color: "#1a1a1a"
     }}>
-      {/* Logo fixa em todas as páginas - canto superior direito */}
+      {/* Logo fixa */}
       <img 
         src={logoXplo} 
         alt="XPLO" 
@@ -177,7 +346,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
         }} 
       />
 
-      {/* Header with Logo */}
+      {/* Header */}
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 
@@ -194,12 +363,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
 
       {/* Title */}
       <div style={{ textAlign: "center", marginBottom: "30px" }}>
-        <h1 style={{ 
-          fontSize: "24pt", 
-          fontWeight: "bold", 
-          color: "#7c3aed",
-          marginBottom: "8px"
-        }}>
+        <h1 style={{ fontSize: "24pt", fontWeight: "bold", color: "#7c3aed", marginBottom: "8px" }}>
           OFERTA IRRESISTÍVEL
         </h1>
         <p style={{ fontSize: "14pt", color: "#666" }}>
@@ -209,7 +373,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
 
       {/* Content Sections */}
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-        {/* Promessa */}
         {getSelectedText("promise") && (
           <div style={sectionStyle}>
             <h2 style={headingStyle}>PROMESSA PRINCIPAL</h2>
@@ -217,7 +380,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
           </div>
         )}
 
-        {/* Mecanismo Único */}
         {getSelectedText("unique_mechanism") && (
           <div style={sectionStyle}>
             <h2 style={headingStyle}>MECANISMO ÚNICO</h2>
@@ -225,7 +387,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
           </div>
         )}
 
-        {/* Garantia */}
         {getSelectedText("guarantee") && (
           <div style={sectionStyle}>
             <h2 style={headingStyle}>GARANTIA</h2>
@@ -233,7 +394,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
           </div>
         )}
 
-        {/* Prova Social */}
         {getSelectedText("proof") && (
           <div style={sectionStyle}>
             <h2 style={headingStyle}>PROVA SOCIAL</h2>
@@ -241,7 +401,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
           </div>
         )}
 
-        {/* Reversão de Risco */}
         {getSelectedText("risk_reversal") && (
           <div style={sectionStyle}>
             <h2 style={headingStyle}>REVERSÃO DE RISCO</h2>
@@ -249,7 +408,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
           </div>
         )}
 
-        {/* Pilha de Valor */}
         {valueStack.length > 0 && (
           <div style={sectionStyle}>
             <h2 style={headingStyle}>PILHA DE VALOR</h2>
@@ -258,9 +416,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                 {valueStack.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
                     <td style={{ padding: "8px 0" }}>{item.name}</td>
-                    <td style={{ padding: "8px 0", textAlign: "right", fontWeight: "600" }}>
-                      {item.perceived_value}
-                    </td>
+                    <td style={{ padding: "8px 0", textAlign: "right", fontWeight: "600" }}>{item.perceived_value}</td>
                   </tr>
                 ))}
               </tbody>
@@ -268,7 +424,6 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
           </div>
         )}
 
-        {/* CTA Principal */}
         {getSelectedText("main_cta") && (
           <div style={{ 
             ...sectionStyle,
@@ -277,12 +432,7 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
             borderRadius: "8px",
             border: "1px solid #7c3aed",
           }}>
-            <h2 style={{ 
-              fontSize: "14pt", 
-              fontWeight: "600", 
-              color: "#7c3aed",
-              marginBottom: "8px"
-            }}>
+            <h2 style={{ fontSize: "14pt", fontWeight: "600", color: "#7c3aed", marginBottom: "8px" }}>
               CTA PRINCIPAL
             </h2>
             <p style={{ fontWeight: "500", whiteSpace: "pre-wrap" }}>{getSelectedText("main_cta")}</p>
@@ -308,19 +458,16 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                 <h3 style={subHeadingStyle}>📊 Análise do Contexto</h3>
                 <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "6px" }}>
                   {demandPlan.context_analysis.niche && (
-                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}>
-                      <strong>Nicho:</strong> {demandPlan.context_analysis.niche}
-                    </p>
+                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}><strong>Nicho:</strong> {demandPlan.context_analysis.niche}</p>
                   )}
                   {demandPlan.context_analysis.icp_profile && (
-                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}>
-                      <strong>Perfil ICP:</strong> {demandPlan.context_analysis.icp_profile}
-                    </p>
+                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}><strong>Perfil ICP:</strong> {demandPlan.context_analysis.icp_profile}</p>
                   )}
                   {demandPlan.context_analysis.key_insight && (
-                    <p style={{ fontSize: "11pt" }}>
-                      <strong>Insight Principal:</strong> {demandPlan.context_analysis.key_insight}
-                    </p>
+                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}><strong>Insight Principal:</strong> {demandPlan.context_analysis.key_insight}</p>
+                  )}
+                  {demandPlan.context_analysis.market_challenges && (
+                    <p style={{ fontSize: "11pt" }}><strong>Desafios:</strong> {demandPlan.context_analysis.market_challenges}</p>
                   )}
                 </div>
               </div>
@@ -329,35 +476,52 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
             {/* Estratégia Principal */}
             {demandPlan.primary_strategy && (
               <div style={sectionStyle}>
-                <h3 style={subHeadingStyle}>🎯 Estratégia Principal</h3>
+                <h3 style={subHeadingStyle}>🎯 Estratégia Principal: {demandPlan.primary_strategy.channel}</h3>
                 <div style={{ backgroundColor: "#f5f3ff", padding: "12px", borderRadius: "6px", border: "1px solid #7c3aed" }}>
-                  <div style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
-                    <span style={badgeStyle}>{demandPlan.primary_strategy.channel}</span>
-                    {demandPlan.primary_strategy.budget_percentage && (
+                  {demandPlan.primary_strategy.budget_percentage && (
+                    <div style={{ marginBottom: "8px" }}>
                       <span style={badgeOutlineStyle}>{demandPlan.primary_strategy.budget_percentage}% do budget</span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {demandPlan.primary_strategy.campaign_type && (
-                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}>
-                      <strong>Campanha:</strong> {demandPlan.primary_strategy.campaign_type}
-                    </p>
-                  )}
-                  {demandPlan.primary_strategy.audiences && demandPlan.primary_strategy.audiences.length > 0 && (
-                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}>
-                      <strong>Públicos:</strong> {demandPlan.primary_strategy.audiences.join(", ")}
-                    </p>
-                  )}
-                  {demandPlan.primary_strategy.creative_types && demandPlan.primary_strategy.creative_types.length > 0 && (
-                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}>
-                      <strong>Criativos:</strong> {demandPlan.primary_strategy.creative_types.join(", ")}
-                    </p>
+                    <p style={{ fontSize: "11pt", marginBottom: "4px" }}><strong>Campanha:</strong> {demandPlan.primary_strategy.campaign_type}</p>
                   )}
                   {demandPlan.primary_strategy.expected_cpl && (
-                    <p style={{ fontSize: "11pt" }}>
-                      <strong>CPL Esperado:</strong> {demandPlan.primary_strategy.expected_cpl}
-                    </p>
+                    <p style={{ fontSize: "11pt", marginBottom: "8px" }}><strong>CPL Esperado:</strong> {demandPlan.primary_strategy.expected_cpl}</p>
                   )}
                 </div>
+
+                {/* Públicos-alvo */}
+                {demandPlan.primary_strategy.audiences && demandPlan.primary_strategy.audiences.length > 0 && (
+                  <div style={{ marginTop: "12px" }}>
+                    <h4 style={{ fontSize: "11pt", fontWeight: "600", marginBottom: "8px" }}>👥 Públicos-alvo ({demandPlan.primary_strategy.audiences.length})</h4>
+                    {demandPlan.primary_strategy.audiences.map((aud, i) => renderAudience(aud, i))}
+                  </div>
+                )}
+
+                {/* Tipos de Criativos */}
+                {demandPlan.primary_strategy.creative_types && demandPlan.primary_strategy.creative_types.length > 0 && (
+                  <div style={{ marginTop: "8px" }}>
+                    <p style={{ fontSize: "11pt", fontWeight: "600", marginBottom: "4px" }}>🎨 Tipos de Criativos:</p>
+                    <div>
+                      {demandPlan.primary_strategy.creative_types.map((ct, i) => (
+                        <span key={i} style={badgeOutlineStyle}>{ct}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* KPIs */}
+                {demandPlan.primary_strategy.kpis && demandPlan.primary_strategy.kpis.length > 0 && (
+                  <div style={{ marginTop: "8px" }}>
+                    <p style={{ fontSize: "11pt", fontWeight: "600", marginBottom: "4px" }}>📊 KPIs:</p>
+                    <div>
+                      {demandPlan.primary_strategy.kpis.map((kpi, i) => (
+                        <span key={i} style={badgeOutlineStyle}>{kpi}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -374,12 +538,9 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                           <span style={{ ...badgeOutlineStyle, marginRight: 0 }}>{strategy.budget_percentage}%</span>
                         )}
                       </div>
-                      {strategy.role && (
-                        <p style={{ fontSize: "10pt", color: "#6b7280", marginBottom: "2px" }}>{strategy.role}</p>
-                      )}
-                      {strategy.integration && (
-                        <p style={{ fontSize: "10pt", color: "#7c3aed" }}>→ {strategy.integration}</p>
-                      )}
+                      {strategy.role && <p style={{ fontSize: "10pt", color: "#6b7280", marginBottom: "2px" }}>{strategy.role}</p>}
+                      {strategy.integration && <p style={{ fontSize: "10pt", color: "#7c3aed" }}>→ {strategy.integration}</p>}
+                      {strategy.tactics && <p style={{ fontSize: "10pt", marginTop: "2px" }}><strong>Táticas:</strong> {strategy.tactics}</p>}
                     </div>
                   ))}
                 </div>
@@ -390,56 +551,9 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
             {demandPlan.acquisition_funnel && (
               <div style={sectionStyle}>
                 <h3 style={subHeadingStyle}>📈 Funil de Aquisição</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {demandPlan.acquisition_funnel.tofu && (
-                    <div style={{ ...itemStyle, display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
-                      <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>TOPO</span>
-                      <div>
-                        <p style={{ fontSize: "11pt", fontWeight: "500" }}>{demandPlan.acquisition_funnel.tofu.objective}</p>
-                        {demandPlan.acquisition_funnel.tofu.message && (
-                          <p style={{ fontSize: "10pt", color: "#6b7280", fontStyle: "italic" }}>"{demandPlan.acquisition_funnel.tofu.message}"</p>
-                        )}
-                        {demandPlan.acquisition_funnel.tofu.channels && demandPlan.acquisition_funnel.tofu.channels.length > 0 && (
-                          <p style={{ fontSize: "10pt", marginTop: "4px" }}>
-                            <strong>Canais:</strong> {demandPlan.acquisition_funnel.tofu.channels.join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {demandPlan.acquisition_funnel.mofu && (
-                    <div style={{ ...itemStyle, display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
-                      <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>MEIO</span>
-                      <div>
-                        <p style={{ fontSize: "11pt", fontWeight: "500" }}>{demandPlan.acquisition_funnel.mofu.objective}</p>
-                        {demandPlan.acquisition_funnel.mofu.message && (
-                          <p style={{ fontSize: "10pt", color: "#6b7280", fontStyle: "italic" }}>"{demandPlan.acquisition_funnel.mofu.message}"</p>
-                        )}
-                        {demandPlan.acquisition_funnel.mofu.channels && demandPlan.acquisition_funnel.mofu.channels.length > 0 && (
-                          <p style={{ fontSize: "10pt", marginTop: "4px" }}>
-                            <strong>Canais:</strong> {demandPlan.acquisition_funnel.mofu.channels.join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {demandPlan.acquisition_funnel.bofu && (
-                    <div style={{ ...itemStyle, display: "flex", gap: "12px", backgroundColor: "#f9fafb", padding: "10px", borderRadius: "6px" }}>
-                      <span style={{ ...badgeOutlineStyle, flexShrink: 0 }}>FUNDO</span>
-                      <div>
-                        <p style={{ fontSize: "11pt", fontWeight: "500" }}>{demandPlan.acquisition_funnel.bofu.objective}</p>
-                        {demandPlan.acquisition_funnel.bofu.message && (
-                          <p style={{ fontSize: "10pt", color: "#6b7280", fontStyle: "italic" }}>"{demandPlan.acquisition_funnel.bofu.message}"</p>
-                        )}
-                        {demandPlan.acquisition_funnel.bofu.channels && demandPlan.acquisition_funnel.bofu.channels.length > 0 && (
-                          <p style={{ fontSize: "10pt", marginTop: "4px" }}>
-                            <strong>Canais:</strong> {demandPlan.acquisition_funnel.bofu.channels.join(", ")}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {demandPlan.acquisition_funnel.tofu && renderFunnelStage(demandPlan.acquisition_funnel.tofu, "TOPO", "🔵")}
+                {demandPlan.acquisition_funnel.mofu && renderFunnelStage(demandPlan.acquisition_funnel.mofu, "MEIO", "🟡")}
+                {demandPlan.acquisition_funnel.bofu && renderFunnelStage(demandPlan.acquisition_funnel.bofu, "FUNDO", "🟢")}
               </div>
             )}
 
@@ -451,14 +565,14 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
                   {demandPlan.channel_synergies.map((syn, i) => (
                     <li key={i} style={{ ...itemStyle, fontSize: "11pt", marginBottom: "4px", paddingLeft: "16px", position: "relative" }}>
                       <span style={{ position: "absolute", left: 0, color: "#7c3aed" }}>→</span>
-                      {syn}
+                      {typeof syn === "string" ? syn : JSON.stringify(syn)}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {/* Cronograma de Implementação */}
+            {/* Cronograma */}
             {demandPlan.implementation_timeline && (
               <div style={sectionStyle}>
                 <h3 style={subHeadingStyle}>📅 Cronograma de Implementação</h3>
