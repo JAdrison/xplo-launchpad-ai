@@ -86,25 +86,28 @@ interface DemandPlan {
     niche?: string;
     icp_profile?: string;
     key_insight?: string;
+    market_challenges?: string;
   };
   primary_strategy?: {
     channel?: string;
     campaign_type?: string;
-    audiences?: string[];
+    audiences?: Array<string | { name?: string; geo?: string; source?: string; exclusions?: string }>;
     creative_types?: string[];
     budget_percentage?: number;
     expected_cpl?: string;
+    kpis?: string[];
   };
   complementary_strategies?: Array<{
     channel?: string;
     role?: string;
     integration?: string;
     budget_percentage?: number;
+    tactics?: string;
   }>;
   acquisition_funnel?: {
-    tofu?: { objective?: string; channels?: string[]; message?: string };
-    mofu?: { objective?: string; channels?: string[]; message?: string };
-    bofu?: { objective?: string; channels?: string[]; message?: string };
+    tofu?: { objective?: string; channels?: string; message?: string; metrics?: string; content_types?: string };
+    mofu?: { objective?: string; channels?: string; message?: string; metrics?: string; content_types?: string };
+    bofu?: { objective?: string; channels?: string; message?: string; metrics?: string; content_types?: string };
   };
   channel_synergies?: string[];
   implementation_timeline?: {
@@ -546,7 +549,10 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                                 <p className="text-sm"><strong>Perfil ICP:</strong> {demandPlan.context_analysis.icp_profile}</p>
                               )}
                               {demandPlan.context_analysis.key_insight && (
-                                <p className="text-sm"><strong>Insight:</strong> {demandPlan.context_analysis.key_insight}</p>
+                                <p className="text-sm"><strong>Insight Principal:</strong> {demandPlan.context_analysis.key_insight}</p>
+                              )}
+                              {demandPlan.context_analysis.market_challenges && (
+                                <p className="text-sm"><strong>Desafios do Mercado:</strong> {demandPlan.context_analysis.market_challenges}</p>
                               )}
                             </div>
                           )}
@@ -566,12 +572,31 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                               )}
                               {demandPlan.primary_strategy.audiences && demandPlan.primary_strategy.audiences.length > 0 && (
                                 <div>
-                                  <p className="text-sm font-medium">Públicos:</p>
+                                  <p className="text-sm font-medium mb-2">Públicos-alvo:</p>
+                                  <div className="space-y-2">
+                                    {demandPlan.primary_strategy.audiences.map((aud, i) => {
+                                      if (typeof aud === "string") {
+                                        return <Badge key={i} variant="secondary" className="text-xs mr-1">{aud}</Badge>;
+                                      }
+                                      const audObj = aud as { name?: string; geo?: string; source?: string; exclusions?: string };
+                                      return (
+                                        <div key={i} className="bg-background/50 rounded p-2 text-xs space-y-1">
+                                          <p className="font-medium">{audObj.name || `Público ${i + 1}`}</p>
+                                          {audObj.geo && <p><strong>Geo:</strong> {audObj.geo}</p>}
+                                          {audObj.source && <p><strong>Fonte:</strong> {audObj.source}</p>}
+                                          {audObj.exclusions && <p><strong>Exclusões:</strong> {audObj.exclusions}</p>}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                              {demandPlan.primary_strategy.creative_types && demandPlan.primary_strategy.creative_types.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium">Tipos de Criativos:</p>
                                   <div className="flex flex-wrap gap-1 mt-1">
-                                    {demandPlan.primary_strategy.audiences.map((aud, i) => (
-                                      <Badge key={i} variant="secondary" className="text-xs">
-                                        {typeof aud === "string" ? aud : (aud as any)?.name || JSON.stringify(aud)}
-                                      </Badge>
+                                    {demandPlan.primary_strategy.creative_types.map((ct, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs">{ct}</Badge>
                                     ))}
                                   </div>
                                 </div>
@@ -579,6 +604,93 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                               {demandPlan.primary_strategy.expected_cpl && (
                                 <p className="text-sm"><strong>CPL esperado:</strong> {demandPlan.primary_strategy.expected_cpl}</p>
                               )}
+                              {demandPlan.primary_strategy.kpis && demandPlan.primary_strategy.kpis.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium">KPIs:</p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {demandPlan.primary_strategy.kpis.map((kpi, i) => (
+                                      <Badge key={i} variant="secondary" className="text-xs">{kpi}</Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Estratégias Complementares */}
+                          {demandPlan.complementary_strategies && demandPlan.complementary_strategies.length > 0 && (
+                            <div className="space-y-3">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4" />
+                                Estratégias Complementares
+                              </h5>
+                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {demandPlan.complementary_strategies.map((strat, i) => (
+                                  <div key={i} className="rounded-lg border p-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">{strat.channel}</span>
+                                      {strat.budget_percentage && (
+                                        <Badge variant="outline" className="text-xs">{strat.budget_percentage}%</Badge>
+                                      )}
+                                    </div>
+                                    {strat.role && <p className="text-xs text-muted-foreground">{strat.role}</p>}
+                                    {strat.integration && (
+                                      <p className="text-xs"><strong>Integração:</strong> {strat.integration}</p>
+                                    )}
+                                    {strat.tactics && (
+                                      <p className="text-xs"><strong>Táticas:</strong> {strat.tactics}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Funil de Aquisição */}
+                          {demandPlan.acquisition_funnel && (
+                            <div className="space-y-3">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <ArrowRight className="h-4 w-4" />
+                                Funil de Aquisição
+                              </h5>
+                              <div className="grid gap-3 sm:grid-cols-3">
+                                {[
+                                  { key: "tofu" as const, label: "TOPO", color: "border-blue-500/30 bg-blue-500/5" },
+                                  { key: "mofu" as const, label: "MEIO", color: "border-yellow-500/30 bg-yellow-500/5" },
+                                  { key: "bofu" as const, label: "FUNDO", color: "border-green-500/30 bg-green-500/5" },
+                                ].map(({ key, label, color }) => {
+                                  const stage = demandPlan.acquisition_funnel?.[key];
+                                  if (!stage) return null;
+                                  return (
+                                    <div key={key} className={`rounded-lg border p-3 space-y-2 ${color}`}>
+                                      <Badge variant="outline" className="text-xs font-bold">{label}</Badge>
+                                      {stage.objective && <p className="text-xs"><strong>Objetivo:</strong> {stage.objective}</p>}
+                                      {stage.channels && <p className="text-xs"><strong>Canais:</strong> {typeof stage.channels === 'string' ? stage.channels : (stage.channels as unknown as string[])?.join(', ')}</p>}
+                                      {stage.message && <p className="text-xs"><strong>Mensagem:</strong> {stage.message}</p>}
+                                      {stage.metrics && <p className="text-xs"><strong>Métricas:</strong> {stage.metrics}</p>}
+                                      {stage.content_types && <p className="text-xs"><strong>Conteúdo:</strong> {stage.content_types}</p>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Sinergias entre Canais */}
+                          {demandPlan.channel_synergies && demandPlan.channel_synergies.length > 0 && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium flex items-center gap-2">
+                                <Zap className="h-4 w-4" />
+                                Sinergias entre Canais
+                              </h5>
+                              <div className="space-y-2">
+                                {demandPlan.channel_synergies.map((syn, i) => (
+                                  <div key={i} className="flex items-start gap-2 text-sm bg-muted/50 p-2 rounded">
+                                    <span className="text-primary font-bold shrink-0">#{i + 1}</span>
+                                    <span>{typeof syn === 'string' ? syn : JSON.stringify(syn)}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
 
