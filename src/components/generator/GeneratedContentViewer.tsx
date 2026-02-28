@@ -908,9 +908,12 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                                         )}
                                         {demandPlan.acquisition_funnel.tofu.channels && (
                                           <div className="flex flex-wrap gap-1">
-                                            {demandPlan.acquisition_funnel.tofu.channels.map((ch, i) => (
-                                              <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
-                                            ))}
+                                            {Array.isArray(demandPlan.acquisition_funnel.tofu.channels) 
+                                              ? demandPlan.acquisition_funnel.tofu.channels.map((ch, i) => (
+                                                  <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                                ))
+                                              : <Badge variant="secondary" className="text-xs">{demandPlan.acquisition_funnel.tofu.channels}</Badge>
+                                            }
                                           </div>
                                         )}
                                       </div>
@@ -926,9 +929,12 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                                         )}
                                         {demandPlan.acquisition_funnel.mofu.channels && (
                                           <div className="flex flex-wrap gap-1">
-                                            {demandPlan.acquisition_funnel.mofu.channels.map((ch, i) => (
-                                              <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
-                                            ))}
+                                            {Array.isArray(demandPlan.acquisition_funnel.mofu.channels) 
+                                              ? demandPlan.acquisition_funnel.mofu.channels.map((ch, i) => (
+                                                  <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                                ))
+                                              : <Badge variant="secondary" className="text-xs">{demandPlan.acquisition_funnel.mofu.channels}</Badge>
+                                            }
                                           </div>
                                         )}
                                       </div>
@@ -944,9 +950,12 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                                         )}
                                         {demandPlan.acquisition_funnel.bofu.channels && (
                                           <div className="flex flex-wrap gap-1">
-                                            {demandPlan.acquisition_funnel.bofu.channels.map((ch, i) => (
-                                              <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
-                                            ))}
+                                            {Array.isArray(demandPlan.acquisition_funnel.bofu.channels) 
+                                              ? demandPlan.acquisition_funnel.bofu.channels.map((ch, i) => (
+                                                  <Badge key={i} variant="secondary" className="text-xs">{ch}</Badge>
+                                                ))
+                                              : <Badge variant="secondary" className="text-xs">{demandPlan.acquisition_funnel.bofu.channels}</Badge>
+                                            }
                                           </div>
                                         )}
                                       </div>
