@@ -631,8 +631,8 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                                           {(audObj.source || audObj.sources) && (
                                             <p><strong>Fonte:</strong> {Array.isArray(audObj.sources) ? audObj.sources.join(", ") : Array.isArray(audObj.source) ? audObj.source.join(", ") : audObj.source}</p>
                                           )}
-                                          {audObj.exclusions && audObj.exclusions.length > 0 && (
-                                            <p><strong>Exclusões:</strong> {audObj.exclusions.join(", ")}</p>
+                                          {audObj.exclusions && (
+                                            <p><strong>Exclusões:</strong> {Array.isArray(audObj.exclusions) ? audObj.exclusions.join(", ") : audObj.exclusions}</p>
                                           )}
                                           {audObj.message && <p className="text-primary italic">"{audObj.message}"</p>}
                                         </div>
