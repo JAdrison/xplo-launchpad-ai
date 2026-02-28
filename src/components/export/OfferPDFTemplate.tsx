@@ -222,8 +222,8 @@ export function OfferPDFTemplate({ offer, clientName, liveOptions, liveSelected 
             <strong>Fonte:</strong> {renderStringArray(audObj.sources) || renderStringArray(audObj.source)}
           </p>
         )}
-        {audObj.exclusions && audObj.exclusions.length > 0 && (
-          <p style={{ fontSize: "10pt", marginBottom: "2px" }}><strong>Exclusões:</strong> {audObj.exclusions.join(", ")}</p>
+        {audObj.exclusions && (
+          <p style={{ fontSize: "10pt", marginBottom: "2px" }}><strong>Exclusões:</strong> {Array.isArray(audObj.exclusions) ? audObj.exclusions.join(", ") : audObj.exclusions}</p>
         )}
         {audObj.message && <p style={{ fontSize: "10pt", color: "#7c3aed", fontStyle: "italic" }}>"{audObj.message}"</p>}
       </div>
