@@ -846,9 +846,16 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                                   <div>
                                     <p className="text-sm font-medium">Públicos:</p>
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                      {demandPlan.primary_strategy.audiences.map((aud, i) => (
-                                        <Badge key={i} variant="secondary" className="text-xs">{aud}</Badge>
-                                      ))}
+                                      {demandPlan.primary_strategy.audiences.map((aud: any, i) => {
+                                        const audienceLabel =
+                                          typeof aud === "string"
+                                            ? aud
+                                            : aud?.name || aud?.geo || aud?.source || "Público";
+
+                                        return (
+                                          <Badge key={i} variant="secondary" className="text-xs">{audienceLabel}</Badge>
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}
