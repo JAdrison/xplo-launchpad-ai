@@ -55,6 +55,7 @@ import { AdsRefinerChat } from "./AdsRefinerChat";
 import { VideoAdCard } from "./VideoAdCard";
 
 type Offer = Tables<"offers_hormozi">;
+type Icp = Tables<"icps">;
 type LandingPage = Tables<"landing_pages">;
 type Ad = Tables<"ads">;
 
@@ -148,6 +149,7 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
   const [offers, setOffers] = useState<Offer[]>([]);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [ads, setAds] = useState<Ad[]>([]);
+  const [icps, setIcps] = useState<Pick<Icp, "id" | "name">[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
   // State for tracking live edits per offer (for PDF sync)
@@ -167,15 +169,17 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
   const fetchGeneratedContent = async () => {
     setIsLoading(true);
 
-    const [offersRes, lpsRes, adsRes] = await Promise.all([
+    const [offersRes, lpsRes, adsRes, icpsRes] = await Promise.all([
       supabase.from("offers_hormozi").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
       supabase.from("landing_pages").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
       supabase.from("ads").select("*").eq("client_id", clientId).order("created_at", { ascending: false }),
+      supabase.from("icps").select("id, name").eq("client_id", clientId),
     ]);
 
     setOffers(offersRes.data || []);
     setLandingPages(lpsRes.data || []);
     setAds(adsRes.data || []);
+    setIcps(icpsRes.data || []);
     setIsLoading(false);
   };
 
@@ -663,7 +667,7 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                     return (
                       <div key={offer.id} className="border rounded-lg p-4 space-y-4">
                         <div className="flex items-center justify-between">
-                          <Badge variant="outline">Oferta {offerIdx + 1}</Badge>
+                          <Badge variant="outline">Oferta {offerIdx + 1}{offer.icp_id ? ` - ${icps.find(i => i.id === offer.icp_id)?.name || "ICP"}` : ""}</Badge>
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-muted-foreground">
                               {new Date(offer.created_at).toLocaleDateString("pt-BR")}
