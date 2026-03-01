@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Save, Sparkles, Key, Brain, Zap } from "lucide-react";
+import { Eye, EyeOff, Save, Sparkles, Key, Brain, Zap, Webhook } from "lucide-react";
 
 type AISource = "lovable" | "xplo" | "custom";
 type AIProvider = "gemini" | "openai";
@@ -52,6 +52,7 @@ export default function Settings() {
   const [model, setModel] = useState("google/gemini-3-flash-preview");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
 
   // Load saved settings
   useEffect(() => {
@@ -59,11 +60,13 @@ export default function Settings() {
     const savedProvider = localStorage.getItem("xplo_ai_provider") as AIProvider | null;
     const savedModel = localStorage.getItem("xplo_ai_model");
     const savedKey = localStorage.getItem("xplo_api_key");
+    const savedWebhook = localStorage.getItem("webhook_url");
 
     if (savedSource) setSource(savedSource);
     if (savedProvider) setProvider(savedProvider);
     if (savedModel) setModel(savedModel);
     if (savedKey) setApiKey(savedKey);
+    if (savedWebhook) setWebhookUrl(savedWebhook);
   }, []);
 
   // Reset model when source or provider changes (only for non-xplo sources)
@@ -288,6 +291,48 @@ export default function Settings() {
           <Button onClick={handleSave} className="w-full gap-2">
             <Save className="h-4 w-4" />
             Salvar Configurações
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Webhook Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Webhook className="h-5 w-5" />
+            Integração Webhook
+          </CardTitle>
+          <CardDescription>
+            Configure a URL para enviar anúncios estáticos para outro sistema.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="webhookUrl">URL do Webhook</Label>
+            <Input
+              id="webhookUrl"
+              type="url"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="https://hooks.exemplo.com/webhook/..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Os anúncios estáticos serão enviados como JSON via POST para esta URL.
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              localStorage.setItem("webhook_url", webhookUrl);
+              toast({
+                title: "Webhook salvo",
+                description: "A URL do webhook foi salva com sucesso.",
+              });
+            }}
+            variant="outline"
+            className="w-full gap-2"
+          >
+            <Save className="h-4 w-4" />
+            Salvar Webhook
           </Button>
         </CardContent>
       </Card>
