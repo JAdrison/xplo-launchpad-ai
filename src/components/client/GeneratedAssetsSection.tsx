@@ -40,6 +40,7 @@ import {
   Undo2,
   Trash2,
   Plus,
+  Send,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ import { PDFExportButton } from "@/components/export/PDFExportButton";
 import { VideoAdCard } from "@/components/generator/VideoAdCard";
 import { AdsRefinerChat } from "@/components/generator/AdsRefinerChat";
 import { CreateVideoAdDialog } from "@/components/generator/CreateVideoAdDialog";
+import { useWebhook } from "@/hooks/useWebhook";
 
 type Offer = Tables<"offers_hormozi">;
 type LandingPage = Tables<"landing_pages">;
@@ -188,6 +190,9 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
   
   // State for Create Video Ad Dialog
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // Webhook hook
+  const { sendStaticAdsWebhook, isSending: isWebhookSending } = useWebhook();
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -945,7 +950,17 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
               </AccordionTrigger>
               <AccordionContent className="space-y-4 pt-4">
                 {/* PDF Export Button */}
-                <div className="flex justify-end mb-2">
+                <div className="flex justify-end gap-2 mb-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={isWebhookSending || staticAds.length === 0}
+                    onClick={() => sendStaticAdsWebhook(staticAds, clientName || "Cliente")}
+                  >
+                    <Send className="h-4 w-4" />
+                    {isWebhookSending ? "Enviando..." : "Enviar via Webhook"}
+                  </Button>
                   <PDFExportButton
                     type="ads"
                     clientName={clientName || "cliente"}

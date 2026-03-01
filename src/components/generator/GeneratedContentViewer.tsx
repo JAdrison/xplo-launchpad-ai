@@ -43,6 +43,7 @@ import {
   Clock,
   Heart,
   AlertTriangle,
+  Send,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ import { LandingPageViewer } from "./LandingPageViewer";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
 import { AdsRefinerChat } from "./AdsRefinerChat";
 import { VideoAdCard } from "./VideoAdCard";
+import { useWebhook } from "@/hooks/useWebhook";
 
 type Offer = Tables<"offers_hormozi">;
 type Icp = Tables<"icps">;
@@ -161,6 +163,9 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
   
   // State for ads PDF sync
   const [adsRefreshKey, setAdsRefreshKey] = useState(0);
+
+  // Webhook hook
+  const { sendStaticAdsWebhook, isSending: isWebhookSending } = useWebhook();
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -1131,7 +1136,22 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                 </AccordionTrigger>
                 <AccordionContent className="pt-4">
                   {/* PDF Export Button for Ads */}
-                  <div className="flex justify-end mb-4">
+                  <div className="flex justify-end gap-2 mb-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      disabled={isWebhookSending || staticAds.length === 0}
+                      onClick={() => {
+                        const icpName = offers[0]?.icp_id
+                          ? icps.find(i => i.id === offers[0].icp_id)?.name
+                          : undefined;
+                        sendStaticAdsWebhook(staticAds, clientName, icpName);
+                      }}
+                    >
+                      <Send className="h-4 w-4" />
+                      {isWebhookSending ? "Enviando..." : "Enviar via Webhook"}
+                    </Button>
                     <PDFExportButton
                       type="ads"
                       clientName={clientName}
