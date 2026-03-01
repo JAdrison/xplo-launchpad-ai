@@ -1,51 +1,59 @@
 
-# Melhorar o Formato "Caixinha de Perguntas"
+# Enviar Anuncios Estaticos via Webhook
 
-## Problema
+## Resumo
+Adicionar um campo de URL de webhook na pagina de Configuracoes e um botao "Enviar via Webhook" na secao de anuncios estaticos (tanto no GeneratedContentViewer quanto no GeneratedAssetsSection). Ao clicar, os anuncios estaticos serao enviados via uma edge function para a URL configurada.
 
-O prompt atual trata o anuncio "Caixinha de Perguntas" como se fosse para stories do Instagram. Na verdade, e um formato de **anuncio online pago** (Facebook/Meta Ads) onde:
+## Etapas
 
-- O **HOOK e uma pergunta que parece ter sido feita por uma pessoa real** -- como se alguem tivesse mandado essa duvida numa caixinha de perguntas
-- A pergunta precisa ser **cotidiana, sincera, e comum** -- algo que muita gente se pergunta no dia a dia
-- O restante do roteiro responde essa duvida de forma natural, guiando para o produto
+### 1. Adicionar campo de Webhook URL na pagina de Configuracoes
+- Adicionar uma nova secao "Integracao Webhook" na pagina `src/pages/Settings.tsx`
+- Campo de input para a URL do webhook, salvo em `localStorage` (mesmo padrao usado para as configuracoes de IA)
+- Botao de salvar com feedback visual
 
-## Alteracao
+### 2. Criar Edge Function `send-webhook`
+- Criar `supabase/functions/send-webhook/index.ts`
+- Recebe o payload (anuncios estaticos + dados do cliente) via POST
+- Encaminha para a URL de webhook fornecida
+- Retorna status de sucesso/erro
+- Inclui CORS headers e validacao
 
-### Arquivo: `supabase/functions/generate-content/index.ts`
+### 3. Adicionar botao "Enviar via Webhook" nos componentes de anuncios
 
-Reescrever as instrucoes do system prompt e do prompt especifico para o 6o video (question_box), deixando claro:
+**Em `src/components/generator/GeneratedContentViewer.tsx`:**
+- Botao ao lado do PDF Export na secao de anuncios
+- Envia somente os `staticAds` com dados do cliente (nome, ICP)
 
-**System prompt** -- adicionar contexto sobre o formato:
-- "Caixinha de Perguntas" e um formato de anuncio pago onde o HOOK simula uma pergunta enviada por uma pessoa real
-- NAO e um story de Instagram, e um anuncio de video para Facebook/Meta Ads
-- A pergunta deve parecer que foi escrita por alguem do publico-alvo, com linguagem informal e natural
+**Em `src/components/client/GeneratedAssetsSection.tsx`:**
+- Mesmo botao na secao de anuncios do detalhe do cliente
 
-**Instrucoes detalhadas para o question_box:**
-- O HOOK deve ser escrito **em primeira pessoa**, como se fosse uma duvida real enviada por alguem (ex: "Gente, meu cachorro nao para de se cocar, sera que e alergia?", "Alguem mais tem problema com infiltracao no banheiro?", "To pensando em colocar energia solar mas sera que vale a pena mesmo?")
-- A pergunta deve ser sobre um **tema cotidiano** que muitas pessoas do publico-alvo realmente tem
-- Deve parecer **espontanea e sincera**, nao uma pergunta de marketing
-- Usar linguagem coloquial, como se fosse um comentario ou mensagem de WhatsApp
-- As secoes seguintes (Problema, Por que e Ruim, Solucao, CTA) devem responder essa duvida de forma natural, como se fosse um especialista respondendo
+### 4. Payload do Webhook
 
-**Exemplos de boas perguntas:**
-- "Minha conta de luz ta vindo absurda, alguem sabe se energia solar realmente compensa?"
-- "To com uma dor nas costas ha semanas, sera que e coluna ou musculo?"
-- "Meu filho nao quer comer nada, alguem ja passou por isso?"
+O JSON enviado ao webhook tera este formato:
 
-**Exemplos de perguntas ruins (evitar):**
-- "Voce sabia que nosso produto resolve seu problema?" (marketing disfarado)
-- "Quer economizar 50% na conta de luz?" (headline de vendas, nao duvida real)
+```text
+{
+  "client_name": "XPLO",
+  "icp_name": "Proprietario investidor",
+  "sent_at": "2026-03-01T...",
+  "ads": [
+    {
+      "headline": "...",
+      "subheadline": "...",
+      "body_text": "...",
+      "cta": "...",
+      "eliminators": [...],
+      "angle": "pain|desire",
+      "focus": "...",
+      "visual_suggestion": "..."
+    }
+  ]
+}
+```
 
----
+## Detalhes Tecnicos
 
-## Secao Tecnica
-
-Linhas afetadas: 478-499 do `supabase/functions/generate-content/index.ts`
-
-O system prompt (linha 478-483) sera expandido para incluir as instrucoes detalhadas do formato Caixinha de Perguntas.
-
-O bloco de instrucoes do question_box (linhas 486-490) sera reescrito com os exemplos e regras acima.
-
-| Arquivo | Mudanca |
-|---------|---------|
-| `supabase/functions/generate-content/index.ts` | Reescrever prompt do question_box com instrucoes claras de que e um anuncio online (nao story), com exemplos de perguntas boas e ruins |
+- A URL do webhook sera armazenada em `localStorage` com a chave `webhook_url`
+- A edge function valida a URL e faz o POST para o destino
+- O botao mostra estado de loading e feedback (toast de sucesso/erro)
+- Se nao houver URL configurada, mostra alerta pedindo para configurar nas Configuracoes
