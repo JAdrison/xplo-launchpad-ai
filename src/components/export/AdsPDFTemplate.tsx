@@ -138,7 +138,10 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
   );
 
   const renderVideoAd = (ad: Ad, idx: number) => (
-    <div key={ad.id} style={cardStyle}>
+    <div key={ad.id} style={{
+      ...cardStyle,
+      ...(idx > 0 ? { pageBreakBefore: "always", breakBefore: "page" } : {}),
+    }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
         <span style={{ 
           backgroundColor: "#f3e8ff", 
@@ -263,7 +266,7 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
       {/* Video Ads */}
       {videoAds.length > 0 && (
         <div>
-          <h2 style={sectionTitleStyle}>
+          <h2 style={{ ...sectionTitleStyle, pageBreakBefore: "always", breakBefore: "page" }}>
             🎬 ROTEIROS DE VÍDEO ({videoAds.length})
           </h2>
           {videoAds.map(renderVideoAd)}

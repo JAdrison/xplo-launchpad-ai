@@ -1,29 +1,59 @@
 
-## PDF de Vídeos: Um vídeo por página
+# Enviar Anuncios Estaticos via Webhook
 
-### Situação atual
-O `renderVideoAd` usa `cardStyle` com `pageBreakInside: avoid` — isso evita que o conteúdo de um único vídeo seja cortado, mas não força cada vídeo a começar em uma nova página.
+## Resumo
+Adicionar um campo de URL de webhook na pagina de Configuracoes e um botao "Enviar via Webhook" na secao de anuncios estaticos (tanto no GeneratedContentViewer quanto no GeneratedAssetsSection). Ao clicar, os anuncios estaticos serao enviados via uma edge function para a URL configurada.
 
-### O que será feito
+## Etapas
 
-**Apenas `src/components/export/AdsPDFTemplate.tsx`** — 1 arquivo, 1 mudança simples:
+### 1. Adicionar campo de Webhook URL na pagina de Configuracoes
+- Adicionar uma nova secao "Integracao Webhook" na pagina `src/pages/Settings.tsx`
+- Campo de input para a URL do webhook, salvo em `localStorage` (mesmo padrao usado para as configuracoes de IA)
+- Botao de salvar com feedback visual
 
-Substituir o `cardStyle` dos vídeos por um novo `videoCardStyle` que adiciona `pageBreakBefore: "always"` em todos exceto o primeiro (`idx === 0`).
+### 2. Criar Edge Function `send-webhook`
+- Criar `supabase/functions/send-webhook/index.ts`
+- Recebe o payload (anuncios estaticos + dados do cliente) via POST
+- Encaminha para a URL de webhook fornecida
+- Retorna status de sucesso/erro
+- Inclui CORS headers e validacao
+
+### 3. Adicionar botao "Enviar via Webhook" nos componentes de anuncios
+
+**Em `src/components/generator/GeneratedContentViewer.tsx`:**
+- Botao ao lado do PDF Export na secao de anuncios
+- Envia somente os `staticAds` com dados do cliente (nome, ICP)
+
+**Em `src/components/client/GeneratedAssetsSection.tsx`:**
+- Mesmo botao na secao de anuncios do detalhe do cliente
+
+### 4. Payload do Webhook
+
+O JSON enviado ao webhook tera este formato:
 
 ```text
-Antes: cardStyle → breakInside: avoid, marginBottom: 10mm
-Depois: videoCardStyle → breakBefore: "page" (exceto índice 0)
-        + pageBreakBefore: "always" (exceto índice 0)
-        + keepInside intacto
+{
+  "client_name": "XPLO",
+  "icp_name": "Proprietario investidor",
+  "sent_at": "2026-03-01T...",
+  "ads": [
+    {
+      "headline": "...",
+      "subheadline": "...",
+      "body_text": "...",
+      "cta": "...",
+      "eliminators": [...],
+      "angle": "pain|desire",
+      "focus": "...",
+      "visual_suggestion": "..."
+    }
+  ]
+}
 ```
 
-O título da seção "🎬 ROTEIROS DE VÍDEO" também receberá `pageBreakBefore: "always"` para garantir que a seção de vídeos sempre comece numa página limpa (separada dos estáticos).
+## Detalhes Tecnicos
 
-### Resultado visual no PDF
-```
-Página 1-N: Anúncios estáticos (comportamento atual)
-Página N+1: Título "ROTEIROS DE VÍDEO" + Vídeo 1
-Página N+2: Vídeo 2
-Página N+3: Vídeo 3
-...
-```
+- A URL do webhook sera armazenada em `localStorage` com a chave `webhook_url`
+- A edge function valida a URL e faz o POST para o destino
+- O botao mostra estado de loading e feedback (toast de sucesso/erro)
+- Se nao houver URL configurada, mostra alerta pedindo para configurar nas Configuracoes
