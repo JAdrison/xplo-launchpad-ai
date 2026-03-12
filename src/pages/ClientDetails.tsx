@@ -469,6 +469,58 @@ export default function ClientDetails() {
         </Card>
       )}
 
+      {/* Investimento em Tráfego */}
+      {clientProfile && (clientProfile.initial_traffic_investment || clientProfile.monthly_investment || clientProfile.current_revenue || clientProfile.revenue_goal) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Investimento em Tráfego
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {clientProfile.initial_traffic_investment && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <DollarSign className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Invest. inicial tráfego</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.initial_traffic_investment}</p>
+                  </div>
+                </div>
+              )}
+              {clientProfile.monthly_investment && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <DollarSign className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Investimento mensal</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.monthly_investment}</p>
+                  </div>
+                </div>
+              )}
+              {clientProfile.current_revenue && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <TrendingUp className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Faturamento atual</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.current_revenue}</p>
+                  </div>
+                </div>
+              )}
+              {clientProfile.revenue_goal && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <Target className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Meta de faturamento</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.revenue_goal}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Seção de Onboarding X1 */}
       <OnboardingX1Section client={client} onStatusChange={handleRefreshClient} />
 
