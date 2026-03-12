@@ -124,10 +124,10 @@ export default function ClientDetails() {
           notes: data.notes || "",
         });
 
-        // Buscar profile do cliente para credenciais Meta Ads
+        // Buscar profile do cliente para credenciais Meta Ads e investimentos
         const { data: profileData } = await supabase
           .from("client_profile")
-          .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password")
+          .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password, initial_traffic_investment, monthly_investment, current_revenue, revenue_goal")
           .eq("client_id", id)
           .maybeSingle();
 
