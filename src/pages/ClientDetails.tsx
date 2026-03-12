@@ -69,6 +69,10 @@ export default function ClientDetails() {
     instagram_password?: string | null;
     facebook_login?: string | null;
     facebook_password?: string | null;
+    initial_traffic_investment?: string | null;
+    monthly_investment?: string | null;
+    current_revenue?: string | null;
+    revenue_goal?: string | null;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
