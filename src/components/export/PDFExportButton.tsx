@@ -17,6 +17,8 @@ interface PDFExportButtonProps {
   liveOptions?: any;
   liveSelected?: any;
   refreshKey?: number;
+  // For ads: filter which ads to include
+  adsFilter?: "all" | "static" | "video";
 }
 
 export function PDFExportButton({ 
