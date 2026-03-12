@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
@@ -69,6 +69,10 @@ export default function ClientDetails() {
     instagram_password?: string | null;
     facebook_login?: string | null;
     facebook_password?: string | null;
+    initial_traffic_investment?: string | null;
+    monthly_investment?: string | null;
+    current_revenue?: string | null;
+    revenue_goal?: string | null;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -120,10 +124,10 @@ export default function ClientDetails() {
           notes: data.notes || "",
         });
 
-        // Buscar profile do cliente para credenciais Meta Ads
+        // Buscar profile do cliente para credenciais Meta Ads e investimentos
         const { data: profileData } = await supabase
           .from("client_profile")
-          .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password")
+          .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password, initial_traffic_investment, monthly_investment, current_revenue, revenue_goal")
           .eq("client_id", id)
           .maybeSingle();
 
@@ -461,6 +465,58 @@ export default function ClientDetails() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Investimento em Tráfego */}
+      {clientProfile && (clientProfile.initial_traffic_investment || clientProfile.monthly_investment || clientProfile.current_revenue || clientProfile.revenue_goal) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Investimento em Tráfego
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {clientProfile.initial_traffic_investment && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <DollarSign className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Invest. inicial tráfego</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.initial_traffic_investment}</p>
+                  </div>
+                </div>
+              )}
+              {clientProfile.monthly_investment && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <DollarSign className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Investimento mensal</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.monthly_investment}</p>
+                  </div>
+                </div>
+              )}
+              {clientProfile.current_revenue && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <TrendingUp className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Faturamento atual</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.current_revenue}</p>
+                  </div>
+                </div>
+              )}
+              {clientProfile.revenue_goal && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <Target className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Meta de faturamento</p>
+                    <p className="font-semibold text-foreground">R$ {clientProfile.revenue_goal}</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

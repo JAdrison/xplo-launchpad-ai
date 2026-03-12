@@ -1,36 +1,59 @@
 
-## Exibir Investimento em Tráfego na Página Principal do Cliente
+# Enviar Anuncios Estaticos via Webhook
 
-### O que o usuário quer
-Mostrar o investimento em tráfego (`initial_traffic_investment`) de forma destacada na página do cliente, igual ao card de senhas Meta Ads — visível sem precisar abrir o Onboarding X1.
+## Resumo
+Adicionar um campo de URL de webhook na pagina de Configuracoes e um botao "Enviar via Webhook" na secao de anuncios estaticos (tanto no GeneratedContentViewer quanto no GeneratedAssetsSection). Ao clicar, os anuncios estaticos serao enviados via uma edge function para a URL configurada.
 
-### Análise do código atual
-Em `ClientDetails.tsx`:
-- O estado `clientProfile` só busca: `instagram_link, instagram_login, instagram_password, facebook_login, facebook_password`
-- Há um card separado "Acesso às Redes Sociais (Meta Ads)" que exibe as credenciais com visibilidade (eye icon)
-- Os dados de investimento (`initial_traffic_investment`, `monthly_investment`, `current_revenue`) existem na tabela `client_profile` mas não são exibidos nessa página
+## Etapas
 
-### Plano de implementação (1 arquivo)
+### 1. Adicionar campo de Webhook URL na pagina de Configuracoes
+- Adicionar uma nova secao "Integracao Webhook" na pagina `src/pages/Settings.tsx`
+- Campo de input para a URL do webhook, salvo em `localStorage` (mesmo padrao usado para as configuracoes de IA)
+- Botao de salvar com feedback visual
 
-**`src/pages/ClientDetails.tsx`**:
+### 2. Criar Edge Function `send-webhook`
+- Criar `supabase/functions/send-webhook/index.ts`
+- Recebe o payload (anuncios estaticos + dados do cliente) via POST
+- Encaminha para a URL de webhook fornecida
+- Retorna status de sucesso/erro
+- Inclui CORS headers e validacao
 
-1. Adicionar `initial_traffic_investment`, `monthly_investment`, `current_revenue` e `revenue_goal` ao tipo do estado `clientProfile`
-2. Atualizar a query do Supabase para buscar esses campos junto com os demais
-3. Adicionar um novo card **"Investimento em Tráfego"** abaixo do card Meta Ads, exibindo:
-   - Investimento em tráfego pago: `R$ {initial_traffic_investment}`
-   - Investimento mensal atual: `{monthly_investment}` (se preenchido)
-   - Faturamento atual: `{current_revenue}` (se preenchido)
-   - Meta de faturamento: `{revenue_goal}` (se preenchido)
-4. Card só aparece se ao menos um dos campos estiver preenchido (mesmo padrão do card Meta Ads)
-5. Visual com ícone `TrendingUp` e `DollarSign`, no mesmo estilo das outras seções
+### 3. Adicionar botao "Enviar via Webhook" nos componentes de anuncios
+
+**Em `src/components/generator/GeneratedContentViewer.tsx`:**
+- Botao ao lado do PDF Export na secao de anuncios
+- Envia somente os `staticAds` com dados do cliente (nome, ICP)
+
+**Em `src/components/client/GeneratedAssetsSection.tsx`:**
+- Mesmo botao na secao de anuncios do detalhe do cliente
+
+### 4. Payload do Webhook
+
+O JSON enviado ao webhook tera este formato:
 
 ```text
-┌─────────────────────────────────────────┐
-│ 💰 Investimento em Tráfego              │
-├─────────────────────────────────────────┤
-│  Invest. inicial tráfego:  R$ 2.000     │
-│  Investimento mensal:      R$ 5.000     │
-│  Faturamento atual:        R$ 30.000    │
-│  Meta de faturamento:      R$ 100.000   │
-└─────────────────────────────────────────┘
+{
+  "client_name": "XPLO",
+  "icp_name": "Proprietario investidor",
+  "sent_at": "2026-03-01T...",
+  "ads": [
+    {
+      "headline": "...",
+      "subheadline": "...",
+      "body_text": "...",
+      "cta": "...",
+      "eliminators": [...],
+      "angle": "pain|desire",
+      "focus": "...",
+      "visual_suggestion": "..."
+    }
+  ]
+}
 ```
+
+## Detalhes Tecnicos
+
+- A URL do webhook sera armazenada em `localStorage` com a chave `webhook_url`
+- A edge function valida a URL e faz o POST para o destino
+- O botao mostra estado de loading e feedback (toast de sucesso/erro)
+- Se nao houver URL configurada, mostra alerta pedindo para configurar nas Configuracoes
