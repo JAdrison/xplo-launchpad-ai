@@ -266,7 +266,7 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
       {/* Video Ads */}
       {videoAds.length > 0 && (
         <div>
-          <h2 style={sectionTitleStyle}>
+          <h2 style={{ ...sectionTitleStyle, pageBreakBefore: "always", breakBefore: "page" }}>
             🎬 ROTEIROS DE VÍDEO ({videoAds.length})
           </h2>
           {videoAds.map(renderVideoAd)}
