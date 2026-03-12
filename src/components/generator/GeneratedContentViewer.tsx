@@ -1154,11 +1154,17 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                     </Button>
                     <PDFExportButton
                       type="ads"
+                      adsFilter="static"
                       clientName={clientName}
-                      content={{
-                        videoAds,
-                        staticAds,
-                      }}
+                      content={{ videoAds, staticAds }}
+                      createdAt={new Date().toISOString()}
+                      refreshKey={adsRefreshKey}
+                    />
+                    <PDFExportButton
+                      type="ads"
+                      adsFilter="video"
+                      clientName={clientName}
+                      content={{ videoAds, staticAds }}
                       createdAt={new Date().toISOString()}
                       refreshKey={adsRefreshKey}
                     />

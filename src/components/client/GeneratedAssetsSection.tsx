@@ -963,6 +963,15 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                   </Button>
                   <PDFExportButton
                     type="ads"
+                    adsFilter="static"
+                    clientName={clientName || "cliente"}
+                    content={{ videoAds, staticAds }}
+                    createdAt={new Date().toISOString()}
+                    refreshKey={adsRefreshKey}
+                  />
+                  <PDFExportButton
+                    type="ads"
+                    adsFilter="video"
                     clientName={clientName || "cliente"}
                     content={{ videoAds, staticAds }}
                     createdAt={new Date().toISOString()}

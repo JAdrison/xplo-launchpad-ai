@@ -13,10 +13,12 @@ interface PDFExportButtonProps {
   variant?: string;
   createdAt?: string;
   size?: "sm" | "default" | "lg" | "icon";
-  // For live-edited options sync
   liveOptions?: any;
   liveSelected?: any;
   refreshKey?: number;
+  // For ads: filter which ads to include
+  adsFilter?: "all" | "static" | "video";
+  label?: string;
 }
 
 export function PDFExportButton({ 
@@ -28,7 +30,9 @@ export function PDFExportButton({
   size = "sm",
   liveOptions,
   liveSelected,
-  refreshKey = 0
+  refreshKey = 0,
+  adsFilter = "all",
+  label,
 }: PDFExportButtonProps) {
   const sanitizedClientName = clientName
     .toLowerCase()
@@ -38,14 +42,28 @@ export function PDFExportButton({
   
   const dateStr = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
   
-  const typeLabels = {
+  const typeLabels: Record<string, string> = {
     offer: "oferta",
     "landing-page": "landing-page",
     onboarding: "onboarding-x1",
     ads: "anuncios",
+    "ads-static": "anuncios-estaticos",
+    "ads-video": "roteiros-video",
   };
+
+  const filenameKey = type === "ads" && adsFilter !== "all"
+    ? adsFilter === "static" ? "ads-static" : "ads-video"
+    : type;
   
-  const filename = `${typeLabels[type]}-${sanitizedClientName}-${dateStr}.pdf`;
+  const filename = `${typeLabels[filenameKey]}-${sanitizedClientName}-${dateStr}.pdf`;
+
+  // Compute filtered ads lists
+  const filteredVideoAds = adsFilter === "static" ? [] : (content.videoAds || []);
+  const filteredStaticAds = adsFilter === "video" ? [] : (content.staticAds || []);
+
+  const defaultLabel = type === "ads"
+    ? adsFilter === "static" ? "Estáticos" : adsFilter === "video" ? "Vídeos" : "PDF"
+    : "PDF";
 
   const { toPDF, targetRef } = usePDF({
     filename,
@@ -62,10 +80,10 @@ export function PDFExportButton({
         variant="ghost" 
         size={size} 
         onClick={() => toPDF()}
-        title="Exportar PDF"
+        title={`Exportar PDF — ${label ?? defaultLabel}`}
       >
         <FileDown className="h-4 w-4" />
-        {size !== "icon" && <span className="ml-1">PDF</span>}
+        {size !== "icon" && <span className="ml-1">{label ?? defaultLabel}</span>}
       </Button>
       
       {/* Hidden template for PDF generation */}
@@ -111,8 +129,8 @@ export function PDFExportButton({
           <AdsPDFTemplate 
             clientName={clientName}
             createdAt={createdAt}
-            videoAds={content.videoAds || []}
-            staticAds={content.staticAds || []}
+            videoAds={filteredVideoAds}
+            staticAds={filteredStaticAds}
           />
         )}
       </div>
