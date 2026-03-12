@@ -138,7 +138,10 @@ export function AdsPDFTemplate({ clientName, createdAt, videoAds, staticAds }: A
   );
 
   const renderVideoAd = (ad: Ad, idx: number) => (
-    <div key={ad.id} style={cardStyle}>
+    <div key={ad.id} style={{
+      ...cardStyle,
+      ...(idx > 0 ? { pageBreakBefore: "always", breakBefore: "page" } : {}),
+    }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
         <span style={{ 
           backgroundColor: "#f3e8ff", 
