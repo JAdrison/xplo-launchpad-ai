@@ -178,7 +178,11 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
 
         <div className="space-y-2">
           <Label>Localização *</Label>
-          <TagInput value={form.locations} onChange={(v) => setForm((p) => ({ ...p, locations: v }))} placeholder="💡 Ex: Canoa Quebrada, CE — Praia" />
+          <Input
+            value={form.location}
+            onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+            placeholder="💡 Ex: Canoa Quebrada, CE — Praia"
+          />
         </div>
 
         <div className="space-y-2">
