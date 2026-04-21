@@ -5,10 +5,9 @@ import { OfferPDFTemplate } from "./OfferPDFTemplate";
 import { LandingPagePDFTemplate } from "./LandingPagePDFTemplate";
 import { OnboardingPDFTemplate } from "./OnboardingPDFTemplate";
 import { AdsPDFTemplate } from "./AdsPDFTemplate";
-import { OnboardingFullPDFTemplate } from "./OnboardingFullPDFTemplate";
 
 interface PDFExportButtonProps {
-  type: "offer" | "landing-page" | "onboarding" | "onboarding-full" | "ads";
+  type: "offer" | "landing-page" | "onboarding" | "ads";
   clientName: string;
   content: any;
   variant?: string;
@@ -47,7 +46,6 @@ export function PDFExportButton({
     offer: "oferta",
     "landing-page": "landing-page",
     onboarding: "onboarding-x1",
-    "onboarding-full": "onboarding-completo",
     ads: "anuncios",
     "ads-static": "anuncios-estaticos",
     "ads-video": "roteiros-video",
@@ -125,17 +123,6 @@ export function PDFExportButton({
             market={content.market}
             icp={content.icp}
             promise={content.promise}
-          />
-        )}
-        {type === "onboarding-full" && (
-          <OnboardingFullPDFTemplate
-            clientName={clientName}
-            createdAt={createdAt}
-            onboarding={content.onboarding}
-            offer={content.offer}
-            landingPages={content.landingPages}
-            videoAds={content.videoAds}
-            staticAds={content.staticAds}
           />
         )}
         {type === "ads" && (
