@@ -472,174 +472,162 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
           </div>
         )}
 
-        {/* Resumo */}
+        {/* Resumo COMPLETO */}
         {hasData && (
           <>
             <Separator />
 
-            {/* Cadastro */}
-            {(client.cnpj || client.responsible_name || data.profile?.current_revenue) && (
-              <div>
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <Building2 className="h-4 w-4" />
-                  Cadastro
-                </h4>
-                {client.responsible_name && (
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">Responsável:</span> {client.responsible_name}
-                  </p>
-                )}
-                {data.profile?.current_revenue && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                    <DollarSign className="h-3 w-3" />
-                    <span className="font-medium text-foreground">Faturamento:</span>{" "}
-                    {data.profile.current_revenue}
-                  </p>
-                )}
-                {data.profile?.initial_traffic_investment && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                    <DollarSign className="h-3 w-3" />
-                    <span className="font-medium text-foreground">Investimento inicial:</span> R${" "}
-                    {data.profile.initial_traffic_investment}
-                  </p>
-                )}
-              </div>
+            {/* Aviso confidencialidade */}
+            {(data.profile?.instagram_password || data.profile?.facebook_password) && (
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Documento confidencial</AlertTitle>
+                <AlertDescription className="text-xs">
+                  Este resumo contém credenciais (Instagram/Facebook) em texto puro.
+                  Compartilhe apenas com pessoas autorizadas.
+                </AlertDescription>
+              </Alert>
             )}
 
-            {/* Negócio */}
-            {(Object.keys(profileData).length > 0 ||
-              (data.profile?.differentiators?.length ?? 0) > 0 ||
-              data.profile?.product_description) && (
-              <div>
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <Package className="h-4 w-4" />
-                  Sobre o Negócio
-                </h4>
-                {(profileData.type || profileData.specialty || profileData.product) && (
-                  <p className="text-foreground font-medium">
-                    {profileData.type || profileData.specialty || profileData.product}
-                  </p>
-                )}
-                {data.profile?.product_description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {data.profile.product_description}
-                  </p>
-                )}
-                {(data.profile?.differentiators?.length ?? 0) > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {data.profile!.differentiators!.map((diff, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {diff}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                {(data.profile?.region?.length ?? 0) > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2 items-center">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    {data.profile!.region!.map((r, idx) => (
-                      <Badge key={idx} variant="outline" className="text-xs">
-                        {r}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* ETAPA 1 — Cadastro */}
+            <FullSection icon={Building2} title="Cadastro">
+              <FullField label="Nome do negócio" value={client.name} />
+              <FullField label="Nicho" value={client.niche_label || client.niche_type} />
+              <FullField label="CNPJ" value={client.cnpj} />
+              <FullField label="Responsável" value={client.responsible_name} />
+              <FullField label="CPF do responsável" value={client.responsible_cpf} />
+              <FullField label="E-mail" value={client.email} />
+              <FullField label="Telefone" value={client.phone} />
+              <FullField label="Faturamento atual" value={data.profile?.current_revenue} />
+              <FullField
+                label="Investimento inicial em tráfego"
+                value={data.profile?.initial_traffic_investment ? `R$ ${data.profile.initial_traffic_investment}` : null}
+              />
+            </FullSection>
 
-            {/* SWOT */}
+            {/* ETAPA 2 — Sobre o negócio */}
+            <FullSection icon={Package} title="Sobre o Negócio">
+              <FullField label="Nome do produto/serviço" value={data.profile?.product_name} />
+              <FullField label="Descrição" value={data.profile?.product_description} />
+              <FullField label="Diferenciais" value={data.profile?.differentiators} />
+              <FullField label="Benefícios" value={data.profile?.benefits} />
+              <FullField label="Promoções" value={data.profile?.promotions} />
+              <FullField label="Ticket médio" value={data.profile?.average_ticket} />
+              <FullField label="Modelo de venda" value={data.profile?.sales_model} />
+              <FullField label="Região(ões)" value={data.profile?.region} />
+              {Object.keys(profileData).length > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground mb-1">Campos específicos do nicho:</p>
+                  {Object.entries(profileData).map(([k, v]) => (
+                    <FullField key={k} label={humanizeKey(k)} value={v} />
+                  ))}
+                </>
+              )}
+            </FullSection>
+
+            {/* ETAPA 3 — SWOT completo */}
             {data.swot && (
-              <div>
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Diagnóstico (SWOT)
-                </h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="font-medium text-foreground">💪 Forças internas</p>
-                    <p className="text-muted-foreground">
-                      {(data.swot.forcas_internas_tags?.length ?? 0)} itens
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">🔧 Fraquezas internas</p>
-                    <p className="text-muted-foreground">
-                      {(data.swot.fraquezas_internas_tags?.length ?? 0)} itens
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">🌤️ Forças do ambiente</p>
-                    <p className="text-muted-foreground">
-                      {(data.swot.forcas_ambiente_tags?.length ?? 0)} itens
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">⚠️ Fraquezas do ambiente</p>
-                    <p className="text-muted-foreground">
-                      {(data.swot.fraquezas_ambiente_tags?.length ?? 0)} itens
-                    </p>
-                  </div>
+              <FullSection icon={BarChart3} title="Diagnóstico (Pontos fortes e fracos)">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { k: "💪 Ponto forte do negócio", t: data.swot.forcas_internas_tags, x: data.swot.forcas_internas_text },
+                    { k: "🔧 Ponto fraco do negócio", t: data.swot.fraquezas_internas_tags, x: data.swot.fraquezas_internas_text },
+                    { k: "🌤️ Ponto forte da região", t: data.swot.forcas_ambiente_tags, x: data.swot.forcas_ambiente_text },
+                    { k: "⚠️ Ponto fraco da região", t: data.swot.fraquezas_ambiente_tags, x: data.swot.fraquezas_ambiente_text },
+                  ].map((q) => (
+                    <div key={q.k} className="rounded-md border p-3 space-y-2">
+                      <div className="font-medium text-xs">{q.k}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(q.t || []).map((t: string) => (
+                          <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                        ))}
+                        {(!q.t || q.t.length === 0) && <span className="text-xs text-muted-foreground">Sem tags</span>}
+                      </div>
+                      {q.x && <p className="text-xs text-muted-foreground">{q.x}</p>}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </FullSection>
             )}
 
-            {/* Mercado */}
-            {(Object.keys(marketData).length > 0 ||
+            {/* ETAPA 4 — Mercado e investimento */}
+            <FullSection icon={TrendingUp} title="Mercado e Investimento">
+              <FullField label="Faturamento atual" value={data.profile?.current_revenue} />
+              <FullField label="Meta de faturamento" value={data.profile?.revenue_goal} />
+              <FullField label="Investimento mensal em marketing" value={data.profile?.monthly_investment} />
+              <FullField label="Investimento inicial em tráfego" value={data.profile?.initial_traffic_investment} />
+              <FullField label="Tamanho da equipe de vendas" value={data.profile?.sales_team_size} />
+              <FullField label="Canais de demanda" value={data.profile?.demand_channels} />
+              <Separator className="my-2" />
+              <p className="text-xs text-muted-foreground mb-1">Concorrentes e inspirações:</p>
+              <FullField label="Concorrente 1 — Nome" value={(data.profile?.local_competitor_1 as any)?.name} />
+              <FullField label="Concorrente 1 — Motivo" value={(data.profile?.local_competitor_1 as any)?.reason} />
+              <FullField label="Concorrente 2 — Nome" value={(data.profile?.local_competitor_2 as any)?.name} />
+              <FullField label="Concorrente 2 — Motivo" value={(data.profile?.local_competitor_2 as any)?.reason} />
+              <FullField label="Inspiração 1 — Nome" value={(data.profile?.inspiration_company_1 as any)?.name} />
+              <FullField label="Inspiração 1 — Motivo" value={(data.profile?.inspiration_company_1 as any)?.reason} />
+              <FullField label="Inspiração 2 — Nome" value={(data.profile?.inspiration_company_2 as any)?.name} />
+              <FullField label="Inspiração 2 — Motivo" value={(data.profile?.inspiration_company_2 as any)?.reason} />
+              {Object.keys(marketData).length > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <p className="text-xs text-muted-foreground mb-1">Campos específicos do nicho:</p>
+                  {Object.entries(marketData).map(([k, v]) => (
+                    <FullField key={k} label={humanizeKey(k)} value={v} />
+                  ))}
+                </>
+              )}
+            </FullSection>
+
+            {/* Acessos Meta Ads */}
+            {(data.profile?.instagram_link ||
               data.profile?.instagram_login ||
-              data.profile?.facebook_login) && (
-              <div>
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Mercado e Acessos
-                </h4>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  {data.profile?.instagram_login && (
-                    <p>
-                      <span className="font-medium text-foreground">Instagram:</span>{" "}
-                      {data.profile.instagram_login}
-                    </p>
-                  )}
-                  {data.profile?.facebook_login && (
-                    <p>
-                      <span className="font-medium text-foreground">Facebook:</span>{" "}
-                      {data.profile.facebook_login}
-                    </p>
-                  )}
-                  {data.profile?.whatsapp_number && (
-                    <p>
-                      <span className="font-medium text-foreground">WhatsApp:</span>{" "}
-                      {data.profile.whatsapp_number}
-                    </p>
-                  )}
+              data.profile?.instagram_password ||
+              data.profile?.facebook_login ||
+              data.profile?.facebook_password ||
+              data.profile?.whatsapp_number ||
+              data.profile?.google_my_business) && (
+              <FullSection icon={Lock} title="Acessos Meta Ads (Instagram / Facebook / WhatsApp)">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lock className="h-3 w-3 text-destructive" />
+                  <Badge variant="destructive" className="text-[10px]">CONFIDENCIAL</Badge>
                 </div>
-              </div>
+                <FullField label="Instagram (link)" value={data.profile?.instagram_link} />
+                <FullField label="Instagram — login" value={data.profile?.instagram_login} />
+                <FullField label="Instagram — senha" value={data.profile?.instagram_password} />
+                <FullField label="Facebook — login" value={data.profile?.facebook_login} />
+                <FullField label="Facebook — senha" value={data.profile?.facebook_password} />
+                <FullField label="WhatsApp comercial" value={data.profile?.whatsapp_number} />
+                <FullField label="Google Meu Negócio" value={data.profile?.google_my_business} />
+              </FullSection>
             )}
 
-            {/* Perfil do Cliente (ICP 3 blocos) */}
+            {/* ETAPA 5 — Perfil do cliente (3 blocos completos) */}
             {data.icp && (
-              <div>
-                <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <Users className="h-4 w-4" />
-                  Perfil do Cliente
-                </h4>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                    Bloco 1 — Quem você atende hoje{" "}
-                    {Object.keys((data.icp.bloco1_data as any) || {}).length > 0 ? "✓" : ""}
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                    Bloco 2 — Cliente dos sonhos{" "}
-                    {Object.keys((data.icp.bloco2_data as any) || {}).length > 0 ? "✓" : ""}
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                    Bloco 3 — Quem evitar{" "}
-                    {Object.keys((data.icp.bloco3_data as any) || {}).length > 0 ? "✓" : ""}
-                  </li>
-                </ul>
-              </div>
+              <FullSection icon={Users} title="Perfil dos Principais Clientes">
+                <div className="space-y-3">
+                  {[
+                    { title: "Bloco 1 — Cliente que você mais quer", data: data.icp.bloco1_data },
+                    { title: "Bloco 2 — Cliente bom, mas não ideal", data: data.icp.bloco2_data },
+                    { title: "Bloco 3 — Cliente que você quer evitar", data: data.icp.bloco3_data },
+                  ].map((bloco) => {
+                    const obj = (bloco.data as Record<string, any>) || {};
+                    return (
+                      <div key={bloco.title} className="rounded-md border p-3">
+                        <div className="font-medium text-sm mb-2">{bloco.title}</div>
+                        {Object.keys(obj).length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">Não preenchido</p>
+                        ) : (
+                          Object.entries(obj).map(([k, v]) => (
+                            <FullField key={k} label={humanizeKey(k)} value={v} />
+                          ))
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </FullSection>
             )}
           </>
         )}
