@@ -1,82 +1,71 @@
 
 
-## Diferenciais e Comodidades — Sugestões clicáveis + adição livre
+## Revisão final e PDF completos — com tudo que foi respondido
+
+### Objetivo
+
+Tanto a tela de **Revisão Final** (etapa 6) quanto o **PDF de Onboarding X1** passarão a mostrar **100% das respostas** do cliente, incluindo dados sensíveis (senhas Instagram/Facebook). Hoje os dois estão incompletos: a tela mostra só um resumo curto e o PDF foi feito para a estrutura antiga, ignorando SWOT, perfil por nicho (`profile_data`), mercado por nicho (`market_data`) e os 3 blocos de ICP novos.
+
+### Aviso importante (LGPD)
+
+Por segurança, nossa regra atual mascara senhas. Você está pedindo para **exibi-las em texto puro**, tanto na tela quanto no PDF. Vou seguir o pedido, mas adicionarei:
+- Um **alerta visual** de confidencialidade no topo da revisão e do PDF ("Documento confidencial — contém credenciais de acesso").
+- Marca d'água "CONFIDENCIAL" no rodapé de cada seção sensível do PDF.
+
+Se preferir manter as senhas mascaradas e mostrar só nos olhos clicando em "revelar", me avise antes que eu implemente.
 
 ### O que muda
 
-Em **Diferenciais da hospedagem** e **Comodidades e estrutura** (etapa 2A — Hospedagem), o usuário passa a ver uma **lista de chips sugeridos** clicáveis. Clicar adiciona à seleção; clicar novamente remove. O `TagInput` continua disponível abaixo para digitar qualquer item extra.
+#### 1. Tela: `StepReviewV2.tsx` (etapa 6 do wizard)
 
-Também corrijo o label "Diferenciais da hospedagem * (até 5)" que ficou desatualizado — remover o "(até 5)" já que removemos o limite.
+Reescrever a revisão para mostrar **todas** as respostas, organizadas por etapa do wizard, no mesmo idioma das perguntas:
 
-### Listas de sugestões
+- **Etapa 1 — Cadastro**: nome do negócio, nicho, CNPJ, responsável, CPF, e-mail, telefone, faturamento atual, investimento inicial em tráfego.
+- **Etapa 2 — Sobre o negócio**: percorre dinamicamente todos os campos de `profile_data` (varia por nicho: hospedagem, saúde, genérico) — tipo, localização, unidades, diária, diferenciais, comodidades, experiência, especialidade, ticket, etc. Mostra também `product_name`, `product_description`, `differentiators`, `benefits`, `promotions`, `average_ticket`, `sales_model`.
+- **Etapa 3 — Diagnóstico (SWOT)**: 4 quadrantes com tags + texto livre, usando os títulos por nicho ("Ponto forte da hospedagem", etc.).
+- **Etapa 4 — Mercado e acessos**: faturamento, investimento mensal, meta, canais de demanda, equipe; concorrentes 1/2 (nome + motivo); inspirações 1/2; **acessos Meta Ads**: Instagram link, login, **senha em texto puro**, Facebook login, **senha em texto puro**, WhatsApp, Google Meu Negócio; e todo o `market_data` extra do nicho.
+- **Etapa 5 — Perfil dos principais clientes**: 3 blocos completos (`bloco1_data`, `bloco2_data`, `bloco3_data`) com todos os campos preenchidos (motivação, perfil, comportamento, o que evitar, etc.).
+- Banner de aviso "Documento confidencial" no topo.
 
-**Diferenciais da hospedagem** (subjetivo, posicionamento):
-- Vista para o mar
-- Vista para a serra
-- Pé na areia
-- Piscina privativa
-- Piscina aquecida
-- Pet-friendly
-- Café da manhã incluso
-- Romântico para casais
-- Ideal para famílias
-- Ambiente para grupos
-- Localização privilegiada
-- Atendimento personalizado
-- Decoração temática
-- Contato com a natureza
-- Estrutura para home-office
+Componente auxiliar interno `RenderJSON` para listar pares chave→valor de objetos `profile_data`/`market_data`/`bloco*_data`, com labels amigáveis (mapa de tradução pt-BR, fallback para a chave bruta) e tratamento de arrays/strings.
 
-**Comodidades e estrutura** (objetivo, infraestrutura):
-- Wi-Fi
-- Ar-condicionado
-- TV
-- Frigobar
-- Cozinha equipada
-- Churrasqueira
-- Estacionamento
-- Piscina
-- Hidromassagem
-- Sauna
-- Academia
-- Área de lazer
-- Espaço kids
-- Lavanderia
-- Berço disponível
-- Acessibilidade
-- Recepção 24h
+#### 2. PDF: `OnboardingPDFTemplate.tsx`
 
-### Como funciona o componente
+Reescrever para receber a mesma estrutura nova que `OnboardingX1Section.tsx` já monta em `pdfContent` (props: `client`, `company`, `product`, `swot`, `market` com `market_data`, `icp` com 3 blocos). Seções:
 
-```text
-┌─ Sugestões (clique para adicionar) ─────────────┐
-│ [Vista mar] [Piscina] [Pet-friendly] [+ ...]    │  ← chips outline
-│ [Café incluso ✓] [Romântico ✓]                  │  ← selecionado = preenchido
-└─────────────────────────────────────────────────┘
-┌─ Adicionar outro ───────────────────────────────┐
-│ [input.....................]  [+]               │
-└─────────────────────────────────────────────────┘
-Tags ativas: [Café incluso ×] [Romântico ×] [Sauna privativa ×]
-```
+1. Capa + aviso "Documento confidencial — contém credenciais"
+2. Cadastro (todos os campos)
+3. Sobre o negócio (product + todo `profile_data` por nicho)
+4. Diagnóstico SWOT (4 quadrantes: tags + texto)
+5. Mercado e investimento (revenue, meta, canais, equipe + `market_data` extra)
+6. Concorrentes e inspirações
+7. **Redes sociais e acessos Meta Ads** — exibir senhas em texto puro + selo "CONFIDENCIAL"
+8. Perfil dos clientes — 3 blocos completos com todas as chaves
+9. Promessa (se existir)
+10. Rodapé com data e nota de confidencialidade
 
-- Chips sugeridos: clique alterna entre **adicionar** e **remover** da lista de tags
-- Item adicionado pelo input livre vira tag normal e (se coincidir com sugestão) marca o chip como ativo
-- Mesma lista de tags final — armazenamento sem mudança no banco
+Reaproveita o estilo atual (logo XPLO em todas as páginas, margens, `pageBreakInside`).
 
-### Mudanças técnicas
+#### 3. Ajuste em `OnboardingX1Section.tsx`
 
-1. **Novo componente** `src/components/onboarding/shared/SuggestedTagInput.tsx`
-   - Props: `value`, `onChange`, `placeholder`, `suggestions: string[]`
-   - Renderiza grid de chips de sugestão acima do `TagInput` existente
-   - Toggle por clique; reusa input de texto livre
+O `pdfContent` já existe mas está incompleto. Adicionar ao objeto `market`:
+- `instagram_link`, `instagram_login`, `instagram_password`
+- `facebook_login`, `facebook_password`
+- `whatsapp_number`, `google_my_business`
+- `local_competitor_1/2`, `inspiration_company_1/2`
 
-2. **Editar** `src/components/onboarding/steps/business/StepBusinessHospedagem.tsx`
-   - Importar `SuggestedTagInput`
-   - Trocar `TagInput` por `SuggestedTagInput` nos campos `differentiators` e `comodidades`, passando as listas acima
-   - Corrigir label "Diferenciais da hospedagem *" (remover "(até 5)" se houver resíduo)
+E acrescentar `profile_data` cru ao objeto `product` (para o template iterar campos por nicho).
+
+### Detalhes técnicos
+
+- **Sem migração de banco** — todos os dados já existem nas tabelas `clients`, `client_profile`, `client_swot`, `client_icp`.
+- Campo `market_data` e `profile_data` são `jsonb` livres → renderização dinâmica via `Object.entries` + dicionário de labels (`LABELS_PT`) para chaves conhecidas (`type`, `units`, `diaria`, `experiencia`, `differentiators`, `comodidades`, `motivacao`, etc.); chaves desconhecidas caem para `humanize(key)`.
+- Senhas: removidas as funções `mask()` e a nota "por segurança não exibimos senhas". Em vez disso, badge vermelho "Confidencial".
+- PDF mantém `react-to-pdf` com layout A4.
 
 ### Fora do escopo
 
-- Saúde e Genérico continuam com `TagInput` simples (podem receber o mesmo tratamento depois se você quiser)
-- Banco de dados não muda
+- Não muda o fluxo de salvar/concluir.
+- Não muda o estilo visual geral da plataforma.
+- Não cria histórico/versão do PDF.
 
