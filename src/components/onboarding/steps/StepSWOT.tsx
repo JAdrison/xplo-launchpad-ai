@@ -210,7 +210,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
                 <div className="flex items-center justify-between">
                   <div className="font-medium text-sm flex items-center gap-2">
                     <span className="text-lg">{q.emoji}</span>
-                    {q.title}
+                    {TITLES[niche][q.key]}
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => setEditing((p) => ({ ...p, [q.key]: !p[q.key] }))}>
                     <Pencil className="h-4 w-4" />
