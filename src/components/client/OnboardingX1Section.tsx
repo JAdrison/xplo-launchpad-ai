@@ -45,11 +45,18 @@ type Client = Tables<"clients">;
 type ClientProfile = Tables<"client_profile">;
 type ClientSwot = Tables<"client_swot">;
 type ClientIcp = Tables<"client_icp">;
+type Offer = Tables<"offers_hormozi">;
+type LandingPage = Tables<"landing_pages">;
+type Ad = Tables<"ads">;
 
 interface OnboardingData {
   profile: ClientProfile | null;
   swot: ClientSwot | null;
   icp: ClientIcp | null;
+  offer: Offer | null;
+  landingPages: LandingPage[];
+  videoAds: Ad[];
+  staticAds: Ad[];
 }
 
 interface OnboardingX1SectionProps {
