@@ -467,7 +467,7 @@ export function OnboardingPDFTemplate({
       {/* 8. PROMESSA */}
       {promise && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>8. PROMESSA</h2>
+          <h2 style={sectionTitleStyle}>6. PROMESSA</h2>
           <div
             style={{
               backgroundColor: "#f5f3ff",
