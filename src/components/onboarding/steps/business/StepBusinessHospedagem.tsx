@@ -115,7 +115,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     try {
       const profile_data = {
         type: form.type,
-        locations: form.locations,
+        location: form.location.trim(),
         units: form.units,
         diaria: form.diaria,
         comodidades: form.comodidades,
