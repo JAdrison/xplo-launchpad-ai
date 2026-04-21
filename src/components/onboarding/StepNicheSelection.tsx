@@ -83,7 +83,6 @@ export function StepNicheSelection({ clientId, initialNiche, initialLabel, onNex
 
       const { error } = await supabase
         .from("clients")
-        // @ts-expect-error - niche_type/niche_label são novos campos pós-migration
         .update({ niche_type: selected, niche_label: label, niche: label })
         .eq("id", clientId);
 
