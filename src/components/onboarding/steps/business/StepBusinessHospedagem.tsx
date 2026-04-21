@@ -7,6 +7,45 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, Hotel, Loader2 } from "lucide-react";
 import { TagInput } from "../../shared/TagInput";
+import { SuggestedTagInput } from "../../shared/SuggestedTagInput";
+
+const DIFFERENTIATOR_SUGGESTIONS = [
+  "Vista para o mar",
+  "Vista para a serra",
+  "Pé na areia",
+  "Piscina privativa",
+  "Piscina aquecida",
+  "Pet-friendly",
+  "Café da manhã incluso",
+  "Romântico para casais",
+  "Ideal para famílias",
+  "Ambiente para grupos",
+  "Localização privilegiada",
+  "Atendimento personalizado",
+  "Decoração temática",
+  "Contato com a natureza",
+  "Estrutura para home-office",
+];
+
+const COMODIDADE_SUGGESTIONS = [
+  "Wi-Fi",
+  "Ar-condicionado",
+  "TV",
+  "Frigobar",
+  "Cozinha equipada",
+  "Churrasqueira",
+  "Estacionamento",
+  "Piscina",
+  "Hidromassagem",
+  "Sauna",
+  "Academia",
+  "Área de lazer",
+  "Espaço kids",
+  "Lavanderia",
+  "Berço disponível",
+  "Acessibilidade",
+  "Recepção 24h",
+];
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
