@@ -84,7 +84,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
       setProfileId(data.id);
       setForm({
         type: pd.type || "",
-        locations: pd.locations || data.region || [],
+        location: pd.location || (Array.isArray(pd.locations) ? pd.locations[0] : "") || (Array.isArray(data.region) ? data.region[0] : "") || "",
         units: pd.units || "",
         diaria: pd.diaria || data.average_ticket || "",
         differentiators: data.differentiators || [],
