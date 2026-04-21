@@ -190,17 +190,6 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
         <CardDescription>Mapeie pontos fortes e fracos do seu negócio e do ambiente externo.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="p-4 rounded-lg border bg-muted/30 flex items-start gap-3">
-          <Sparkles className="h-5 w-5 text-muted-foreground mt-0.5" />
-          <div className="flex-1 space-y-2">
-            <p className="text-sm font-medium">{isEmpty ? "Quer ajuda para começar?" : "Quer gerar sugestões novas?"}</p>
-            <p className="text-sm text-muted-foreground">A IA analisa seu nicho e seu cadastro para sugerir pontos relevantes nos 4 quadrantes.</p>
-            <Button type="button" variant="outline" onClick={generate} disabled={isGenerating} className="gap-2">
-              {isGenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</> : isEmpty ? <><Sparkles className="h-4 w-4" /> Gerar com IA</> : <><RefreshCw className="h-4 w-4" /> Gerar novamente</>}
-            </Button>
-          </div>
-        </div>
-
         <div className="grid gap-4 md:grid-cols-2">
           {QUADRANT_META.map((q) => {
             const s = state[q.key];
