@@ -432,7 +432,7 @@ export function OnboardingPDFTemplate({
       {/* 7. PERFIL DOS CLIENTES */}
       {icp && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>7. PERFIL DOS PRINCIPAIS CLIENTES</h2>
+          <h2 style={sectionTitleStyle}>5. PERFIL DOS PRINCIPAIS CLIENTES</h2>
           {[
             { title: "Bloco 1 — Cliente que você mais quer", data: icp.bloco1 },
             { title: "Bloco 2 — Cliente bom, mas não ideal", data: icp.bloco2 },
