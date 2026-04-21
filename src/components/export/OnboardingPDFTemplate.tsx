@@ -365,7 +365,7 @@ export function OnboardingPDFTemplate({
         market.inspiration_company_1?.name ||
         market.inspiration_company_2?.name) && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>5. CONCORRENTES E INSPIRAÇÕES</h2>
+          <h2 style={sectionTitleStyle}>4.1. CONCORRENTES E INSPIRAÇÕES</h2>
           {market.local_competitor_1?.name && (
             <p style={valueStyle}>
               <strong>Concorrente 1: {market.local_competitor_1.name}</strong>
@@ -411,7 +411,7 @@ export function OnboardingPDFTemplate({
           }}
         >
           <h2 style={sectionTitleStyle}>
-            6. REDES SOCIAIS E ACESSOS META ADS
+            4.2. REDES SOCIAIS E ACESSOS META ADS
             <ConfidentialBadge />
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -432,7 +432,7 @@ export function OnboardingPDFTemplate({
       {/* 7. PERFIL DOS CLIENTES */}
       {icp && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>7. PERFIL DOS PRINCIPAIS CLIENTES</h2>
+          <h2 style={sectionTitleStyle}>5. PERFIL DOS PRINCIPAIS CLIENTES</h2>
           {[
             { title: "Bloco 1 — Cliente que você mais quer", data: icp.bloco1 },
             { title: "Bloco 2 — Cliente bom, mas não ideal", data: icp.bloco2 },
@@ -467,7 +467,7 @@ export function OnboardingPDFTemplate({
       {/* 8. PROMESSA */}
       {promise && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>8. PROMESSA</h2>
+          <h2 style={sectionTitleStyle}>6. PROMESSA</h2>
           <div
             style={{
               backgroundColor: "#f5f3ff",
