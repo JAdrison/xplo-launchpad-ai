@@ -179,12 +179,22 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
 
         <div className="space-y-2">
           <Label>Diferenciais da hospedagem *</Label>
-          <TagInput value={form.differentiators} onChange={(v) => setForm((p) => ({ ...p, differentiators: v }))} placeholder="💡 Ex: piscina privativa, café incluso, pet-friendly" />
+          <SuggestedTagInput
+            value={form.differentiators}
+            onChange={(v) => setForm((p) => ({ ...p, differentiators: v }))}
+            suggestions={DIFFERENTIATOR_SUGGESTIONS}
+            placeholder="💡 Adicionar outro diferencial..."
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Comodidades e estrutura</Label>
-          <TagInput value={form.comodidades} onChange={(v) => setForm((p) => ({ ...p, comodidades: v }))} placeholder="💡 Ex: ar-cond, churrasqueira, internet, estacionamento" />
+          <SuggestedTagInput
+            value={form.comodidades}
+            onChange={(v) => setForm((p) => ({ ...p, comodidades: v }))}
+            suggestions={COMODIDADE_SUGGESTIONS}
+            placeholder="💡 Adicionar outra comodidade..."
+          />
         </div>
 
         <div className="space-y-2">
