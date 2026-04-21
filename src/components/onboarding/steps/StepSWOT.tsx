@@ -142,9 +142,14 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
   };
 
   const handleSubmit = async () => {
-    const allHaveItem = QUADRANT_META.every((q) => state[q.key].tags.length > 0);
-    if (!allHaveItem) {
-      toast({ title: "Mínimo 1 item por quadrante", description: "Preencha pelo menos uma tag em cada quadrante.", variant: "destructive" });
+    // Validação leve: avisa se quadrante estiver vazio mas não bloqueia
+    const empty = QUADRANT_META.filter((q) => state[q.key].tags.length === 0);
+    if (empty.length === QUADRANT_META.length) {
+      toast({
+        title: "Adicione pelo menos algumas observações",
+        description: "Digite no campo e clique no botão + para adicionar. Você pode pular quadrantes individuais.",
+        variant: "destructive",
+      });
       return;
     }
 
