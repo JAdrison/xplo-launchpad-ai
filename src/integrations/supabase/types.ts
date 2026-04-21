@@ -116,6 +116,45 @@ export type Database = {
           },
         ]
       }
+      client_icp: {
+        Row: {
+          bloco1_data: Json | null
+          bloco2_data: Json | null
+          bloco3_data: Json | null
+          client_id: string
+          created_at: string
+          generated_at: string | null
+          generated_by_ai: boolean | null
+          generated_icp_text: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          bloco1_data?: Json | null
+          bloco2_data?: Json | null
+          bloco3_data?: Json | null
+          client_id: string
+          created_at?: string
+          generated_at?: string | null
+          generated_by_ai?: boolean | null
+          generated_icp_text?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          bloco1_data?: Json | null
+          bloco2_data?: Json | null
+          bloco3_data?: Json | null
+          client_id?: string
+          created_at?: string
+          generated_at?: string | null
+          generated_by_ai?: boolean | null
+          generated_icp_text?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_profile: {
         Row: {
           average_ticket: string | null
@@ -130,6 +169,7 @@ export type Database = {
           differentiators: string[] | null
           facebook_login: string | null
           facebook_password: string | null
+          google_my_business: string | null
           id: string
           initial_traffic_investment: string | null
           inspiration_company_1: Json | null
@@ -140,9 +180,11 @@ export type Database = {
           local_competitor_1: Json | null
           local_competitor_2: Json | null
           main_pain: string | null
+          market_data: Json | null
           monthly_investment: string | null
           product_description: string | null
           product_name: string | null
+          profile_data: Json | null
           promotions: string | null
           region: string[] | null
           revenue_goal: string | null
@@ -150,6 +192,7 @@ export type Database = {
           sales_team_size: string | null
           secondary_pain: string | null
           updated_at: string
+          whatsapp_number: string | null
         }
         Insert: {
           average_ticket?: string | null
@@ -164,6 +207,7 @@ export type Database = {
           differentiators?: string[] | null
           facebook_login?: string | null
           facebook_password?: string | null
+          google_my_business?: string | null
           id?: string
           initial_traffic_investment?: string | null
           inspiration_company_1?: Json | null
@@ -174,9 +218,11 @@ export type Database = {
           local_competitor_1?: Json | null
           local_competitor_2?: Json | null
           main_pain?: string | null
+          market_data?: Json | null
           monthly_investment?: string | null
           product_description?: string | null
           product_name?: string | null
+          profile_data?: Json | null
           promotions?: string | null
           region?: string[] | null
           revenue_goal?: string | null
@@ -184,6 +230,7 @@ export type Database = {
           sales_team_size?: string | null
           secondary_pain?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Update: {
           average_ticket?: string | null
@@ -198,6 +245,7 @@ export type Database = {
           differentiators?: string[] | null
           facebook_login?: string | null
           facebook_password?: string | null
+          google_my_business?: string | null
           id?: string
           initial_traffic_investment?: string | null
           inspiration_company_1?: Json | null
@@ -208,9 +256,11 @@ export type Database = {
           local_competitor_1?: Json | null
           local_competitor_2?: Json | null
           main_pain?: string | null
+          market_data?: Json | null
           monthly_investment?: string | null
           product_description?: string | null
           product_name?: string | null
+          profile_data?: Json | null
           promotions?: string | null
           region?: string[] | null
           revenue_goal?: string | null
@@ -218,6 +268,7 @@ export type Database = {
           sales_team_size?: string | null
           secondary_pain?: string | null
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Relationships: [
           {
@@ -263,6 +314,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_swot: {
+        Row: {
+          client_id: string
+          created_at: string
+          forcas_ambiente_tags: string[] | null
+          forcas_ambiente_text: string | null
+          forcas_internas_tags: string[] | null
+          forcas_internas_text: string | null
+          fraquezas_ambiente_tags: string[] | null
+          fraquezas_ambiente_text: string | null
+          fraquezas_internas_tags: string[] | null
+          fraquezas_internas_text: string | null
+          generated_by_ai: boolean | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          forcas_ambiente_tags?: string[] | null
+          forcas_ambiente_text?: string | null
+          forcas_internas_tags?: string[] | null
+          forcas_internas_text?: string | null
+          fraquezas_ambiente_tags?: string[] | null
+          fraquezas_ambiente_text?: string | null
+          fraquezas_internas_tags?: string[] | null
+          fraquezas_internas_text?: string | null
+          generated_by_ai?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          forcas_ambiente_tags?: string[] | null
+          forcas_ambiente_text?: string | null
+          forcas_internas_tags?: string[] | null
+          forcas_internas_text?: string | null
+          fraquezas_ambiente_tags?: string[] | null
+          fraquezas_ambiente_text?: string | null
+          fraquezas_internas_tags?: string[] | null
+          fraquezas_internas_text?: string | null
+          generated_by_ai?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       client_tokens: {
         Row: {
@@ -310,6 +409,8 @@ export type Database = {
           id: string
           name: string
           niche: string | null
+          niche_label: string | null
+          niche_type: Database["public"]["Enums"]["niche_type"] | null
           notes: string | null
           phone: string | null
           product_description: string | null
@@ -325,6 +426,8 @@ export type Database = {
           id?: string
           name: string
           niche?: string | null
+          niche_label?: string | null
+          niche_type?: Database["public"]["Enums"]["niche_type"] | null
           notes?: string | null
           phone?: string | null
           product_description?: string | null
@@ -340,6 +443,8 @@ export type Database = {
           id?: string
           name?: string
           niche?: string | null
+          niche_label?: string | null
+          niche_type?: Database["public"]["Enums"]["niche_type"] | null
           notes?: string | null
           phone?: string | null
           product_description?: string | null
@@ -683,6 +788,7 @@ export type Database = {
         | "assets_generated"
         | "archived"
       lp_variant: "direct" | "consultive" | "aggressive"
+      niche_type: "hospedagem" | "saude" | "generico"
       sales_model: "b2b" | "b2c" | "recurring" | "project" | "hybrid"
       token_type: "onboarding"
     }
@@ -824,6 +930,7 @@ export const Constants = {
         "archived",
       ],
       lp_variant: ["direct", "consultive", "aggressive"],
+      niche_type: ["hospedagem", "saude", "generico"],
       sales_model: ["b2b", "b2c", "recurring", "project", "hybrid"],
       token_type: ["onboarding"],
     },
