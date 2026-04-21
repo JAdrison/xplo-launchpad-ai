@@ -411,7 +411,7 @@ export function OnboardingPDFTemplate({
           }}
         >
           <h2 style={sectionTitleStyle}>
-            6. REDES SOCIAIS E ACESSOS META ADS
+            4.2. REDES SOCIAIS E ACESSOS META ADS
             <ConfidentialBadge />
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
