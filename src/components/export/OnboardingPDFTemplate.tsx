@@ -365,7 +365,7 @@ export function OnboardingPDFTemplate({
         market.inspiration_company_1?.name ||
         market.inspiration_company_2?.name) && (
         <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>5. CONCORRENTES E INSPIRAÇÕES</h2>
+          <h2 style={sectionTitleStyle}>4.1. CONCORRENTES E INSPIRAÇÕES</h2>
           {market.local_competitor_1?.name && (
             <p style={valueStyle}>
               <strong>Concorrente 1: {market.local_competitor_1.name}</strong>
