@@ -119,9 +119,9 @@ export function PDFExportButton({
             client={content.client}
             company={content.company}
             product={content.product}
-            pains={content.pains}
+            swot={content.swot}
             market={content.market}
-            icps={content.icps}
+            icp={content.icp}
             promise={content.promise}
           />
         )}
