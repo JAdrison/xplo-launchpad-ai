@@ -47,6 +47,7 @@ export function PDFExportButton({
     offer: "oferta",
     "landing-page": "landing-page",
     onboarding: "onboarding-x1",
+    "onboarding-full": "onboarding-completo",
     ads: "anuncios",
     "ads-static": "anuncios-estaticos",
     "ads-video": "roteiros-video",
