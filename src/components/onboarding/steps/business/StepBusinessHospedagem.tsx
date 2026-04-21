@@ -65,7 +65,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
 
   const [form, setForm] = useState({
     type: "",
-    locations: [] as string[],
+    location: "",
     units: "",
     diaria: "",
     differentiators: [] as string[],
@@ -84,7 +84,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
       setProfileId(data.id);
       setForm({
         type: pd.type || "",
-        locations: pd.locations || data.region || [],
+        location: pd.location || (Array.isArray(pd.locations) ? pd.locations[0] : "") || (Array.isArray(data.region) ? data.region[0] : "") || "",
         units: pd.units || "",
         diaria: pd.diaria || data.average_ticket || "",
         differentiators: data.differentiators || [],
@@ -100,7 +100,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
   const handleSubmit = async () => {
     const missing: string[] = [];
     if (!form.type) missing.push("tipo");
-    if (form.locations.length === 0) missing.push("localização");
+    if (!form.location.trim()) missing.push("localização");
     if (!form.units) missing.push("unidades");
     if (!form.diaria.trim()) missing.push("diária");
     if (form.differentiators.length === 0) missing.push("diferenciais");
@@ -115,7 +115,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     try {
       const profile_data = {
         type: form.type,
-        locations: form.locations,
+        location: form.location.trim(),
         units: form.units,
         diaria: form.diaria,
         comodidades: form.comodidades,
@@ -124,7 +124,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
       };
       const payload = {
         profile_data,
-        region: form.locations,
+        region: [form.location.trim()],
         differentiators: form.differentiators,
         average_ticket: form.diaria,
         promotions: form.promotions.trim() || null,
@@ -178,7 +178,11 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
 
         <div className="space-y-2">
           <Label>Localização *</Label>
-          <TagInput value={form.locations} onChange={(v) => setForm((p) => ({ ...p, locations: v }))} placeholder="💡 Ex: Canoa Quebrada, CE — Praia" />
+          <Input
+            value={form.location}
+            onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+            placeholder="💡 Ex: Canoa Quebrada, CE — Praia"
+          />
         </div>
 
         <div className="space-y-2">
