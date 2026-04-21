@@ -306,7 +306,7 @@ function ClientOnboardingCard({ client, onNavigate }: ClientOnboardingCardProps)
 
   const handleContinueOnboarding = () => {
     const nextStep = client.completedSteps + 1;
-    navigate(`/onboarding?client=${client.id}&step=${Math.min(nextStep, 7)}`);
+    navigate(`/onboarding?client=${client.id}&step=${Math.min(nextStep, 6)}`);
   };
 
   const handleEditOnboarding = () => {
