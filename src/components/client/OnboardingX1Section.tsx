@@ -409,6 +409,15 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
       : null,
   };
 
+  // Conteúdo completo: onboarding + oferta + LPs + anúncios
+  const fullPdfContent = {
+    onboarding: pdfContent,
+    offer: data.offer,
+    landingPages: data.landingPages,
+    videoAds: data.videoAds,
+    staticAds: data.staticAds,
+  };
+
   const cs = checkpointStatus();
   const NicheIcon = client.niche_type ? NICHE_ICON[client.niche_type] : Building;
   const nicheLabel = client.niche_label || (client.niche_type
@@ -426,11 +435,12 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
           <div className="flex items-center gap-2">
             {hasData && (
               <PDFExportButton
-                type="onboarding"
+                type="onboarding-full"
                 clientName={client.name}
-                content={pdfContent as any}
+                content={fullPdfContent as any}
                 createdAt={client.created_at}
                 size="icon"
+                label="Documento completo"
               />
             )}
             {isCompleted && (
