@@ -40,6 +40,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { PDFExportButton } from "@/components/export/PDFExportButton";
+import { humanizeKey, formatValue } from "@/components/onboarding/shared/fieldLabels";
+import { Lock, ShieldAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type Client = Tables<"clients">;
 type ClientProfile = Tables<"client_profile">;
