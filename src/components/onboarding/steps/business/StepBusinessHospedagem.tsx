@@ -98,8 +98,17 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
   };
 
   const handleSubmit = async () => {
-    if (!form.type || form.locations.length === 0 || !form.units || !form.diaria.trim() || form.differentiators.length === 0 || !form.experiencia.trim()) {
-      toast({ title: "Campos obrigatórios", description: "Preencha tipo, localização, unidades, diária, diferenciais e experiência.", variant: "destructive" });
+    const missing: string[] = [];
+    if (!form.type) missing.push("tipo");
+    if (form.locations.length === 0) missing.push("localização");
+    if (!form.units) missing.push("unidades");
+    if (!form.diaria.trim()) missing.push("diária");
+    if (form.differentiators.length === 0) missing.push("diferenciais");
+    if (!form.experiencia.trim()) missing.push("experiência");
+    if (missing.length > 0) {
+      console.log("[Hospedagem] form state:", form);
+      console.log("[Hospedagem] missing fields:", missing);
+      toast({ title: "Campos obrigatórios", description: `Preencha: ${missing.join(", ")}.`, variant: "destructive" });
       return;
     }
     setIsSaving(true);
