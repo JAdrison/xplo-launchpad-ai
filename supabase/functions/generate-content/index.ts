@@ -18,6 +18,7 @@ const STRATEGIC_TASKS = [
   "generate-pains", 
   "generate-buyer-pains",
   "generate-promise",
+  "generate-swot",
   "offer",
   "lp",
   "ads",
@@ -425,6 +426,70 @@ JSON: {"profiles":[{
       prompt = `${ctx}\nCrie promessa.\nJSON: {"promise":""}`;
       const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, promise: res.promise }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-swot") {
+      // Buscar contexto do cliente (nicho + dados da Etapa 2)
+      const niche = (b as any).niche as string | undefined;
+      const { data: cli } = await supabase.from('clients').select('niche_type, niche_label, name').eq('id', clientId).maybeSingle();
+      const { data: prof } = await supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle();
+      const effectiveNiche = niche || cli?.niche_type || 'generico';
+
+      const profileData = (prof as any)?.profile_data || {};
+      const ctxParts: string[] = [];
+      ctxParts.push(`Negócio: ${cli?.name || 'cliente'}`);
+      ctxParts.push(`Nicho: ${cli?.niche_label || effectiveNiche}`);
+      if ((prof as any)?.region?.length) ctxParts.push(`Localização: ${(prof as any).region.join(', ')}`);
+      if ((prof as any)?.differentiators?.length) ctxParts.push(`Diferenciais: ${(prof as any).differentiators.join(', ')}`);
+      if ((prof as any)?.average_ticket) ctxParts.push(`Ticket médio: ${(prof as any).average_ticket}`);
+      if ((prof as any)?.product_description) ctxParts.push(`Experiência/Descrição: ${(prof as any).product_description}`);
+      if (profileData.type) ctxParts.push(`Tipo: ${profileData.type}`);
+      if (profileData.units) ctxParts.push(`Unidades: ${profileData.units}`);
+      if (profileData.specialty) ctxParts.push(`Especialidade: ${profileData.specialty}`);
+      if (profileData.treatments?.length) ctxParts.push(`Tratamentos: ${profileData.treatments.join(', ')}`);
+      if (profileData.products_list?.length) ctxParts.push(`Produtos: ${profileData.products_list.join(', ')}`);
+      if (profileData.operation_model) ctxParts.push(`Modelo: ${profileData.operation_model}`);
+      if (profileData.comodidades?.length) ctxParts.push(`Comodidades: ${profileData.comodidades.join(', ')}`);
+
+      const swotCtx = ctxParts.join('\n');
+
+      const examplesByNiche: Record<string, string> = {
+        hospedagem: `Exemplos para HOSPEDAGEM:
+- Forças internas: vista única, localização privilegiada, atendimento pessoal, café da manhã caseiro
+- Fraquezas internas: fotos ruins, site desatualizado, poucas avaliações online, baixa presença em OTAs
+- Forças do ambiente: crescimento do turismo regional, alta temporada, feriadões, novo aeroporto
+- Fraquezas do ambiente: concorrência de Airbnb, baixa temporada, dependência de OTAs, sazonalidade`,
+        saude: `Exemplos para ÁREA DA SAÚDE:
+- Forças internas: formação sólida, equipamentos modernos, pacientes fiéis, atendimento humanizado
+- Fraquezas internas: pouca presença no Instagram, agenda mal organizada, sem prontuário digital
+- Forças do ambiente: aumento da demanda por saúde mental, bairro em expansão, novos planos de saúde
+- Fraquezas do ambiente: muitos profissionais na mesma região, concorrência em preço, baixa indicação`,
+        generico: `Exemplos para o nicho geral:
+- Forças internas: qualidade do produto, entrega rápida, atendimento próximo, marca reconhecida
+- Fraquezas internas: processo de venda desorganizado, estoque irregular, equipe pequena
+- Forças do ambiente: crescimento do setor, mudança no comportamento do consumidor, marketplaces ativos
+- Fraquezas do ambiente: concorrência grande, sazonalidade forte, instabilidade econômica`,
+      };
+
+      sys = `Você é um consultor estratégico brasileiro especialista em diagnóstico SWOT para pequenos negócios. Gere análises práticas, específicas e em linguagem simples (sem jargão corporativo). Cada item deve ser CURTO (3-6 palavras), concreto e útil. Adapte ao nicho informado.`;
+      prompt = `Contexto do negócio:
+${swotCtx}
+
+${examplesByNiche[effectiveNiche] || examplesByNiche.generico}
+
+Gere uma análise SWOT prática e específica para ESTE negócio. 
+- 3 a 5 tags por quadrante (curtas, em linguagem simples)
+- 1 frase de detalhamento por quadrante (até 200 caracteres)
+
+JSON exato:
+{
+  "swot": {
+    "forcas_internas": { "tags": ["tag1","tag2","tag3"], "text": "frase de detalhamento" },
+    "fraquezas_internas": { "tags": ["tag1","tag2","tag3"], "text": "frase de detalhamento" },
+    "forcas_ambiente": { "tags": ["tag1","tag2","tag3"], "text": "frase de detalhamento" },
+    "fraquezas_ambiente": { "tags": ["tag1","tag2","tag3"], "text": "frase de detalhamento" }
+  }
+}`;
+      const res = await ai(config, sys, prompt, 0.8);
+      return new Response(JSON.stringify({ success: true, swot: (res as any).swot }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "create-video-ad") {
       const { instruction } = b;
       if (!instruction || !clientId) {
