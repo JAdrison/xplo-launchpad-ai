@@ -127,6 +127,17 @@ export function PDFExportButton({
             promise={content.promise}
           />
         )}
+        {type === "onboarding-full" && (
+          <OnboardingFullPDFTemplate
+            clientName={clientName}
+            createdAt={createdAt}
+            onboarding={content.onboarding}
+            offer={content.offer}
+            landingPages={content.landingPages}
+            videoAds={content.videoAds}
+            staticAds={content.staticAds}
+          />
+        )}
         {type === "ads" && (
           <AdsPDFTemplate 
             clientName={clientName}
