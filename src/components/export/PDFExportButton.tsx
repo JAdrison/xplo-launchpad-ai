@@ -5,9 +5,10 @@ import { OfferPDFTemplate } from "./OfferPDFTemplate";
 import { LandingPagePDFTemplate } from "./LandingPagePDFTemplate";
 import { OnboardingPDFTemplate } from "./OnboardingPDFTemplate";
 import { AdsPDFTemplate } from "./AdsPDFTemplate";
+import { OnboardingFullPDFTemplate } from "./OnboardingFullPDFTemplate";
 
 interface PDFExportButtonProps {
-  type: "offer" | "landing-page" | "onboarding" | "ads";
+  type: "offer" | "landing-page" | "onboarding" | "onboarding-full" | "ads";
   clientName: string;
   content: any;
   variant?: string;
