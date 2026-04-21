@@ -139,8 +139,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         </div>
 
         <div className="space-y-2">
-          <Label>Diferenciais da hospedagem * (até 5)</Label>
-          <TagInput value={form.differentiators} onChange={(v) => setForm((p) => ({ ...p, differentiators: v }))} placeholder="💡 Ex: piscina privativa, café incluso, pet-friendly" max={5} />
+          <Label>Diferenciais da hospedagem *</Label>
+          <TagInput value={form.differentiators} onChange={(v) => setForm((p) => ({ ...p, differentiators: v }))} placeholder="💡 Ex: piscina privativa, café incluso, pet-friendly" />
         </div>
 
         <div className="space-y-2">
