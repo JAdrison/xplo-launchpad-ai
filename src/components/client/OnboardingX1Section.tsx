@@ -45,11 +45,18 @@ type Client = Tables<"clients">;
 type ClientProfile = Tables<"client_profile">;
 type ClientSwot = Tables<"client_swot">;
 type ClientIcp = Tables<"client_icp">;
+type Offer = Tables<"offers_hormozi">;
+type LandingPage = Tables<"landing_pages">;
+type Ad = Tables<"ads">;
 
 interface OnboardingData {
   profile: ClientProfile | null;
   swot: ClientSwot | null;
   icp: ClientIcp | null;
+  offer: Offer | null;
+  landingPages: LandingPage[];
+  videoAds: Ad[];
+  staticAds: Ad[];
 }
 
 interface OnboardingX1SectionProps {
@@ -92,19 +99,31 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     profile: null,
     swot: null,
     icp: null,
+    offer: null,
+    landingPages: [],
+    videoAds: [],
+    staticAds: [],
   });
 
   const fetchOnboardingData = useCallback(async () => {
     setIsLoading(true);
-    const [profileRes, swotRes, icpRes] = await Promise.all([
+    const [profileRes, swotRes, icpRes, offerRes, lpRes, adsRes] = await Promise.all([
       supabase.from("client_profile").select("*").eq("client_id", client.id).maybeSingle(),
       supabase.from("client_swot").select("*").eq("client_id", client.id).maybeSingle(),
       supabase.from("client_icp").select("*").eq("client_id", client.id).maybeSingle(),
+      supabase.from("offers_hormozi").select("*").eq("client_id", client.id).eq("is_active", true).maybeSingle(),
+      supabase.from("landing_pages").select("*").eq("client_id", client.id).eq("is_active", true),
+      supabase.from("ads").select("*").eq("client_id", client.id).eq("is_active", true),
     ]);
+    const allAds = adsRes.data ?? [];
     setData({
       profile: profileRes.data ?? null,
       swot: swotRes.data ?? null,
       icp: icpRes.data ?? null,
+      offer: offerRes.data ?? null,
+      landingPages: lpRes.data ?? [],
+      videoAds: allAds.filter((a) => a.asset_type === "video_ad"),
+      staticAds: allAds.filter((a) => a.asset_type === "static_ad"),
     });
     setIsLoading(false);
   }, [client.id]);
@@ -390,6 +409,15 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
       : null,
   };
 
+  // Conteúdo completo: onboarding + oferta + LPs + anúncios
+  const fullPdfContent = {
+    onboarding: pdfContent,
+    offer: data.offer,
+    landingPages: data.landingPages,
+    videoAds: data.videoAds,
+    staticAds: data.staticAds,
+  };
+
   const cs = checkpointStatus();
   const NicheIcon = client.niche_type ? NICHE_ICON[client.niche_type] : Building;
   const nicheLabel = client.niche_label || (client.niche_type
@@ -407,11 +435,12 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
           <div className="flex items-center gap-2">
             {hasData && (
               <PDFExportButton
-                type="onboarding"
+                type="onboarding-full"
                 clientName={client.name}
-                content={pdfContent as any}
+                content={fullPdfContent as any}
                 createdAt={client.created_at}
                 size="icon"
+                label="Documento completo"
               />
             )}
             {isCompleted && (
