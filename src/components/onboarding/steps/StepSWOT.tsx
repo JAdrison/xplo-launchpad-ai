@@ -142,7 +142,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
   };
 
   const handleSubmit = async () => {
-    const allHaveItem = QUADRANTS.every((q) => state[q.key].tags.length > 0);
+    const allHaveItem = QUADRANT_META.every((q) => state[q.key].tags.length > 0);
     if (!allHaveItem) {
       toast({ title: "Mínimo 1 item por quadrante", description: "Preencha pelo menos uma tag em cada quadrante.", variant: "destructive" });
       return;
@@ -179,7 +179,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
     }
   };
 
-  const isEmpty = QUADRANTS.every((q) => state[q.key].tags.length === 0);
+  const isEmpty = QUADRANT_META.every((q) => state[q.key].tags.length === 0);
 
   if (isLoading) return <Card><CardContent className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
 
@@ -202,7 +202,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {QUADRANTS.map((q) => {
+          {QUADRANT_META.map((q) => {
             const s = state[q.key];
             const isEdit = editing[q.key];
             return (
