@@ -7,6 +7,45 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, Hotel, Loader2 } from "lucide-react";
 import { TagInput } from "../../shared/TagInput";
+import { SuggestedTagInput } from "../../shared/SuggestedTagInput";
+
+const DIFFERENTIATOR_SUGGESTIONS = [
+  "Vista para o mar",
+  "Vista para a serra",
+  "Pé na areia",
+  "Piscina privativa",
+  "Piscina aquecida",
+  "Pet-friendly",
+  "Café da manhã incluso",
+  "Romântico para casais",
+  "Ideal para famílias",
+  "Ambiente para grupos",
+  "Localização privilegiada",
+  "Atendimento personalizado",
+  "Decoração temática",
+  "Contato com a natureza",
+  "Estrutura para home-office",
+];
+
+const COMODIDADE_SUGGESTIONS = [
+  "Wi-Fi",
+  "Ar-condicionado",
+  "TV",
+  "Frigobar",
+  "Cozinha equipada",
+  "Churrasqueira",
+  "Estacionamento",
+  "Piscina",
+  "Hidromassagem",
+  "Sauna",
+  "Academia",
+  "Área de lazer",
+  "Espaço kids",
+  "Lavanderia",
+  "Berço disponível",
+  "Acessibilidade",
+  "Recepção 24h",
+];
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -140,12 +179,22 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
 
         <div className="space-y-2">
           <Label>Diferenciais da hospedagem *</Label>
-          <TagInput value={form.differentiators} onChange={(v) => setForm((p) => ({ ...p, differentiators: v }))} placeholder="💡 Ex: piscina privativa, café incluso, pet-friendly" />
+          <SuggestedTagInput
+            value={form.differentiators}
+            onChange={(v) => setForm((p) => ({ ...p, differentiators: v }))}
+            suggestions={DIFFERENTIATOR_SUGGESTIONS}
+            placeholder="💡 Adicionar outro diferencial..."
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Comodidades e estrutura</Label>
-          <TagInput value={form.comodidades} onChange={(v) => setForm((p) => ({ ...p, comodidades: v }))} placeholder="💡 Ex: ar-cond, churrasqueira, internet, estacionamento" />
+          <SuggestedTagInput
+            value={form.comodidades}
+            onChange={(v) => setForm((p) => ({ ...p, comodidades: v }))}
+            suggestions={COMODIDADE_SUGGESTIONS}
+            placeholder="💡 Adicionar outra comodidade..."
+          />
         </div>
 
         <div className="space-y-2">
