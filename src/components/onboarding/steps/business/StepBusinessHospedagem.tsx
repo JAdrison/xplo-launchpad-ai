@@ -124,7 +124,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
       };
       const payload = {
         profile_data,
-        region: form.locations,
+        region: [form.location.trim()],
         differentiators: form.differentiators,
         average_ticket: form.diaria,
         promotions: form.promotions.trim() || null,
