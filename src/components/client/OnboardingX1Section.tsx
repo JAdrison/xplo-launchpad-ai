@@ -99,19 +99,31 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     profile: null,
     swot: null,
     icp: null,
+    offer: null,
+    landingPages: [],
+    videoAds: [],
+    staticAds: [],
   });
 
   const fetchOnboardingData = useCallback(async () => {
     setIsLoading(true);
-    const [profileRes, swotRes, icpRes] = await Promise.all([
+    const [profileRes, swotRes, icpRes, offerRes, lpRes, adsRes] = await Promise.all([
       supabase.from("client_profile").select("*").eq("client_id", client.id).maybeSingle(),
       supabase.from("client_swot").select("*").eq("client_id", client.id).maybeSingle(),
       supabase.from("client_icp").select("*").eq("client_id", client.id).maybeSingle(),
+      supabase.from("offers_hormozi").select("*").eq("client_id", client.id).eq("is_active", true).maybeSingle(),
+      supabase.from("landing_pages").select("*").eq("client_id", client.id).eq("is_active", true),
+      supabase.from("ads").select("*").eq("client_id", client.id).eq("is_active", true),
     ]);
+    const allAds = adsRes.data ?? [];
     setData({
       profile: profileRes.data ?? null,
       swot: swotRes.data ?? null,
       icp: icpRes.data ?? null,
+      offer: offerRes.data ?? null,
+      landingPages: lpRes.data ?? [],
+      videoAds: allAds.filter((a) => a.asset_type === "video_ad"),
+      staticAds: allAds.filter((a) => a.asset_type === "static_ad"),
     });
     setIsLoading(false);
   }, [client.id]);
