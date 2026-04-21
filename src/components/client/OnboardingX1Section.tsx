@@ -351,6 +351,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
       differentiators: data.profile?.differentiators || [],
       benefits: data.profile?.benefits || [],
       promotions: data.profile?.promotions || null,
+      profile_data: profileData,
     },
     swot: data.swot
       ? {
@@ -366,7 +367,19 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
       initial_traffic_investment: data.profile?.initial_traffic_investment || null,
       demand_channels: data.profile?.demand_channels || [],
       revenue_goal: data.profile?.revenue_goal || null,
+      sales_team_size: data.profile?.sales_team_size || null,
       market_data: marketData,
+      instagram_link: data.profile?.instagram_link || null,
+      instagram_login: data.profile?.instagram_login || null,
+      instagram_password: data.profile?.instagram_password || null,
+      facebook_login: data.profile?.facebook_login || null,
+      facebook_password: data.profile?.facebook_password || null,
+      whatsapp_number: data.profile?.whatsapp_number || null,
+      google_my_business: data.profile?.google_my_business || null,
+      local_competitor_1: data.profile?.local_competitor_1 || null,
+      local_competitor_2: data.profile?.local_competitor_2 || null,
+      inspiration_company_1: data.profile?.inspiration_company_1 || null,
+      inspiration_company_2: data.profile?.inspiration_company_2 || null,
     },
     icp: data.icp
       ? {
