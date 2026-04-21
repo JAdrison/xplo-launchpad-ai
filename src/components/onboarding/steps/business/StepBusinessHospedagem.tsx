@@ -65,7 +65,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
 
   const [form, setForm] = useState({
     type: "",
-    locations: [] as string[],
+    location: "",
     units: "",
     diaria: "",
     differentiators: [] as string[],
