@@ -23,12 +23,33 @@ interface QuadrantState {
   text: string;
 }
 
-const QUADRANTS: { key: QuadrantKey; emoji: string; title: string; ring: string; bg: string }[] = [
-  { key: "forcas_internas", emoji: "💪", title: "O que seu negócio tem de melhor", ring: "ring-emerald-500/30", bg: "bg-emerald-500/5" },
-  { key: "fraquezas_internas", emoji: "🔧", title: "O que ainda pode melhorar", ring: "ring-rose-500/30", bg: "bg-rose-500/5" },
-  { key: "forcas_ambiente", emoji: "🌤️", title: "O que favorece seu negócio lá fora", ring: "ring-sky-500/30", bg: "bg-sky-500/5" },
-  { key: "fraquezas_ambiente", emoji: "⚠️", title: "O que dificulta seu negócio lá fora", ring: "ring-amber-500/30", bg: "bg-amber-500/5" },
+const QUADRANT_META: { key: QuadrantKey; emoji: string; ring: string; bg: string }[] = [
+  { key: "forcas_internas", emoji: "💪", ring: "ring-emerald-500/30", bg: "bg-emerald-500/5" },
+  { key: "fraquezas_internas", emoji: "🔧", ring: "ring-rose-500/30", bg: "bg-rose-500/5" },
+  { key: "forcas_ambiente", emoji: "🌤️", ring: "ring-sky-500/30", bg: "bg-sky-500/5" },
+  { key: "fraquezas_ambiente", emoji: "⚠️", ring: "ring-amber-500/30", bg: "bg-amber-500/5" },
 ];
+
+const TITLES: Record<"hospedagem" | "saude" | "generico", Record<QuadrantKey, string>> = {
+  hospedagem: {
+    forcas_internas: "Qual o ponto forte da sua hospedagem?",
+    fraquezas_internas: "Qual o ponto fraco da sua hospedagem?",
+    forcas_ambiente: "Qual o ponto forte da sua região?",
+    fraquezas_ambiente: "Qual o ponto fraco da sua região?",
+  },
+  saude: {
+    forcas_internas: "Qual o ponto forte da sua clínica/consultório?",
+    fraquezas_internas: "Qual o ponto fraco da sua clínica/consultório?",
+    forcas_ambiente: "Qual o ponto forte da sua região?",
+    fraquezas_ambiente: "Qual o ponto fraco da sua região?",
+  },
+  generico: {
+    forcas_internas: "Qual o ponto forte do seu negócio?",
+    fraquezas_internas: "Qual o ponto fraco do seu negócio?",
+    forcas_ambiente: "Qual o ponto forte do seu mercado/região?",
+    fraquezas_ambiente: "Qual o ponto fraco do seu mercado/região?",
+  },
+};
 
 const PLACEHOLDERS: Record<"hospedagem" | "saude" | "generico", Record<QuadrantKey, string>> = {
   hospedagem: {
@@ -121,7 +142,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
   };
 
   const handleSubmit = async () => {
-    const allHaveItem = QUADRANTS.every((q) => state[q.key].tags.length > 0);
+    const allHaveItem = QUADRANT_META.every((q) => state[q.key].tags.length > 0);
     if (!allHaveItem) {
       toast({ title: "Mínimo 1 item por quadrante", description: "Preencha pelo menos uma tag em cada quadrante.", variant: "destructive" });
       return;
@@ -158,7 +179,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
     }
   };
 
-  const isEmpty = QUADRANTS.every((q) => state[q.key].tags.length === 0);
+  const isEmpty = QUADRANT_META.every((q) => state[q.key].tags.length === 0);
 
   if (isLoading) return <Card><CardContent className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
 
@@ -181,7 +202,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {QUADRANTS.map((q) => {
+          {QUADRANT_META.map((q) => {
             const s = state[q.key];
             const isEdit = editing[q.key];
             return (
@@ -189,7 +210,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
                 <div className="flex items-center justify-between">
                   <div className="font-medium text-sm flex items-center gap-2">
                     <span className="text-lg">{q.emoji}</span>
-                    {q.title}
+                    {TITLES[niche][q.key]}
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => setEditing((p) => ({ ...p, [q.key]: !p[q.key] }))}>
                     <Pencil className="h-4 w-4" />
