@@ -17,7 +17,6 @@ interface Props {
 }
 
 const HOSP_TYPES = ["Pousada", "Chalé", "Casa de praia", "Casa de serra", "Apartamento de temporada", "Flat", "Hostel", "Hotel", "Outro"];
-const UNIT_OPTIONS = ["1-3", "4-8", "9-15", "+15"];
 
 export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) {
   const { toast } = useToast();
@@ -117,10 +116,15 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
           </div>
           <div className="space-y-2">
             <Label>Número de unidades / quartos *</Label>
-            <Select value={form.units} onValueChange={(v) => setForm((p) => ({ ...p, units: v }))}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>{UNIT_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-            </Select>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              value={form.units}
+              onChange={(e) => setForm((p) => ({ ...p, units: e.target.value.replace(/\D/g, "") }))}
+              placeholder="💡 Ex: 6"
+            />
           </div>
         </div>
 
