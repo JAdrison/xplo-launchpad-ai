@@ -9,14 +9,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
-// Import step components
-import { StepCompany } from "./steps/StepCompany";
-import { StepProduct } from "./steps/StepProduct";
-import { StepPains } from "./steps/StepPains";
-import { StepMarket } from "./steps/StepMarket";
-import { StepPromise } from "./steps/StepPromise";
-import { StepICPs } from "./steps/StepICPs";
-import { StepReview } from "./steps/StepReview";
+// New multi-niche steps
+import { StepNicheSelection } from "./StepNicheSelection";
+import { StepRegistration } from "./steps/StepRegistration";
+import { StepBusinessHospedagem } from "./steps/business/StepBusinessHospedagem";
+import { StepBusinessSaude } from "./steps/business/StepBusinessSaude";
+import { StepBusinessGenerico } from "./steps/business/StepBusinessGenerico";
+import { StepSWOT } from "./steps/StepSWOT";
+import { StepMarketByNiche } from "./steps/market/StepMarketByNiche";
+import { StepClientProfile } from "./steps/StepClientProfile";
+import { StepReviewV2 } from "./steps/StepReviewV2";
+import type { NicheType } from "./shared/nicheLabels";
 
 type Client = Tables<"clients">;
 
@@ -26,18 +29,18 @@ interface OnboardingWizardProps {
   onComplete?: () => void;
 }
 
-// NEW ORDER: Company > Product > Pains > Market > Promise > ICPs > Review
+// New structure: Etapa 0 (nicho) + 6 etapas
 const STEPS = [
-  { number: 1, name: "Empresa", description: "Nicho e regiões de atuação" },
-  { number: 2, name: "Produto", description: "O que você oferece" },
-  { number: 3, name: "Dores", description: "Dores e desejos do comprador" },
-  { number: 4, name: "Mercado", description: "Faturamento, investimento e metas" },
-  { number: 5, name: "Promessa", description: "Sua promessa de valor" },
-  { number: 6, name: "Público", description: "Perfis de cliente ideal" },
-  { number: 7, name: "Revisão", description: "Confirmar informações" },
+  { number: 0, name: "Nicho", description: "Selecione o tipo do seu negócio" },
+  { number: 1, name: "Cadastro", description: "Dados do negócio e responsável" },
+  { number: 2, name: "Negócio", description: "Sobre o que você oferece" },
+  { number: 3, name: "Diagnóstico", description: "O que é bom e o que pode melhorar" },
+  { number: 4, name: "Mercado", description: "Como você vende hoje" },
+  { number: 5, name: "Cliente", description: "Quem é o seu cliente" },
+  { number: 6, name: "Revisão", description: "Confirmar informações" },
 ];
 
-const TOTAL_STEPS = STEPS.length;
+const TOTAL_STEPS = 7; // 0..6
 
 export function OnboardingWizard({ clientId, isExternal = false, onComplete }: OnboardingWizardProps) {
   const navigate = useNavigate();
@@ -47,20 +50,21 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
     const stepParam = searchParams.get("step");
-    if (stepParam) {
+    if (stepParam !== null) {
       const step = parseInt(stepParam, 10);
-      if (step >= 1 && step <= TOTAL_STEPS) {
+      if (!isNaN(step) && step >= 0 && step <= 6) {
         setCurrentStep(step);
       }
     }
   }, [searchParams]);
 
   useEffect(() => {
-    fetchClient();
+    void fetchClient();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
   const fetchClient = async () => {
@@ -77,39 +81,50 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
         description: "Não foi possível carregar os dados.",
         variant: "destructive",
       });
-      if (!isExternal) {
-        navigate("/clients");
-      }
+      if (!isExternal) navigate("/clients");
+      setIsLoading(false);
       return;
     }
 
     setClient(data);
+
+    // Force Etapa 0 if niche not yet selected
+    if (!data.niche_type && currentStep > 0) {
+      setCurrentStep(0);
+      if (!isExternal) setSearchParams({ client: clientId, step: "0" });
+    }
+
     setIsLoading(false);
   };
 
-  const handleNext = () => {
-    if (currentStep < TOTAL_STEPS) {
+  const updateStepInUrl = (step: number) => {
+    if (!isExternal) {
+      setSearchParams({ client: clientId, step: step.toString() });
+    }
+  };
+
+  const handleNext = async () => {
+    // Refresh client after step 0 to pick up niche
+    if (currentStep === 0) {
+      await fetchClient();
+    }
+    if (currentStep < 6) {
       const newStep = currentStep + 1;
       setCurrentStep(newStep);
-      if (!isExternal) {
-        setSearchParams({ client: clientId, step: newStep.toString() });
-      }
+      updateStepInUrl(newStep);
     }
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       const newStep = currentStep - 1;
       setCurrentStep(newStep);
-      if (!isExternal) {
-        setSearchParams({ client: clientId, step: newStep.toString() });
-      }
+      updateStepInUrl(newStep);
     }
   };
 
   const handleComplete = async () => {
     setIsSaving(true);
-
     try {
       await supabase
         .from("clients")
@@ -121,11 +136,8 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
         description: "Todas as informações foram salvas com sucesso.",
       });
 
-      if (onComplete) {
-        onComplete();
-      } else {
-        navigate(`/clients/${clientId}`);
-      }
+      if (onComplete) onComplete();
+      else navigate(`/clients/${clientId}`);
     } catch (error) {
       console.error("Error completing onboarding:", error);
       toast({
@@ -138,15 +150,9 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
     }
   };
 
-  const handleSaveAndExit = async () => {
-    toast({
-      title: "Progresso salvo",
-      description: "Você pode continuar mais tarde.",
-    });
-    
-    if (!isExternal) {
-      navigate(`/clients/${clientId}`);
-    }
+  const handleSaveAndExit = () => {
+    toast({ title: "Progresso salvo", description: "Você pode continuar mais tarde." });
+    if (!isExternal) navigate(`/clients/${clientId}`);
   };
 
   if (isLoading) {
@@ -161,31 +167,84 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
     );
   }
 
-  if (!client) {
-    return null;
-  }
+  if (!client) return null;
 
-  const progress = (currentStep / TOTAL_STEPS) * 100;
+  const niche = (client.niche_type as NicheType | null) ?? null;
+  // Visible step index (1-based for header display: Etapa X de 6); etapa 0 is shown as "Início"
+  const displayStepIndex = currentStep === 0 ? 0 : currentStep;
+  const progress = currentStep === 0 ? 0 : (currentStep / 6) * 100;
 
   const renderStep = () => {
     switch (currentStep) {
-      case 1:
-        return <StepCompany clientId={clientId} onNext={handleNext} />;
-      case 2:
-        return <StepProduct clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 3:
-        return <StepPains clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 4:
-        return <StepMarket clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 5:
-        return <StepPromise clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 6:
-        return <StepICPs clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
-      case 7:
+      case 0:
         return (
-          <StepReview 
-            clientId={clientId} 
-            onPrevious={handlePrevious} 
+          <StepNicheSelection
+            clientId={clientId}
+            initialNiche={niche}
+            initialLabel={client.niche_label}
+            onNext={handleNext}
+          />
+        );
+      case 1:
+        return (
+          <StepRegistration
+            clientId={clientId}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        );
+      case 2: {
+        if (!niche) {
+          return (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-sm text-muted-foreground">
+                  Selecione primeiro o nicho do negócio na Etapa 0.
+                </p>
+              </CardContent>
+            </Card>
+          );
+        }
+        if (niche === "hospedagem") {
+          return <StepBusinessHospedagem clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+        }
+        if (niche === "saude") {
+          return <StepBusinessSaude clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+        }
+        return <StepBusinessGenerico clientId={clientId} onNext={handleNext} onPrevious={handlePrevious} />;
+      }
+      case 3:
+        return (
+          <StepSWOT
+            clientId={clientId}
+            niche={niche ?? "generico"}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        );
+      case 4:
+        return (
+          <StepMarketByNiche
+            clientId={clientId}
+            niche={niche ?? "generico"}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        );
+      case 5:
+        return (
+          <StepClientProfile
+            clientId={clientId}
+            niche={niche ?? "generico"}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+          />
+        );
+      case 6:
+        return (
+          <StepReviewV2
+            clientId={clientId}
+            onPrevious={handlePrevious}
             onComplete={handleComplete}
             isCompleting={isSaving}
           />
@@ -194,6 +253,10 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
         return null;
     }
   };
+
+  // Build the visible progress map for steps 1-6
+  const VISIBLE_STEPS = STEPS.filter((s) => s.number > 0);
+  const currentMeta = STEPS.find((s) => s.number === currentStep);
 
   return (
     <div className="space-y-6">
@@ -204,10 +267,12 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-semibold text-lg">
-                  Etapa {currentStep} de {TOTAL_STEPS} - {STEPS[currentStep - 1].name}
+                  {currentStep === 0
+                    ? "Etapa Inicial — Seleção de Nicho"
+                    : `Etapa ${displayStepIndex} de 6 - ${currentMeta?.name}`}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {STEPS[currentStep - 1].description}
+                  {currentMeta?.description}
                 </p>
               </div>
               {isExternal && (
@@ -218,29 +283,31 @@ export function OnboardingWizard({ clientId, isExternal = false, onComplete }: O
               )}
             </div>
             <Progress value={progress} className="h-2" />
-            <div className="flex justify-between overflow-x-auto">
-              {STEPS.map((step) => (
-                <div 
-                  key={step.number}
-                  className={`flex items-center gap-1 text-xs whitespace-nowrap ${
-                    step.number < currentStep 
-                      ? "text-primary" 
-                      : step.number === currentStep 
-                        ? "text-foreground font-medium" 
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {step.number < currentStep ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <span className="w-4 h-4 rounded-full border flex items-center justify-center text-xs">
-                      {step.number}
-                    </span>
-                  )}
-                  <span className="hidden sm:inline">{step.name}</span>
-                </div>
-              ))}
-            </div>
+            {currentStep > 0 && (
+              <div className="flex justify-between overflow-x-auto">
+                {VISIBLE_STEPS.map((step) => (
+                  <div
+                    key={step.number}
+                    className={`flex items-center gap-1 text-xs whitespace-nowrap ${
+                      step.number < currentStep
+                        ? "text-primary"
+                        : step.number === currentStep
+                          ? "text-foreground font-medium"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {step.number < currentStep ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <span className="w-4 h-4 rounded-full border flex items-center justify-center text-xs">
+                        {step.number}
+                      </span>
+                    )}
+                    <span className="hidden sm:inline">{step.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
