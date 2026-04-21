@@ -100,7 +100,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
   const handleSubmit = async () => {
     const missing: string[] = [];
     if (!form.type) missing.push("tipo");
-    if (form.locations.length === 0) missing.push("localização");
+    if (!form.location.trim()) missing.push("localização");
     if (!form.units) missing.push("unidades");
     if (!form.diaria.trim()) missing.push("diária");
     if (form.differentiators.length === 0) missing.push("diferenciais");
