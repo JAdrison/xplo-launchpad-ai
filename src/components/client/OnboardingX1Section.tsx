@@ -83,6 +83,37 @@ const RESET_CHECKPOINTS = [
   { id: "cliente", label: "Perfil do Cliente", description: "Quem você atende, quer atrair e evitar", icon: Users },
 ];
 
+function FullSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Building2;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+        <Icon className="h-4 w-4" />
+        {title}
+      </h4>
+      <div className="rounded-lg border p-3 space-y-1.5 text-sm">{children}</div>
+    </div>
+  );
+}
+
+function FullField({ label, value }: { label: string; value: any }) {
+  const formatted = formatValue(value);
+  if (formatted === "—") return null;
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <span className="text-muted-foreground text-xs">{label}:</span>
+      <span className="col-span-2 break-words text-xs">{formatted}</span>
+    </div>
+  );
+}
+
 export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1SectionProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
