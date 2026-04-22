@@ -747,6 +747,9 @@ interface ReqBody {
   currentContent?: Record<string, unknown>; 
   instruction?: string;
   aiConfig?: AIConfig;
+  bankOfferText?: string;
+  bankOfferDocumentId?: string;
+  bankOfferId?: string;
 }
 
 function buildCtx(p: PPPData): string {
