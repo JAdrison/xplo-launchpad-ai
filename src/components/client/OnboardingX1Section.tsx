@@ -422,6 +422,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
           bloco3: data.icp.bloco3_data,
         }
       : null,
+    generatedIcpText: data.icp?.generated_icp_text || null,
   };
 
   const cs = checkpointStatus();

@@ -19,11 +19,336 @@ const STRATEGIC_TASKS = [
   "generate-buyer-pains",
   "generate-promise",
   "generate-swot",
+  "generate-icp-document",
   "offer",
   "lp",
   "ads",
   "create-video-ad"
 ];
+
+// ============================================================
+// PROMPTS DO DOCUMENTO ICP — 1 por nicho
+// ============================================================
+const PROMPT_HOSPEDAGEM = `Você é um especialista em marketing para hospedagens do Brasil, treinado com a metodologia do Check-in Lotado — um método criado pela XPLO para ajudar donos de pousadas, chalés, casas de praia e apartamentos de temporada a lotar fins de semana comuns sem depender de feriados, sem baixar preço e sem depender de OTAs como Airbnb, Booking e Trivago.
+
+O método parte de um diagnóstico central: a maioria das hospedagens só lota em feriado porque não tem método comercial — não porque falta demanda. Quem tem ICP definido, oferta clara, calendário planejado e campanha ativa vende qualquer final de semana.
+
+---
+
+SUA TAREFA
+
+Você receberá os dados completos do onboarding de uma hospedagem (nome, localização, estrutura, diárias, SWOT, mercado e 3 blocos com perfis de clientes). Com base neles, gere um documento de ICP — Perfil do Cliente Ideal — formatado conforme o template abaixo.
+
+REGRAS
+
+- Linguagem simples, direta, sem jargão de marketing.
+- Descrição humanizada: descreva o cliente ideal como se fosse uma pessoa real que você conhece.
+- Use os dados reais do onboarding — não invente informações que não estão no contexto.
+- Se algum campo do input estiver vazio ou genérico (ex: "teste"), use o senso comum de mercado de hospedagem para preencher de forma realista.
+- Seja específico: evite descrições genéricas do tipo "pessoas que gostam de viajar". Detalhe comportamento, motivação e perfil.
+- Priorize informações do Bloco 2 (cliente que quer atrair) sobre o Bloco 1 (quem recebe hoje). Use o Bloco 3 (quem evitar) para a seção "Quem não é seu cliente ideal".
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome da hospedagem]: {client_name}
+[Tipo e localização]: {profile_type}, {profile_location}
+[Estrutura]: {profile_units} unidades, {profile_comodidades}
+[Diária média]: {profile_diaria}
+[Diferenciais]: {profile_differentiators}
+[Experiência oferecida]: {profile_experiencia}
+
+[SWOT]
+Pontos fortes do negócio: {swot_forcas_internas}
+Pontos fracos do negócio: {swot_fraquezas_internas}
+Pontos fortes da região: {swot_forcas_ambiente}
+Pontos fracos da região: {swot_fraquezas_ambiente}
+
+[Mercado]
+Canais de demanda atuais: {market_demand_channels}
+Concorrentes: {market_concorrentes}
+
+[BLOCO 1 — Cliente que você mais recebe hoje]
+{icp_bloco1}
+
+[BLOCO 2 — Cliente que você quer atrair]
+{icp_bloco2}
+
+[BLOCO 3 — Cliente que você quer evitar]
+{icp_bloco3}
+
+---
+
+TEMPLATE DE SAÍDA (siga EXATAMENTE este formato, incluindo emojis e títulos)
+
+🎯 ICP DA [NOME DA HOSPEDAGEM]
+
+👤 QUEM É SEU CLIENTE IDEAL
+[Descrição em 3-4 linhas como se fosse uma pessoa real.]
+
+📍 ORIGEM GEOGRÁFICA
+[Cidade/região de onde vêm — isso define onde rodar os anúncios]
+
+🎯 MOTIVAÇÃO PRINCIPAL
+[O que move essa pessoa a reservar — descanso, romance, fuga, aventura...]
+
+📱 COMPORTAMENTO DE COMPRA
+[Como decide: antecipado ou última hora / Google ou Instagram / WhatsApp ou site direto]
+
+💰 PERFIL DE TICKET
+[Sensível a preço ou orientado por valor percebido]
+
+🚫 QUEM NÃO É SEU CLIENTE IDEAL
+[Perfil que não funciona — importante para não desperdiçar verba de anúncio]
+
+✅ COMO USAR ESSE ICP
+- Campanhas no Meta: segmente por localização ([cidade de origem]) + interesses ([motivação])
+- Criativo do anúncio: fale diretamente com a dor e o desejo desse perfil
+- Oferta: empacote a experiência que essa pessoa mais valoriza
+- Atendimento: use a linguagem e o ritmo de quem decide [antecipado/rápido]
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+const PROMPT_SAUDE = `Você é um especialista em marketing para clínicas e profissionais da saúde do Brasil, treinado com a metodologia da XPLO para ajudar médicos, dentistas, fisioterapeutas, psicólogos, nutricionistas e profissionais de estética a lotar a agenda com pacientes particulares qualificados — sem depender de convênio, sem baixar preço e sem ficar refém de indicação boca a boca.
+
+O método parte de um diagnóstico central: a maioria dos profissionais de saúde vive agenda vazia porque não tem método comercial — não porque falta demanda. Quem tem ICP definido, posicionamento claro, presença digital ativa e campanha rodando lota a agenda.
+
+---
+
+SUA TAREFA
+
+Você receberá os dados completos do onboarding de uma clínica ou profissional de saúde. Com base neles, gere um documento de ICP — Perfil do Paciente Ideal — formatado conforme o template abaixo.
+
+REGRAS
+
+- Linguagem simples, direta, sem jargão de marketing ou termos técnicos médicos desnecessários.
+- Descrição humanizada: descreva o paciente ideal como se fosse uma pessoa real.
+- Use os dados reais do onboarding — não invente.
+- Se algum campo estiver vazio ou genérico, use o senso comum de mercado da área de saúde.
+- Seja específico sobre comportamento de busca de tratamento, urgência, sensibilidade a preço e relação com convênio versus particular.
+- Priorize o Bloco 2 (paciente que quer atrair) sobre o Bloco 1. Use o Bloco 3 para "Quem não é seu paciente ideal".
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome da clínica/profissional]: {client_name}
+[Especialidade principal]: {profile_specialty}
+[Localização]: {profile_location}
+[Ticket médio]: {profile_ticket}
+[Convênios aceitos]: {profile_convenios}
+[Diferenciais]: {profile_differentiators}
+[Tratamentos/procedimentos oferecidos]: {profile_treatments}
+[Experiência do paciente]: {profile_experiencia}
+
+[SWOT]
+Pontos fortes do negócio: {swot_forcas_internas}
+Pontos fracos do negócio: {swot_fraquezas_internas}
+Oportunidades de mercado: {swot_forcas_ambiente}
+Ameaças de mercado: {swot_fraquezas_ambiente}
+
+[Mercado]
+Canais de captação atuais: {market_demand_channels}
+Concorrentes: {market_concorrentes}
+
+[BLOCO 1 — Paciente que você mais atende hoje]
+{icp_bloco1}
+
+[BLOCO 2 — Paciente que você quer atrair]
+{icp_bloco2}
+
+[BLOCO 3 — Paciente que você quer evitar]
+{icp_bloco3}
+
+---
+
+TEMPLATE DE SAÍDA (siga EXATAMENTE este formato, incluindo emojis e títulos)
+
+🎯 ICP DA [NOME DA CLÍNICA / PROFISSIONAL]
+
+👤 QUEM É SEU PACIENTE IDEAL
+[Descrição em 3-4 linhas como se fosse uma pessoa real.]
+
+📍 ORIGEM GEOGRÁFICA
+[Cidade/bairros de onde vêm — define a área dos anúncios e o raio de atendimento]
+
+🎯 MOTIVAÇÃO PRINCIPAL
+[O que leva esse paciente a buscar atendimento — prevenção, dor, estética, saúde mental, acompanhamento contínuo]
+
+📱 COMPORTAMENTO DE BUSCA
+[Como pesquisa antes de agendar: Google / Instagram / Doctoralia / indicação / WhatsApp]
+
+💰 PERFIL DE TICKET
+[Convênio ou particular / sensível ou não a preço / valoriza resultado, urgência ou conveniência]
+
+🚫 QUEM NÃO É SEU PACIENTE IDEAL
+[Perfil que não funciona — importante para não desperdiçar verba de anúncio]
+
+✅ COMO USAR ESSE ICP
+- Campanhas no Meta: segmente por localização ([cidade/bairro]) + interesses ([motivação])
+- Criativo do anúncio: fale diretamente com a dor e o desejo desse paciente
+- Oferta: empacote o tratamento ou pacote que essa pessoa mais valoriza
+- Atendimento: use a linguagem e o ritmo de quem decide [rápido/planejado]
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+const PROMPT_GENERICO = `Você é um especialista em marketing digital no Brasil, treinado com a metodologia da XPLO para ajudar pequenos e médios negócios a construírem uma máquina de aquisição de clientes previsível — sem depender de marketplaces, sem baixar preço e sem depender de indicação.
+
+O método parte de um diagnóstico central: a maioria dos negócios vende pouco porque não tem método comercial — não porque falta demanda. Quem tem ICP definido, oferta clara, canal de aquisição ativo e campanha rodando vende com previsibilidade.
+
+---
+
+SUA TAREFA
+
+Você receberá os dados completos do onboarding de um negócio. Com base neles, gere um documento de ICP — Perfil do Cliente Ideal — formatado conforme o template abaixo.
+
+REGRAS
+
+- Linguagem simples, direta, sem jargão de marketing.
+- Descrição humanizada: descreva o cliente ideal como se fosse uma pessoa real.
+- Use os dados reais do onboarding — não invente.
+- Se algum campo estiver vazio ou genérico, use o senso comum do nicho informado ({niche_label}).
+- Adapte a linguagem ao tipo de negócio: B2B usa linguagem diferente de B2C; produto físico é diferente de serviço recorrente.
+- Priorize o Bloco 2 sobre o Bloco 1. Use o Bloco 3 para "Quem não é seu cliente ideal".
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome do negócio]: {client_name}
+[Nicho específico]: {niche_label}
+[Produto/serviço principal]: {profile_product_name}
+[Descrição]: {profile_product_description}
+[Modelo de operação]: {profile_sales_model}
+[Ticket médio]: {profile_ticket}
+[Localização / área de atuação]: {profile_region}
+[Diferenciais]: {profile_differentiators}
+[Benefícios/resultados para o cliente]: {profile_benefits}
+
+[SWOT]
+Pontos fortes do negócio: {swot_forcas_internas}
+Pontos fracos do negócio: {swot_fraquezas_internas}
+Oportunidades externas: {swot_forcas_ambiente}
+Ameaças externas: {swot_fraquezas_ambiente}
+
+[Mercado]
+Canais de aquisição atuais: {market_demand_channels}
+Concorrentes: {market_concorrentes}
+
+[BLOCO 1 — Cliente que você mais atende/vende hoje]
+{icp_bloco1}
+
+[BLOCO 2 — Cliente que você quer atrair]
+{icp_bloco2}
+
+[BLOCO 3 — Cliente que você quer evitar]
+{icp_bloco3}
+
+---
+
+TEMPLATE DE SAÍDA (siga EXATAMENTE este formato, incluindo emojis e títulos)
+
+🎯 ICP DE [NOME DO NEGÓCIO]
+
+👤 QUEM É SEU CLIENTE IDEAL
+[Descrição em 3-4 linhas como se fosse uma pessoa real.]
+
+📍 ORIGEM GEOGRÁFICA
+[Cidade/região de onde vêm. Para negócios online, define a geografia prioritária do targeting]
+
+🎯 MOTIVAÇÃO PRINCIPAL
+[O que leva esse cliente a buscar você — qual dor resolve, qual desejo realiza, qual transformação proporciona]
+
+📱 COMPORTAMENTO DE COMPRA
+[Como pesquisa e decide: antecipado ou impulso / Google ou redes sociais / compra direta ou consulta primeiro]
+
+💰 PERFIL DE TICKET
+[Sensível a preço ou orientado por valor percebido / compra recorrente ou pontual]
+
+🚫 QUEM NÃO É SEU CLIENTE IDEAL
+[Perfil que não funciona — importante para não desperdiçar verba de anúncio]
+
+✅ COMO USAR ESSE ICP
+- Campanhas no Meta: segmente por localização ([origem]) + interesses ([motivação])
+- Criativo do anúncio: fale diretamente com a dor e o desejo desse perfil
+- Oferta: empacote o produto/serviço do jeito que essa pessoa mais valoriza
+- Atendimento: use a linguagem e o ritmo de quem decide [rápido/planejado]
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+function fmtVal(v: any): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (Array.isArray(v)) return v.length ? v.filter(Boolean).join(", ") : "—";
+  if (typeof v === "object") {
+    const entries = Object.entries(v).filter(([_, val]) => val !== null && val !== undefined && val !== "");
+    if (!entries.length) return "—";
+    return entries.map(([k, val]) => `${k}: ${fmtVal(val)}`).join(" • ");
+  }
+  return String(v);
+}
+
+function fmtBlock(data: any): string {
+  if (!data || typeof data !== "object") return "—";
+  const entries = Object.entries(data).filter(([_, v]) => v !== null && v !== undefined && v !== "");
+  if (!entries.length) return "—";
+  return entries.map(([k, v]) => `- ${k}: ${fmtVal(v)}`).join("\n");
+}
+
+function fmtCompetitors(c1: any, c2: any): string {
+  const parts: string[] = [];
+  if (c1?.name) parts.push(`${c1.name}${c1.reason ? ` (${c1.reason})` : ""}`);
+  if (c2?.name) parts.push(`${c2.name}${c2.reason ? ` (${c2.reason})` : ""}`);
+  return parts.length ? parts.join("; ") : "—";
+}
+
+function interpolate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "—");
+}
+
+async function aiText(config: AIConfig, sys: string, usr: string, t = 0.7): Promise<string> {
+  let url: string;
+  let headers: Record<string, string>;
+  let body: Record<string, unknown>;
+  let isGeminiDirect = false;
+
+  if (config.source === "custom" && config.apiKey) {
+    if (config.provider === "openai") {
+      url = "https://api.openai.com/v1/chat/completions";
+      headers = { "Authorization": `Bearer ${config.apiKey}`, "Content-Type": "application/json" };
+      body = { model: config.model, messages: [{ role: "system", content: sys }, { role: "user", content: usr }], temperature: t };
+    } else {
+      isGeminiDirect = true;
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+      headers = { "Content-Type": "application/json" };
+      body = { contents: [{ parts: [{ text: `${sys}\n\n${usr}` }] }], generationConfig: { temperature: t } };
+    }
+  } else {
+    const KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!KEY) throw new Error("No LOVABLE_API_KEY configured");
+    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    headers = { "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" };
+    body = {
+      model: config.model || "google/gemini-2.5-flash",
+      messages: [{ role: "system", content: sys }, { role: "user", content: usr }],
+      temperature: t,
+    };
+  }
+
+  const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  if (!r.ok) {
+    const st = r.status;
+    const errorText = await r.text();
+    console.error(`[AI Text] Error ${st}:`, errorText.substring(0, 500));
+    throw { status: st, message: st === 429 ? "Rate limit exceeded" : st === 402 ? "Payment required" : `Error ${st}` };
+  }
+  const d = await r.json();
+  const content = isGeminiDirect
+    ? (d.candidates?.[0]?.content?.parts?.[0]?.text || "")
+    : (d.choices?.[0]?.message?.content || "");
+  if (!content) throw new Error("No AI content returned");
+  return content.trim();
+}
 
 // Seleção automática de modelo baseada no tipo de tarefa
 function selectModelForTask(type: string, aiConfig: AIConfig): AIConfig {
@@ -490,6 +815,91 @@ JSON exato:
 }`;
       const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, swot: (res as any).swot }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-icp-document") {
+      // Buscar todos os dados necessários
+      const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpRow }] = await Promise.all([
+        supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
+        supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_icp').select('*').eq('client_id', clientId).maybeSingle(),
+      ]);
+
+      if (!cli) {
+        return new Response(JSON.stringify({ error: 'Cliente não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const niche = (cli.niche_type as string) || 'generico';
+      const profileData: Record<string, any> = ((prof as any)?.profile_data) || {};
+      const marketData: Record<string, any> = ((prof as any)?.market_data) || {};
+
+      const swotJoin = (tags: string[] | null | undefined, text: string | null | undefined) => {
+        const t = (tags || []).filter(Boolean).join(", ");
+        const parts = [t, text].filter(Boolean);
+        return parts.length ? parts.join(" — ") : "—";
+      };
+
+      const vars: Record<string, string> = {
+        client_name: cli.name || "—",
+        niche_label: cli.niche_label || niche,
+        // hospedagem
+        profile_type: fmtVal(profileData.type || profileData.tipo),
+        profile_location: fmtVal(profileData.location || profileData.localizacao || (prof as any)?.region),
+        profile_units: fmtVal(profileData.units || profileData.unidades || profileData.rooms),
+        profile_comodidades: fmtVal(profileData.comodidades || profileData.amenities),
+        profile_diaria: fmtVal(profileData.diaria || profileData.daily_rate || (prof as any)?.average_ticket),
+        profile_experiencia: fmtVal(profileData.experiencia || profileData.experience || (prof as any)?.product_description),
+        // saude
+        profile_specialty: fmtVal(profileData.specialty || profileData.especialidade),
+        profile_ticket: fmtVal(profileData.ticket_medio || (prof as any)?.average_ticket),
+        profile_convenios: fmtVal(profileData.convenios),
+        profile_treatments: fmtVal(profileData.treatments || profileData.procedimentos),
+        // generico
+        profile_product_name: fmtVal((prof as any)?.product_name || profileData.product_name),
+        profile_product_description: fmtVal((prof as any)?.product_description || profileData.product_description),
+        profile_sales_model: fmtVal((prof as any)?.sales_model),
+        profile_region: fmtVal((prof as any)?.region),
+        profile_benefits: fmtVal((prof as any)?.benefits),
+        // shared
+        profile_differentiators: fmtVal((prof as any)?.differentiators),
+        // swot
+        swot_forcas_internas: swotJoin(swotRow?.forcas_internas_tags, swotRow?.forcas_internas_text),
+        swot_fraquezas_internas: swotJoin(swotRow?.fraquezas_internas_tags, swotRow?.fraquezas_internas_text),
+        swot_forcas_ambiente: swotJoin(swotRow?.forcas_ambiente_tags, swotRow?.forcas_ambiente_text),
+        swot_fraquezas_ambiente: swotJoin(swotRow?.fraquezas_ambiente_tags, swotRow?.fraquezas_ambiente_text),
+        // market
+        market_demand_channels: fmtVal((prof as any)?.demand_channels),
+        market_concorrentes: fmtCompetitors((prof as any)?.local_competitor_1, (prof as any)?.local_competitor_2),
+        // icp blocos
+        icp_bloco1: fmtBlock((icpRow as any)?.bloco1_data),
+        icp_bloco2: fmtBlock((icpRow as any)?.bloco2_data),
+        icp_bloco3: fmtBlock((icpRow as any)?.bloco3_data),
+      };
+
+      const template = niche === "hospedagem" ? PROMPT_HOSPEDAGEM
+        : niche === "saude" ? PROMPT_SAUDE
+        : PROMPT_GENERICO;
+
+      const finalPrompt = interpolate(template, vars);
+      const generatedText = await aiText(config, "Você é um especialista em marketing digital brasileiro.", finalPrompt, 0.7);
+
+      // Upsert em client_icp
+      const nowIso = new Date().toISOString();
+      if (icpRow) {
+        await supabase.from('client_icp').update({
+          generated_icp_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+        }).eq('client_id', clientId);
+      } else {
+        await supabase.from('client_icp').insert({
+          client_id: clientId,
+          generated_icp_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "create-video-ad") {
       const { instruction } = b;
       if (!instruction || !clientId) {
