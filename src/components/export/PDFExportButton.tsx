@@ -123,6 +123,7 @@ export function PDFExportButton({
             market={content.market}
             icp={content.icp}
             promise={content.promise}
+            generatedIcpText={content.generatedIcpText}
           />
         )}
         {type === "ads" && (
