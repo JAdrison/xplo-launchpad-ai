@@ -777,7 +777,7 @@ function OfferDocBlock(props: OfferDocBlockProps) {
                         {!isRegen && (
                           <div className="flex flex-wrap gap-2">
                             <Button
-                              onClick={() => onRegenerateSingle(offer.id)}
+                              onClick={() => onRegenerateSingle(offer.id, offer.name)}
                               variant="outline"
                               size="sm"
                               className="gap-2"
