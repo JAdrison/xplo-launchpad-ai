@@ -73,7 +73,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     setIsLoading(false);
   };
 
-  const handleGoToGenerator = (type?: "offer" | "lp" | "ads") => {
+  const handleGoToGenerator = (type?: "offer" | "ads") => {
     const params = new URLSearchParams({ client: client.id });
     if (type) {
       params.set("type", type);
@@ -98,14 +98,6 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
 
   const generationItems = [
     {
-      id: "lp" as const,
-      icon: Layout,
-      name: "Landing Page",
-      description: "Crie seções de LP com variantes (Direta, Consultiva, Agressiva)",
-      generated: status.hasLandingPage,
-      count: status.lpCount,
-    },
-    {
       id: "ads" as const,
       icon: Video,
       name: "Anúncios",
@@ -115,7 +107,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     },
   ];
 
-  const allGenerated = status.hasLandingPage && status.hasAds;
+  const allGenerated = status.hasAds;
 
   return (
     <div className="space-y-4">
@@ -131,7 +123,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
                 Geração com IA
               </CardTitle>
               <CardDescription>
-                Use os dados do PPP para gerar LPs e anúncios
+                Use os dados do PPP para gerar anúncios
               </CardDescription>
             </div>
             {allGenerated && (
@@ -143,7 +135,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-1">
             {generationItems.map((item) => {
               const Icon = item.icon;
               return (
