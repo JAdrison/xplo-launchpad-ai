@@ -621,7 +621,7 @@ interface OfferDocBlockProps {
   onToggleEnabled: (offerId: string, enabled: boolean) => void;
   onRequestDeleteOffer: (offerId: string) => void;
   onRestoreOffer: (offerId: string) => void;
-  onRegenerateSingle: (offerId: string) => void;
+  onRegenerateSingle: (offerId: string, offerName: string) => void;
   regeneratingOfferId: string | null;
 }
 
