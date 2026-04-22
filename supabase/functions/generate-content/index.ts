@@ -816,6 +816,10 @@ JSON exato:
       const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, swot: (res as any).swot }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "generate-icp-document") {
+      const documentId: string | undefined = b.documentId;
+      const documentName: string | undefined = b.documentName;
+      const variationHint: string | undefined = b.variationHint;
+
       // Buscar todos os dados necessários
       const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpRow }] = await Promise.all([
         supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
@@ -879,27 +883,66 @@ JSON exato:
         : niche === "saude" ? PROMPT_SAUDE
         : PROMPT_GENERICO;
 
-      const finalPrompt = interpolate(template, vars);
-      const generatedText = await aiText(config, "Você é um especialista em marketing digital brasileiro.", finalPrompt, 0.7);
+      let finalPrompt = interpolate(template, vars);
 
-      // Upsert em client_icp
-      const nowIso = new Date().toISOString();
-      if (icpRow) {
-        await supabase.from('client_icp').update({
-          generated_icp_text: generatedText,
-          generated_by_ai: true,
-          generated_at: nowIso,
-        }).eq('client_id', clientId);
-      } else {
-        await supabase.from('client_icp').insert({
-          client_id: clientId,
-          generated_icp_text: generatedText,
-          generated_by_ai: true,
-          generated_at: nowIso,
-        });
+      // Se for um ICP adicional/variação, adicionar instrução para diferenciar
+      if (variationHint || (documentName && documentName !== "ICP Principal")) {
+        const hint = variationHint || `Foque este ICP em: "${documentName}". Gere um perfil diferente do ICP principal, explorando outro ângulo do público-alvo.`;
+        finalPrompt += `\n\n---\n\nINSTRUÇÃO ADICIONAL — VARIAÇÃO DE ICP\n${hint}\n\nImportante: este é um ICP COMPLEMENTAR. Não repita o perfil do ICP principal. Explore um segmento, comportamento ou motivação diferente que também faça sentido para este negócio.`;
       }
 
-      return new Response(JSON.stringify({ success: true, text: generatedText }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      const generatedText = await aiText(config, "Você é um especialista em marketing digital brasileiro.", finalPrompt, 0.7);
+      const nowIso = new Date().toISOString();
+
+      // Atualiza documento existente OU cria um novo na nova tabela
+      let savedId = documentId;
+      if (documentId) {
+        await supabase.from('client_icp_documents').update({
+          generated_icp_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          ...(documentName ? { name: documentName } : {}),
+        }).eq('id', documentId);
+      } else {
+        // Calcular sort_order = max + 1
+        const { data: existing } = await supabase
+          .from('client_icp_documents')
+          .select('sort_order')
+          .eq('client_id', clientId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        const nextOrder = ((existing?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+
+        const { data: created } = await supabase.from('client_icp_documents').insert({
+          client_id: clientId,
+          name: documentName || (nextOrder === 0 ? "ICP Principal" : `ICP ${nextOrder + 1}`),
+          generated_icp_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          sort_order: nextOrder,
+        }).select('id').maybeSingle();
+        savedId = created?.id;
+      }
+
+      // Mantém compat: também atualiza o campo legacy em client_icp (primeiro doc)
+      if (!documentId) {
+        if (icpRow) {
+          await supabase.from('client_icp').update({
+            generated_icp_text: generatedText,
+            generated_by_ai: true,
+            generated_at: nowIso,
+          }).eq('client_id', clientId);
+        } else {
+          await supabase.from('client_icp').insert({
+            client_id: clientId,
+            generated_icp_text: generatedText,
+            generated_by_ai: true,
+            generated_at: nowIso,
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "create-video-ad") {
       const { instruction } = b;
       if (!instruction || !clientId) {
