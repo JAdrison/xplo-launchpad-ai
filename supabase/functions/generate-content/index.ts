@@ -906,7 +906,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
     const b = await req.json() as ReqBody;
-    const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig } = b;
+    const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig, bankOfferText, bankOfferDocumentId, bankOfferId } = b;
     console.log(`[generate-content] ${type} for ${clientId}`);
     
     // Usar config recebida ou padrão XPLO (arquitetura dual)
@@ -1455,7 +1455,13 @@ JSON exato:
       return new Response(JSON.stringify({ success: true, ad: newAd }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "ads") {
       let oCtx = '', vOid: string | null = null;
-      if (offerId) {
+      if (bankOfferText && bankOfferText.trim()) {
+        // Novo fluxo: oferta vem do Banco de Ofertas (texto rico completo)
+        vOid = null;
+        oCtx = `OFERTA BASE (do Banco de Ofertas):\n${bankOfferText.trim()}`;
+        console.log(`[generate-content] ads using bankOfferId=${bankOfferId} doc=${bankOfferDocumentId}`);
+      } else if (offerId) {
+        // Fluxo legado: tabela offers_hormozi
         const { data: o } = await supabase.from('offers_hormozi').select('*').eq('id', offerId).maybeSingle();
         if (o) { vOid = offerId; oCtx = `Oferta: ${o.promise || ''}`; }
       }
