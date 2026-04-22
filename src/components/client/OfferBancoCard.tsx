@@ -596,6 +596,73 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={!!regenDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRegenDialog(null);
+            setRegenInstruction("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {regenDialog?.kind === "single"
+                ? `Regenerar oferta: ${regenDialog.offerName}`
+                : `Regenerar banco completo${regenDialog?.kind === "all" ? `: ${regenDialog.docName}` : ""}`}
+            </DialogTitle>
+            <DialogDescription>
+              Descreva o que você quer mudar nesta regeneração. Deixe em branco para a IA decidir um novo ângulo automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label className="text-xs">Instrução para a IA (opcional)</Label>
+            <Textarea
+              value={regenInstruction}
+              onChange={(e) => setRegenInstruction(e.target.value)}
+              placeholder={
+                regenDialog?.kind === "single"
+                  ? "Ex: deixar mais agressiva, focar em casais sem filhos, trocar a escassez por bônus surpresa..."
+                  : "Ex: tom mais consultivo, focar em alta temporada, trocar promessa principal..."
+              }
+              className="min-h-[100px]"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRegenDialog(null);
+                setRegenInstruction("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!regenDialog) return;
+                const instruction = regenInstruction;
+                const dialog = regenDialog;
+                setRegenDialog(null);
+                setRegenInstruction("");
+                if (dialog.kind === "all") {
+                  const doc = docs.find((d) => d.id === dialog.docId);
+                  if (doc) void handleRegenerateAll(doc, instruction);
+                } else {
+                  const doc = docs.find((d) => d.id === dialog.docId);
+                  if (doc) void handleRegenerateSingle(doc, dialog.offerId, instruction);
+                }
+              }}
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" /> Regenerar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
