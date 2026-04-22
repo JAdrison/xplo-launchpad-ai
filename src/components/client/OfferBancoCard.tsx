@@ -126,6 +126,14 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
   const [newName, setNewName] = useState("");
   const [newHint, setNewHint] = useState("");
 
+  // Diálogo único para coletar instrução em qualquer regeneração
+  const [regenDialog, setRegenDialog] = useState<
+    | { kind: "all"; docId: string; docName: string }
+    | { kind: "single"; docId: string; offerId: string; offerName: string }
+    | null
+  >(null);
+  const [regenInstruction, setRegenInstruction] = useState("");
+
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
 
   useEffect(() => {
