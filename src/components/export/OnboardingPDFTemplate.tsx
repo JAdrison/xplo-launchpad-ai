@@ -67,6 +67,7 @@ interface OnboardingPDFTemplateProps {
     bloco2?: Record<string, any> | null;
     bloco3?: Record<string, any> | null;
   } | null;
+  generatedIcpText?: string | null;
   // Backward compat (unused mas mantém typing)
   pains?: any;
   icps?: any;
@@ -193,6 +194,7 @@ export function OnboardingPDFTemplate({
   market,
   icp,
   promise,
+  generatedIcpText,
 }: OnboardingPDFTemplateProps) {
   const formattedDate = new Date(createdAt).toLocaleDateString("pt-BR", {
     day: "2-digit",
