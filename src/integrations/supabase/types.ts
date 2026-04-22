@@ -155,6 +155,42 @@ export type Database = {
         }
         Relationships: []
       }
+      client_icp_documents: {
+        Row: {
+          client_id: string
+          created_at: string
+          generated_at: string | null
+          generated_by_ai: boolean | null
+          generated_icp_text: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          generated_at?: string | null
+          generated_by_ai?: boolean | null
+          generated_icp_text?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          generated_at?: string | null
+          generated_by_ai?: boolean | null
+          generated_icp_text?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_profile: {
         Row: {
           average_ticket: string | null
