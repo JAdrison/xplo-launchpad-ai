@@ -53,6 +53,7 @@ interface OnboardingData {
   profile: ClientProfile | null;
   swot: ClientSwot | null;
   icp: ClientIcp | null;
+  generatedOffersText: string | null;
 }
 
 interface OnboardingX1SectionProps {
@@ -126,19 +127,28 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
     profile: null,
     swot: null,
     icp: null,
+    generatedOffersText: null,
   });
 
   const fetchOnboardingData = useCallback(async () => {
     setIsLoading(true);
-    const [profileRes, swotRes, icpRes] = await Promise.all([
+    const [profileRes, swotRes, icpRes, offersRes] = await Promise.all([
       supabase.from("client_profile").select("*").eq("client_id", client.id).maybeSingle(),
       supabase.from("client_swot").select("*").eq("client_id", client.id).maybeSingle(),
       supabase.from("client_icp").select("*").eq("client_id", client.id).maybeSingle(),
+      supabase
+        .from("client_offer_documents")
+        .select("generated_text")
+        .eq("client_id", client.id)
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
     ]);
     setData({
       profile: profileRes.data ?? null,
       swot: swotRes.data ?? null,
       icp: icpRes.data ?? null,
+      generatedOffersText: (offersRes.data as any)?.generated_text ?? null,
     });
     setIsLoading(false);
   }, [client.id]);
@@ -423,6 +433,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
         }
       : null,
     generatedIcpText: data.icp?.generated_icp_text || null,
+    generatedOffersText: data.generatedOffersText,
   };
 
   const cs = checkpointStatus();

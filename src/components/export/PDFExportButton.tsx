@@ -124,6 +124,7 @@ export function PDFExportButton({
             icp={content.icp}
             promise={content.promise}
             generatedIcpText={content.generatedIcpText}
+            generatedOffersText={content.generatedOffersText}
           />
         )}
         {type === "ads" && (
