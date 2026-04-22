@@ -479,14 +479,20 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
               onSaveEdit={handleSaveEdit}
               onCancelEdit={() => setEditingId(null)}
               isGenerating={generatingId === doc.id}
-              onRegenerateAll={() => handleRegenerateAll(doc)}
+              onRegenerateAll={() => {
+                setRegenInstruction("");
+                setRegenDialog({ kind: "all", docId: doc.id, docName: doc.name });
+              }}
               onCopy={() => handleCopyDoc(doc)}
               onPDF={() => pdfTriggers[doc.id]?.()}
               onDeleteDoc={() => setDeleteId(doc.id)}
               onToggleEnabled={(offerId, enabled) => toggleEnabled(doc, offerId, enabled)}
               onRequestDeleteOffer={(offerId) => setDeleteOfferKey(`${doc.id}:${offerId}`)}
               onRestoreOffer={(offerId) => setDeleted(doc, offerId, false)}
-              onRegenerateSingle={(offerId) => handleRegenerateSingle(doc, offerId)}
+              onRegenerateSingle={(offerId, offerName) => {
+                setRegenInstruction("");
+                setRegenDialog({ kind: "single", docId: doc.id, offerId, offerName });
+              }}
               regeneratingOfferId={
                 regeneratingOfferKey?.startsWith(`${doc.id}:`)
                   ? regeneratingOfferKey.split(":")[1]
