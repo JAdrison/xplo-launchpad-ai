@@ -1278,6 +1278,8 @@ JSON exato:
       const documentId: string | undefined = b.documentId;
       const documentName: string | undefined = b.documentName;
       const variationHint: string | undefined = b.variationHint;
+      const regenerateOfferId: string | undefined = b.regenerateOfferId;
+      const offerContext: { partLabel?: string; offerNumber?: number; currentText?: string; existingFullText?: string } | undefined = b.offerContext;
 
       // Buscar dados necessários
       const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpDocs }, { data: icpLegacy }] = await Promise.all([
