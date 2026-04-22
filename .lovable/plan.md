@@ -1,70 +1,65 @@
 
 
-## Banco de Ofertas — 3 prompts por nicho (substitui Oferta Hormozi)
+## Ações por oferta dentro do Banco de Ofertas
 
-Adicionar um novo gerador **"Oferta — Banco de Ofertas"** que produz, via GPT-5.2, um documento com **6 ofertas** (3 de entrada + 3 de continuidade) personalizadas pelo ICP gerado. Padrão idêntico ao card de ICP recém-implementado: texto formatado, salvo em tabela própria, com Editar/Regenerar/Copiar/PDF.
+Hoje o banco é um único texto monolítico. Vamos quebrá-lo em **6 ofertas individuais**, cada uma com 3 ações: **habilitar/desabilitar**, **regenerar só ela**, e **excluir** (com opção de manter no documento).
 
-### Arquitetura — espelhar o padrão do ICP
+### O que muda
 
-| ICP (já feito)              | Banco de Ofertas (novo)            |
-|-----------------------------|------------------------------------|
-| `client_icp_documents`      | `client_offer_documents`           |
-| `ICPDocumentCard.tsx`       | `OfferBancoCard.tsx`               |
-| `generate-icp-document`     | `generate-offers-document`         |
-| `ICPPDFTemplate.tsx`        | `OfferBancoPDFTemplate.tsx`        |
-| 3 prompts por nicho         | 3 prompts por nicho                |
+#### 1. Estrutura — parser + estado por oferta
 
-### O que será feito
+- Criar `src/lib/offerParser.ts` com:
+  - `parseOfferBank(text)` → divide o texto em `{ header, offers: [{id, rawText, name, partLabel}], footer }` usando o marcador `[OFERTA N]` e os títulos `🗓️/🩺/🎁 BANCO DE OFERTAS — ...` para identificar a parte (Entrada / Continuidade etc).
+  - `serializeOfferBank(parsed, { skipDisabled })` → reconstrói o texto, opcionalmente omitindo ofertas desabilitadas/excluídas (usado para PDF e cópia).
+- Cada oferta extraída recebe um `id` estável (hash do índice + parte) para mapear no estado de habilitação.
 
-#### 1. Banco — nova tabela `client_offer_documents`
+#### 2. Banco — nova coluna `offer_states` em `client_offer_documents`
 
-Migration com mesma estrutura/RLS do `client_icp_documents`: `id`, `client_id`, `name` (default "Banco de Ofertas"), `generated_text`, `generated_by_ai`, `generated_at`, `sort_order`, timestamps. Permite múltiplos bancos por cliente (ex.: variações).
+- `offer_states JSONB DEFAULT '{}'` armazena `{ [offerId]: { enabled: boolean, deleted: boolean } }`.
+- Sem migração destrutiva — colunas existentes ficam intactas.
 
-A tabela legada `offers_hormozi` é **mantida** (histórico, LPs e Ads referenciam `offer_id`). Apenas para de ser exibida no novo card.
+#### 3. UI — render por oferta dentro do card
 
-#### 2. Backend — novo task `generate-offers-document`
+Em `OfferBancoCard.tsx`, quando `generated_text` existir, em vez do `<div whitespace-pre-wrap>` único, renderizar:
 
-Em `supabase/functions/generate-content/index.ts`:
+- **Cabeçalho do banco** (texto antes da 1ª oferta) em bloco simples.
+- Para cada oferta: um sub-card com:
+  - Título da oferta (extraído da linha após `🏷️ NOME DA OFERTA`) + badge da parte (Entrada / Continuidade etc.).
+  - Texto da oferta com `whitespace-pre-wrap`.
+  - **Switch "Ativa"** (toggle enabled/disabled — desabilitada fica com opacidade reduzida e badge "Desativada").
+  - Botão **🔄 Regenerar esta oferta** (loading individual).
+  - Botão **🗑️ Excluir** (com AlertDialog). A exclusão marca `deleted: true` mas mantém visualmente como "Excluída — restaurar?" para permitir reverter, conforme pedido ("excluir também ou deixar lá").
+- **Rodapé** (texto após a última oferta, ex.: "📋 COMO USAR ESSE BANCO") em bloco final.
 
-- Adicionar `"generate-offers-document"` a `STRATEGIC_TASKS` (GPT-5.2).
-- 3 constantes de prompt: `OFFER_PROMPT_HOSPEDAGEM`, `OFFER_PROMPT_SAUDE`, `OFFER_PROMPT_GENERICO` (textos exatos do briefing).
-- **Pré-requisito**: ler `client_icp_documents` (mais recente) ou `client_icp.generated_icp_text`. Se vazio, retornar `400` com `{ error: "ICP_REQUIRED" }`.
-- Reutilizar helpers existentes (`interpolate`, `fmtVal`, `fmtBlock`, `aiText`) para popular `{client_name}`, `{profile_data.*}`, `{swot.*}`, `{market.*}`, `{niche_label}` e `{icp.generated_icp_text}`.
-- Selecionar prompt por `clients.niche_type` (fallback `generico`).
-- Suporte a `documentId` (regenerar) e `variationHint` (igual ao ICP, para múltiplos bancos).
-- Upsert em `client_offer_documents`.
+#### 4. Backend — modo "regenerate-single-offer"
 
-#### 3. Frontend — novo card `OfferBancoCard`
+Em `supabase/functions/generate-content/index.ts`, no task `generate-offers-document`:
 
-Criar `src/components/client/OfferBancoCard.tsx` (clone adaptado do `ICPDocumentCard`):
+- Aceitar novos params: `regenerateOfferId?: string`, `existingText?: string`, `offerContext?: { partLabel, offerNumber, currentText }`.
+- Quando recebido, montar prompt curto e direcionado: *"Aqui está o banco atual: \<texto\>. Reescreva APENAS a [OFERTA N] da parte \<X\>, mantendo o mesmo formato (🏷️ NOME, ✨ PROMESSA, 📦 O QUE INCLUI, 💰 CONDIÇÃO COMERCIAL, 👤 PARA QUEM É, ⏰ ESCASSEZ). Traga um ângulo/ocasião diferente da atual. Retorne só o bloco da oferta."*
+- O frontend faz o splice: substitui a oferta pelo novo bloco no array, re-serializa e dá `update` no documento.
+- Reusa `aiText()` e o mesmo modelo (GPT-5.2).
 
-- Lista os documentos de banco existentes; botão **"+ Novo Banco de Ofertas"** com diálogo (nome + dica de variação opcional).
-- **Bloqueio inteligente**: se o cliente ainda não tem ICP (`client_icp_documents` vazio E `client_icp.generated_icp_text` vazio), botão fica desabilitado com tooltip *"Gere primeiro o ICP — a oferta é personalizada por ele"*.
-- Estado de loading: *"Montando seu banco de ofertas..."*.
-- Render do texto com `whitespace-pre-wrap` + emojis preservados.
-- Ações por documento: ✏️ Editar, 🔄 Regenerar, 📋 Copiar, 🗑️ Remover, 📄 PDF (via `OfferBancoPDFTemplate.tsx`).
+#### 5. Cópia, PDF e exportação respeitam estado
 
-#### 4. Atualizar `AIGenerationSection.tsx`
+- **Copiar** e **PDF** chamam `serializeOfferBank` com `skipDisabled: true` (omitem desabilitadas e excluídas). Botão de copiar/PDF do banco completo continua existindo no nível do card.
+- **Exclusão "soft"**: a oferta excluída fica oculta do PDF/cópia, mas aparece numa pequena seção "Ofertas removidas" no card com botão "Restaurar".
+- O texto bruto (`generated_text`) **não é modificado** ao habilitar/desabilitar/excluir — só `offer_states` muda. Só é reescrito ao **regenerar individual** ou na edição manual existente.
 
-- **Remover** o item `"offer"` (Oferta Hormozi) do grid `generationItems` — sobram **Landing Page** e **Anúncios** (grid `sm:grid-cols-2`).
-- Renderizar `<OfferBancoCard />` logo abaixo de `<ICPDocumentCard />` (ordem: ICP → Banco de Ofertas → grid LP/Ads).
-- A geração legada de Oferta Hormozi continua acessível via `/generator` para clientes antigos (não quebra LPs/Ads existentes).
+#### 6. Edição manual — preservada
 
-#### 5. PDF de Onboarding
-
-Em `OnboardingPDFTemplate.tsx`: adicionar prop opcional `generatedOffersText?: string | null` e renderizar **Seção 8 — Banco de Ofertas** (após Seção 7 ICP) com mesmo estilo (`white-space: pre-wrap`, fundo off-white). Em `OnboardingX1Section.tsx` e `PDFExportButton.tsx`: buscar o banco mais recente de `client_offer_documents` e repassar.
+O modo "Editar" atual (textarea com o texto inteiro) continua funcionando como fallback para edição livre. Após salvar, o parser re-roda automaticamente.
 
 ### Detalhes técnicos
 
-- **Modelo IA**: GPT-5.2 via Lovable AI Gateway (já roteado pelo `STRATEGIC_TASKS`).
-- **Saída**: texto puro formatado (não JSON) — usar `aiText()` existente.
-- **Mapeamento de variáveis dinâmicas**: campos não previstos em `profile_data`/`market_data` (ex.: `comodidades`, `experiencia`, `treatments`, `volume_pacientes`) são acessados via lookup seguro `?? "—"`. Quando ausentes, o prompt instrui a IA a usar senso comum do nicho.
-- **Sem foreign keys** (padrão atual do projeto), com RLS `public` espelhando `client_icp_documents`.
-- **Memory update**: criar `mem://ia/banco-ofertas-3-nichos` e atualizar Core para refletir que "Oferta" agora é Banco de Ofertas (não mais Hormozi no card de IA).
+- **Robustez do parser**: se a IA não seguir exatamente o template, o parser cai num fallback que mostra o texto inteiro como hoje (sem quebrar a UI). Logamos um warning no console.
+- **Estado local otimista**: toggles e exclusão atualizam UI imediatamente e fazem `update` em background; em erro, revertem com toast.
+- **Modelo IA p/ regeneração unitária**: GPT-5.2 (mesmo usado no banco completo, para manter consistência de tom).
+- **Sem nova tabela** — só uma coluna `offer_states` em `client_offer_documents`.
 
 ### Fora do escopo
 
-- Não excluir `offers_hormozi` nem migrar dados (mantém compatibilidade com LPs/Ads existentes que usam `offer_id`).
-- Não mudar prompts de ICP, LP ou Ads.
-- Não criar abas separadas (Final de Semana / Dias de Semana) — render unificado em texto formatado, igual ao ICP, para manter simplicidade e consistência visual. As seções já vêm visualmente separadas pelos emojis e títulos do prompt.
+- Não muda os 3 prompts por nicho.
+- Não cria reordenação drag-and-drop entre ofertas (só ativa/desativa/exclui).
+- Não toca no card de ICP nem nos cards de LP/Anúncios.
 
