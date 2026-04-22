@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePDF, Margin } from "react-to-pdf";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Tag,
   Sparkles,
@@ -18,11 +19,19 @@ import {
   Plus,
   Trash2,
   Lock,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAIConfig } from "@/lib/aiConfig";
 import { OfferBancoPDFTemplate } from "@/components/export/OfferBancoPDFTemplate";
+import {
+  parseOfferBank,
+  serializeOfferBank,
+  replaceOfferBlock,
+  getOfferState,
+  type OfferStatesMap,
+} from "@/lib/offerParser";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,15 +69,18 @@ interface OfferDoc {
   generated_text: string | null;
   generated_at: string | null;
   sort_order: number;
+  offer_states: OfferStatesMap | null;
 }
 
 function PDFTarget({
   doc,
   clientName,
+  exportText,
   onReady,
 }: {
   doc: OfferDoc;
   clientName: string;
+  exportText: string;
   onReady: (toPDF: () => void) => void;
 }) {
   const sanitized = `${clientName}-${doc.name}`
@@ -92,7 +104,7 @@ function PDFTarget({
       <OfferBancoPDFTemplate
         clientName={`${clientName} — ${doc.name}`}
         createdAt={doc.generated_at || new Date().toISOString()}
-        text={doc.generated_text || ""}
+        text={exportText}
       />
     </div>
   );
@@ -103,10 +115,12 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
   const [docs, setDocs] = useState<OfferDoc[]>([]);
   const [hasIcp, setHasIcp] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | "new" | null>(null);
+  const [regeneratingOfferKey, setRegeneratingOfferKey] = useState<string | null>(null); // `${docId}:${offerId}`
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [editName, setEditName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteOfferKey, setDeleteOfferKey] = useState<string | null>(null); // `${docId}:${offerId}`
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -124,7 +138,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     const [docsRes, icpDocsRes, icpLegacyRes] = await Promise.all([
       supabase
         .from("client_offer_documents")
-        .select("id, name, generated_text, generated_at, sort_order")
+        .select("id, name, generated_text, generated_at, sort_order, offer_states")
         .eq("client_id", clientId)
         .order("sort_order", { ascending: true }),
       supabase
@@ -139,7 +153,10 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
         .maybeSingle(),
     ]);
 
-    const list = (docsRes.data as OfferDoc[]) || [];
+    const list = ((docsRes.data as any[]) || []).map((d) => ({
+      ...d,
+      offer_states: (d.offer_states as OfferStatesMap | null) || {},
+    })) as OfferDoc[];
     const icpFromDocs = (icpDocsRes.data || []).some((d: any) => d?.generated_icp_text);
     const icpFromLegacy = !!icpLegacyRes.data?.generated_icp_text;
     setHasIcp(icpFromDocs || icpFromLegacy);
@@ -151,6 +168,8 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     documentId?: string;
     documentName?: string;
     variationHint?: string;
+    regenerateOfferId?: string;
+    offerContext?: { partLabel: string; offerNumber: number; currentText: string; existingFullText: string };
   }) => {
     const aiConfig = getAIConfig();
     const { data, error } = await supabase.functions.invoke("generate-content", {
@@ -158,7 +177,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.message || data.error);
-    return data as { text: string; documentId: string };
+    return data as { text?: string; documentId?: string; offerBlock?: string; offerId?: string };
   };
 
   const handleGenerateNew = async () => {
@@ -180,7 +199,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     }
   };
 
-  const handleRegenerate = async (doc: OfferDoc) => {
+  const handleRegenerateAll = async (doc: OfferDoc) => {
     setGeneratingId(doc.id);
     try {
       await callGenerate({ documentId: doc.id, documentName: doc.name });
@@ -190,6 +209,44 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
       handleError(e);
     } finally {
       setGeneratingId(null);
+    }
+  };
+
+  const handleRegenerateSingle = async (doc: OfferDoc, offerId: string) => {
+    const parsed = parseOfferBank(doc.generated_text || "");
+    const offer = parsed.offers.find((o) => o.id === offerId);
+    if (!offer) {
+      toast.error("Oferta não encontrada para regeneração");
+      return;
+    }
+    const key = `${doc.id}:${offerId}`;
+    setRegeneratingOfferKey(key);
+    try {
+      const res = await callGenerate({
+        documentId: doc.id,
+        regenerateOfferId: offerId,
+        offerContext: {
+          partLabel: offer.partLabel,
+          offerNumber: offer.offerNumber,
+          currentText: offer.rawText,
+          existingFullText: doc.generated_text || "",
+        },
+      });
+      if (!res.offerBlock) throw new Error("IA não retornou o bloco da oferta");
+
+      const newFullText = replaceOfferBlock(parsed, offerId, res.offerBlock, doc.offer_states);
+      const { error } = await supabase
+        .from("client_offer_documents")
+        .update({ generated_text: newFullText, generated_at: new Date().toISOString() })
+        .eq("id", doc.id);
+      if (error) throw error;
+
+      await load();
+      toast.success("Oferta regenerada!");
+    } catch (e: any) {
+      handleError(e);
+    } finally {
+      setRegeneratingOfferKey(null);
     }
   };
 
@@ -228,8 +285,42 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     toast.success("Banco atualizado");
   };
 
-  const handleCopy = async (doc: OfferDoc) => {
-    await navigator.clipboard.writeText(doc.generated_text || "");
+  const updateOfferStates = async (doc: OfferDoc, next: OfferStatesMap) => {
+    // otimista
+    setDocs((prev) => prev.map((d) => (d.id === doc.id ? { ...d, offer_states: next } : d)));
+    const { error } = await supabase
+      .from("client_offer_documents")
+      .update({ offer_states: next as any })
+      .eq("id", doc.id);
+    if (error) {
+      // reverte
+      setDocs((prev) => prev.map((d) => (d.id === doc.id ? { ...d, offer_states: doc.offer_states } : d)));
+      toast.error("Erro ao salvar mudança");
+    }
+  };
+
+  const toggleEnabled = (doc: OfferDoc, offerId: string, enabled: boolean) => {
+    const cur = doc.offer_states || {};
+    const next: OfferStatesMap = {
+      ...cur,
+      [offerId]: { ...(cur[offerId] || {}), enabled },
+    };
+    void updateOfferStates(doc, next);
+  };
+
+  const setDeleted = (doc: OfferDoc, offerId: string, deleted: boolean) => {
+    const cur = doc.offer_states || {};
+    const next: OfferStatesMap = {
+      ...cur,
+      [offerId]: { ...(cur[offerId] || {}), deleted },
+    };
+    void updateOfferStates(doc, next);
+  };
+
+  const handleCopyDoc = async (doc: OfferDoc) => {
+    const parsed = parseOfferBank(doc.generated_text || "");
+    const text = serializeOfferBank(parsed, doc.offer_states, { skipDisabled: true });
+    await navigator.clipboard.writeText(text);
     toast.success("Copiado para a área de transferência");
   };
 
@@ -246,6 +337,14 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     }
     await load();
     toast.success("Banco removido");
+  };
+
+  const confirmDeleteOffer = () => {
+    if (!deleteOfferKey) return;
+    const [docId, offerId] = deleteOfferKey.split(":");
+    const doc = docs.find((d) => d.id === docId);
+    if (doc) setDeleted(doc, offerId, true);
+    setDeleteOfferKey(null);
   };
 
   if (isLoading) {
@@ -353,135 +452,53 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
             </div>
           )}
 
+          {docs.map((doc) => (
+            <OfferDocBlock
+              key={doc.id}
+              doc={doc}
+              isEditing={editingId === doc.id}
+              editText={editText}
+              editName={editName}
+              onChangeEditText={setEditText}
+              onChangeEditName={setEditName}
+              onStartEdit={() => handleStartEdit(doc)}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={() => setEditingId(null)}
+              isGenerating={generatingId === doc.id}
+              onRegenerateAll={() => handleRegenerateAll(doc)}
+              onCopy={() => handleCopyDoc(doc)}
+              onPDF={() => pdfTriggers[doc.id]?.()}
+              onDeleteDoc={() => setDeleteId(doc.id)}
+              onToggleEnabled={(offerId, enabled) => toggleEnabled(doc, offerId, enabled)}
+              onRequestDeleteOffer={(offerId) => setDeleteOfferKey(`${doc.id}:${offerId}`)}
+              onRestoreOffer={(offerId) => setDeleted(doc, offerId, false)}
+              onRegenerateSingle={(offerId) => handleRegenerateSingle(doc, offerId)}
+              regeneratingOfferId={
+                regeneratingOfferKey?.startsWith(`${doc.id}:`)
+                  ? regeneratingOfferKey.split(":")[1]
+                  : null
+              }
+            />
+          ))}
+
           {docs.map((doc) => {
-            const isEditing = editingId === doc.id;
-            const isGen = generatingId === doc.id;
+            if (!doc.generated_text) return null;
+            const parsed = parseOfferBank(doc.generated_text);
+            const exportText = serializeOfferBank(parsed, doc.offer_states, { skipDisabled: true });
             return (
-              <div key={doc.id} className="rounded-lg border p-4 space-y-3">
-                {isEditing ? (
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Nome do banco</Label>
-                      <Input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Ex: Banco Alta Temporada"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Conteúdo</Label>
-                      <Textarea
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        className="min-h-[400px] font-mono text-sm"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleSaveEdit} size="sm" className="gap-2">
-                        <Check className="h-4 w-4" /> Salvar
-                      </Button>
-                      <Button
-                        onClick={() => setEditingId(null)}
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <X className="h-4 w-4" /> Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Tag className="h-4 w-4 text-primary shrink-0" />
-                        <h4 className="font-semibold truncate">{doc.name}</h4>
-                      </div>
-                      {doc.generated_at && (
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(doc.generated_at).toLocaleDateString("pt-BR")}
-                        </span>
-                      )}
-                    </div>
-
-                    {isGen ? (
-                      <div className="flex items-center gap-2 py-6 justify-center">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                        <span className="text-sm text-muted-foreground">Regenerando...</span>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg border bg-muted/30 p-4 whitespace-pre-wrap text-sm leading-relaxed max-h-[500px] overflow-y-auto">
-                        {doc.generated_text || (
-                          <span className="text-muted-foreground italic">Sem conteúdo</span>
-                        )}
-                      </div>
-                    )}
-
-                    {!isGen && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          onClick={() => handleStartEdit(doc)}
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          <Pencil className="h-4 w-4" /> Editar
-                        </Button>
-                        <Button
-                          onClick={() => handleRegenerate(doc)}
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          <RefreshCw className="h-4 w-4" /> Regenerar
-                        </Button>
-                        <Button
-                          onClick={() => handleCopy(doc)}
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                        >
-                          <Copy className="h-4 w-4" /> Copiar
-                        </Button>
-                        <Button
-                          onClick={() => pdfTriggers[doc.id]?.()}
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          disabled={!doc.generated_text}
-                        >
-                          <FileDown className="h-4 w-4" /> PDF
-                        </Button>
-                        <Button
-                          onClick={() => setDeleteId(doc.id)}
-                          variant="ghost"
-                          size="sm"
-                          className="gap-2 text-destructive hover:text-destructive ml-auto"
-                        >
-                          <Trash2 className="h-4 w-4" /> Remover
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
-
-          {docs.map((doc) =>
-            doc.generated_text ? (
               <PDFTarget
                 key={doc.id}
                 doc={doc}
                 clientName={clientName}
+                exportText={exportText}
                 onReady={(trigger) =>
                   setPdfTriggers((prev) =>
                     prev[doc.id] === trigger ? prev : { ...prev, [doc.id]: trigger }
                   )
                 }
               />
-            ) : null
-          )}
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -542,6 +559,297 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!deleteOfferKey} onOpenChange={(open) => !open && setDeleteOfferKey(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta oferta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A oferta ficará oculta do PDF e da cópia, mas continua salva no banco e pode ser restaurada a qualquer momento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteOffer} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
+  );
+}
+
+// ============================================================
+// Sub-componente: render de um único documento de banco
+// ============================================================
+interface OfferDocBlockProps {
+  doc: OfferDoc;
+  isEditing: boolean;
+  editText: string;
+  editName: string;
+  onChangeEditText: (v: string) => void;
+  onChangeEditName: (v: string) => void;
+  onStartEdit: () => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  isGenerating: boolean;
+  onRegenerateAll: () => void;
+  onCopy: () => void;
+  onPDF: () => void;
+  onDeleteDoc: () => void;
+  onToggleEnabled: (offerId: string, enabled: boolean) => void;
+  onRequestDeleteOffer: (offerId: string) => void;
+  onRestoreOffer: (offerId: string) => void;
+  onRegenerateSingle: (offerId: string) => void;
+  regeneratingOfferId: string | null;
+}
+
+function OfferDocBlock(props: OfferDocBlockProps) {
+  const {
+    doc,
+    isEditing,
+    editText,
+    editName,
+    onChangeEditText,
+    onChangeEditName,
+    onStartEdit,
+    onSaveEdit,
+    onCancelEdit,
+    isGenerating,
+    onRegenerateAll,
+    onCopy,
+    onPDF,
+    onDeleteDoc,
+    onToggleEnabled,
+    onRequestDeleteOffer,
+    onRestoreOffer,
+    onRegenerateSingle,
+    regeneratingOfferId,
+  } = props;
+
+  const parsed = useMemo(
+    () => parseOfferBank(doc.generated_text || ""),
+    [doc.generated_text]
+  );
+
+  const activeOffers = parsed.offers.filter((o) => !getOfferState(doc.offer_states, o.id).deleted);
+  const deletedOffers = parsed.offers.filter((o) => getOfferState(doc.offer_states, o.id).deleted);
+
+  return (
+    <div className="rounded-lg border p-4 space-y-3">
+      {isEditing ? (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Nome do banco</Label>
+            <Input
+              value={editName}
+              onChange={(e) => onChangeEditName(e.target.value)}
+              placeholder="Ex: Banco Alta Temporada"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Conteúdo</Label>
+            <Textarea
+              value={editText}
+              onChange={(e) => onChangeEditText(e.target.value)}
+              className="min-h-[400px] font-mono text-sm"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={onSaveEdit} size="sm" className="gap-2">
+              <Check className="h-4 w-4" /> Salvar
+            </Button>
+            <Button onClick={onCancelEdit} variant="outline" size="sm" className="gap-2">
+              <X className="h-4 w-4" /> Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <Tag className="h-4 w-4 text-primary shrink-0" />
+              <h4 className="font-semibold truncate">{doc.name}</h4>
+              {parsed.offers.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {activeOffers.filter((o) => getOfferState(doc.offer_states, o.id).enabled).length}/
+                  {parsed.offers.length} ativas
+                </Badge>
+              )}
+            </div>
+            {doc.generated_at && (
+              <span className="text-xs text-muted-foreground">
+                {new Date(doc.generated_at).toLocaleDateString("pt-BR")}
+              </span>
+            )}
+          </div>
+
+          {isGenerating ? (
+            <div className="flex items-center gap-2 py-6 justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Regenerando banco completo...</span>
+            </div>
+          ) : (
+            <>
+              {parsed.isFallback ? (
+                <div className="rounded-lg border bg-muted/30 p-4 whitespace-pre-wrap text-sm leading-relaxed max-h-[500px] overflow-y-auto">
+                  {doc.generated_text || (
+                    <span className="text-muted-foreground italic">Sem conteúdo</span>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {parsed.header && (
+                    <div className="rounded-lg border bg-muted/20 p-3 whitespace-pre-wrap text-sm leading-relaxed">
+                      {parsed.header}
+                    </div>
+                  )}
+
+                  {activeOffers.map((offer) => {
+                    const st = getOfferState(doc.offer_states, offer.id);
+                    const isRegen = regeneratingOfferId === offer.id;
+                    return (
+                      <div
+                        key={offer.id}
+                        className={`rounded-lg border p-3 space-y-2 transition-opacity ${
+                          st.enabled ? "" : "opacity-50 bg-muted/10"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              #{offer.offerNumber}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs shrink-0">
+                              {offer.partLabel}
+                            </Badge>
+                            <span className="font-medium text-sm truncate">{offer.name}</span>
+                            {!st.enabled && (
+                              <Badge variant="destructive" className="text-xs shrink-0">
+                                Desativada
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <Switch
+                                checked={st.enabled}
+                                onCheckedChange={(v) => onToggleEnabled(offer.id, v)}
+                                disabled={isRegen}
+                              />
+                              <span className="text-xs text-muted-foreground">Ativa</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {isRegen ? (
+                          <div className="flex items-center gap-2 py-4 justify-center">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            <span className="text-xs text-muted-foreground">Regenerando esta oferta...</span>
+                          </div>
+                        ) : (
+                          <div className="rounded bg-muted/30 p-3 whitespace-pre-wrap text-sm leading-relaxed">
+                            {offer.rawText}
+                          </div>
+                        )}
+
+                        {!isRegen && (
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              onClick={() => onRegenerateSingle(offer.id)}
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              disabled={!!regeneratingOfferId}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" /> Regenerar
+                            </Button>
+                            <Button
+                              onClick={() => onRequestDeleteOffer(offer.id)}
+                              variant="ghost"
+                              size="sm"
+                              className="gap-2 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> Excluir
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {parsed.footer && (
+                    <div className="rounded-lg border bg-muted/20 p-3 whitespace-pre-wrap text-sm leading-relaxed">
+                      {parsed.footer}
+                    </div>
+                  )}
+
+                  {deletedOffers.length > 0 && (
+                    <div className="rounded-lg border border-dashed p-3 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Ofertas removidas ({deletedOffers.length}) — ocultas do PDF/cópia
+                      </p>
+                      <div className="space-y-2">
+                        {deletedOffers.map((offer) => (
+                          <div
+                            key={offer.id}
+                            className="flex items-center justify-between gap-2 text-sm"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 opacity-60">
+                              <Badge variant="outline" className="text-xs shrink-0">
+                                #{offer.offerNumber}
+                              </Badge>
+                              <span className="truncate">{offer.name}</span>
+                            </div>
+                            <Button
+                              onClick={() => onRestoreOffer(offer.id)}
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5 h-7"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 pt-2 border-t">
+                <Button onClick={onStartEdit} variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-4 w-4" /> Editar texto
+                </Button>
+                <Button onClick={onRegenerateAll} variant="outline" size="sm" className="gap-2">
+                  <RefreshCw className="h-4 w-4" /> Regenerar tudo
+                </Button>
+                <Button onClick={onCopy} variant="outline" size="sm" className="gap-2">
+                  <Copy className="h-4 w-4" /> Copiar
+                </Button>
+                <Button
+                  onClick={onPDF}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={!doc.generated_text}
+                >
+                  <FileDown className="h-4 w-4" /> PDF
+                </Button>
+                <Button
+                  onClick={onDeleteDoc}
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-destructive hover:text-destructive ml-auto"
+                >
+                  <Trash2 className="h-4 w-4" /> Remover banco
+                </Button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
   );
 }

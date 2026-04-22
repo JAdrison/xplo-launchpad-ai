@@ -1278,6 +1278,8 @@ JSON exato:
       const documentId: string | undefined = b.documentId;
       const documentName: string | undefined = b.documentName;
       const variationHint: string | undefined = b.variationHint;
+      const regenerateOfferId: string | undefined = b.regenerateOfferId;
+      const offerContext: { partLabel?: string; offerNumber?: number; currentText?: string; existingFullText?: string } | undefined = b.offerContext;
 
       // Buscar dados necessários
       const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpDocs }, { data: icpLegacy }] = await Promise.all([
@@ -1300,6 +1302,21 @@ JSON exato:
 
       if (!icpCombined) {
         return new Response(JSON.stringify({ error: 'ICP_REQUIRED', message: 'Gere primeiro o ICP — a oferta é personalizada por ele.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // ===== Modo: regenerar UMA oferta específica =====
+      if (regenerateOfferId && offerContext && documentId) {
+        const partLabel = offerContext.partLabel || "Geral";
+        const offerNum = offerContext.offerNumber || 1;
+        const currentText = (offerContext.currentText || "").trim();
+        const fullText = (offerContext.existingFullText || "").trim();
+
+        const singleSys = "Você é um especialista em marketing de oferta no Brasil. Reescreva APENAS o bloco de UMA oferta específica, mantendo rigorosamente o formato original.";
+        const singlePrompt = `Abaixo está o BANCO DE OFERTAS atual deste cliente (para contexto):\n\n${fullText}\n\n---\n\nReescreva APENAS a [OFERTA ${offerNum}] da parte "${partLabel}". O bloco atual dessa oferta é:\n\n${currentText}\n\n---\n\nREGRAS OBRIGATÓRIAS:\n- Retorne SOMENTE o bloco da oferta, começando com a linha "[OFERTA ${offerNum}]" exatamente assim.\n- Mantenha o mesmo formato visual: 🏷️ NOME DA OFERTA, ✨ PROMESSA, 📦 O QUE INCLUI, 💰 CONDIÇÃO COMERCIAL, 👤 PARA QUEM É, ⏰ ESCASSEZ (use os mesmos emojis e títulos que aparecem nas outras ofertas).\n- Traga um ÂNGULO/OCASIÃO/PROPOSTA DIFERENTE da oferta atual e que não conflite com as outras ofertas do banco.\n- Mantenha consistência de tom, nicho e ICP.\n- NÃO escreva nenhum texto antes ou depois do bloco. NÃO adicione explicações.`;
+
+        const newBlock = await aiText(config, singleSys, singlePrompt, 0.8);
+
+        return new Response(JSON.stringify({ success: true, offerBlock: newBlock.trim(), offerId: regenerateOfferId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       const niche = (cli.niche_type as string) || 'generico';

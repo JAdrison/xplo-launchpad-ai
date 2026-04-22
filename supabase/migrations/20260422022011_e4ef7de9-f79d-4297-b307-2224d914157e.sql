@@ -1,0 +1,1 @@
+ALTER TABLE public.client_offer_documents ADD COLUMN IF NOT EXISTS offer_states JSONB NOT NULL DEFAULT '{}'::jsonb;
