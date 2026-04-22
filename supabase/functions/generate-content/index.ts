@@ -1274,6 +1274,121 @@ JSON exato:
       }
 
       return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-offers-document") {
+      const documentId: string | undefined = b.documentId;
+      const documentName: string | undefined = b.documentName;
+      const variationHint: string | undefined = b.variationHint;
+
+      // Buscar dados necessários
+      const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpDocs }, { data: icpLegacy }] = await Promise.all([
+        supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
+        supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_icp_documents').select('generated_icp_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+        supabase.from('client_icp').select('generated_icp_text').eq('client_id', clientId).maybeSingle(),
+      ]);
+
+      if (!cli) {
+        return new Response(JSON.stringify({ error: 'Cliente não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Pré-requisito: ICP precisa existir
+      const icpsList = (icpDocs || []).filter((d: any) => d?.generated_icp_text);
+      const icpCombined = icpsList.length
+        ? icpsList.map((d: any) => `### ${d.name}\n${d.generated_icp_text}`).join("\n\n---\n\n")
+        : (icpLegacy?.generated_icp_text || "");
+
+      if (!icpCombined) {
+        return new Response(JSON.stringify({ error: 'ICP_REQUIRED', message: 'Gere primeiro o ICP — a oferta é personalizada por ele.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const niche = (cli.niche_type as string) || 'generico';
+      const profileData: Record<string, any> = ((prof as any)?.profile_data) || {};
+
+      const swotJoin = (tags: string[] | null | undefined, text: string | null | undefined) => {
+        const t = (tags || []).filter(Boolean).join(", ");
+        const parts = [t, text].filter(Boolean);
+        return parts.length ? parts.join(" — ") : "—";
+      };
+
+      const vars: Record<string, string> = {
+        client_name: cli.name || "—",
+        niche_label: cli.niche_label || niche,
+        // hospedagem
+        profile_type: fmtVal(profileData.type || profileData.tipo),
+        profile_location: fmtVal(profileData.location || profileData.localizacao || (prof as any)?.region),
+        profile_units: fmtVal(profileData.units || profileData.unidades || profileData.rooms),
+        profile_comodidades: fmtVal(profileData.comodidades || profileData.amenities),
+        profile_diaria: fmtVal(profileData.diaria || profileData.daily_rate || (prof as any)?.average_ticket),
+        profile_experiencia: fmtVal(profileData.experiencia || profileData.experience || (prof as any)?.product_description),
+        // saude
+        profile_specialty: fmtVal(profileData.specialty || profileData.especialidade),
+        profile_ticket: fmtVal(profileData.ticket_medio || (prof as any)?.average_ticket),
+        profile_convenios: fmtVal(profileData.convenios),
+        profile_treatments: fmtVal(profileData.treatments || profileData.procedimentos),
+        // generico
+        profile_product_name: fmtVal((prof as any)?.product_name || profileData.product_name),
+        profile_product_description: fmtVal((prof as any)?.product_description || profileData.product_description),
+        profile_sales_model: fmtVal((prof as any)?.sales_model),
+        profile_region: fmtVal((prof as any)?.region),
+        profile_benefits: fmtVal((prof as any)?.benefits),
+        // shared
+        profile_differentiators: fmtVal((prof as any)?.differentiators),
+        // swot
+        swot_forcas_internas: swotJoin(swotRow?.forcas_internas_tags, swotRow?.forcas_internas_text),
+        swot_fraquezas_internas: swotJoin(swotRow?.fraquezas_internas_tags, swotRow?.fraquezas_internas_text),
+        swot_forcas_ambiente: swotJoin(swotRow?.forcas_ambiente_tags, swotRow?.forcas_ambiente_text),
+        swot_fraquezas_ambiente: swotJoin(swotRow?.fraquezas_ambiente_tags, swotRow?.fraquezas_ambiente_text),
+        // market
+        market_demand_channels: fmtVal((prof as any)?.demand_channels),
+        // icp
+        icp_generated_text: icpCombined,
+      };
+
+      const template = niche === "hospedagem" ? OFFER_PROMPT_HOSPEDAGEM
+        : niche === "saude" ? OFFER_PROMPT_SAUDE
+        : OFFER_PROMPT_GENERICO;
+
+      let finalPrompt = interpolate(template, vars);
+
+      // Variação opcional
+      if (variationHint || (documentName && documentName !== "Banco de Ofertas")) {
+        const hint = variationHint || `Foque este banco em: "${documentName}". Gere ofertas com ângulo diferente do banco principal.`;
+        finalPrompt += `\n\n---\n\nINSTRUÇÃO ADICIONAL — VARIAÇÃO\n${hint}\n\nImportante: este é um banco COMPLEMENTAR. Não repita as ofertas do banco principal. Explore outro ângulo, segmento ou momento de campanha.`;
+      }
+
+      const generatedText = await aiText(config, "Você é um especialista em marketing de oferta no Brasil, focado em conversão real.", finalPrompt, 0.7);
+      const nowIso = new Date().toISOString();
+
+      let savedId = documentId;
+      if (documentId) {
+        await supabase.from('client_offer_documents').update({
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          ...(documentName ? { name: documentName } : {}),
+        }).eq('id', documentId);
+      } else {
+        const { data: existing } = await supabase
+          .from('client_offer_documents')
+          .select('sort_order')
+          .eq('client_id', clientId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        const nextOrder = ((existing?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+
+        const { data: created } = await supabase.from('client_offer_documents').insert({
+          client_id: clientId,
+          name: documentName || (nextOrder === 0 ? "Banco de Ofertas" : `Banco de Ofertas ${nextOrder + 1}`),
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          sort_order: nextOrder,
+        }).select('id').maybeSingle();
+        savedId = created?.id;
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "create-video-ad") {
       const { instruction } = b;
       if (!instruction || !clientId) {
