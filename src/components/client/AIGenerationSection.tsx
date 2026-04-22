@@ -5,18 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Sparkles,
-  FileText,
   Layout,
   Video,
   Loader2,
   CheckCircle,
-  ArrowRight,
   Eye,
   Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { ICPDocumentCard } from "./ICPDocumentCard";
+import { OfferBancoCard } from "./OfferBancoCard";
 
 type Client = Tables<"clients">;
 
@@ -99,14 +98,6 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
 
   const generationItems = [
     {
-      id: "offer" as const,
-      icon: FileText,
-      name: "Oferta Hormozi",
-      description: "Gere uma oferta irresistível usando a metodologia Hormozi",
-      generated: status.hasOffer,
-      count: status.offerCount,
-    },
-    {
       id: "lp" as const,
       icon: Layout,
       name: "Landing Page",
@@ -124,11 +115,12 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     },
   ];
 
-  const allGenerated = status.hasOffer && status.hasLandingPage && status.hasAds;
+  const allGenerated = status.hasLandingPage && status.hasAds;
 
   return (
     <div className="space-y-4">
       <ICPDocumentCard clientId={client.id} clientName={client.name} />
+      <OfferBancoCard clientId={client.id} clientName={client.name} />
 
       <Card>
         <CardHeader>
@@ -139,7 +131,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
                 Geração com IA
               </CardTitle>
               <CardDescription>
-                Use os dados do PPP para gerar ofertas, LPs e anúncios
+                Use os dados do PPP para gerar LPs e anúncios
               </CardDescription>
             </div>
             {allGenerated && (
@@ -151,7 +143,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {generationItems.map((item) => {
               const Icon = item.icon;
               return (

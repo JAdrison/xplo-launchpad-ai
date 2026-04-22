@@ -68,6 +68,7 @@ interface OnboardingPDFTemplateProps {
     bloco3?: Record<string, any> | null;
   } | null;
   generatedIcpText?: string | null;
+  generatedOffersText?: string | null;
   // Backward compat (unused mas mantém typing)
   pains?: any;
   icps?: any;
@@ -195,6 +196,7 @@ export function OnboardingPDFTemplate({
   icp,
   promise,
   generatedIcpText,
+  generatedOffersText,
 }: OnboardingPDFTemplateProps) {
   const formattedDate = new Date(createdAt).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -513,6 +515,28 @@ export function OnboardingPDFTemplate({
             }}
           >
             {generatedIcpText}
+          </div>
+        </div>
+      )}
+
+      {/* 8. BANCO DE OFERTAS (gerado por IA) */}
+      {generatedOffersText && (
+        <div style={sectionStyle}>
+          <h2 style={sectionTitleStyle}>8. BANCO DE OFERTAS</h2>
+          <div
+            style={{
+              backgroundColor: "#fafafa",
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+              whiteSpace: "pre-wrap",
+              fontSize: "10.5pt",
+              color: "#1f2937",
+              lineHeight: 1.65,
+              pageBreakInside: "avoid",
+            }}
+          >
+            {generatedOffersText}
           </div>
         </div>
       )}

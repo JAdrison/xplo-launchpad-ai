@@ -20,6 +20,7 @@ const STRATEGIC_TASKS = [
   "generate-promise",
   "generate-swot",
   "generate-icp-document",
+  "generate-offers-document",
   "offer",
   "lp",
   "ads",
@@ -274,6 +275,336 @@ TEMPLATE DE SAÍDA (siga EXATAMENTE este formato, incluindo emojis e títulos)
 - Criativo do anúncio: fale diretamente com a dor e o desejo desse perfil
 - Oferta: empacote o produto/serviço do jeito que essa pessoa mais valoriza
 - Atendimento: use a linguagem e o ritmo de quem decide [rápido/planejado]
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+// ============================================================
+// PROMPTS DO BANCO DE OFERTAS — 1 por nicho
+// ============================================================
+const OFFER_PROMPT_HOSPEDAGEM = `Você é um especialista em marketing para hospedagens do Brasil, treinado com a metodologia do Check-in Lotado — método da XPLO para ajudar donos de pousadas, chalés, casas de praia e apartamentos de temporada a lotar fins de semana comuns e dias de semana sem depender de feriados, sem baixar preço indiscriminadamente e sem depender de OTAs.
+
+---
+
+CONTEXTO DO MÉTODO
+
+O Check-in Lotado ensina que oferta não é "temos disponibilidade". Oferta é quando você empacota a experiência com promessa clara, condição especial, escassez real e chamada para ação.
+
+Para final de semana: a oferta compete com outras hospedagens — precisa de diferenciação e valor percebido alto, sem necessariamente reduzir o preço.
+
+Para dias de semana: a demanda é naturalmente menor, então a oferta precisa criar um motivo. Aqui entra uma condição comercial estratégica — desconto ou benefício que justifique a saída em dia útil, sem destruir a percepção de valor da hospedagem.
+
+---
+
+SUA TAREFA
+
+Você receberá os dados completos do onboarding de uma hospedagem. Com base neles, gere um BANCO DE OFERTAS com 3 ofertas para final de semana e 3 ofertas para dias de semana, seguindo os formatos abaixo.
+
+REGRAS
+
+- Linguagem simples, direta, sem jargão de marketing.
+- Use os dados reais do onboarding — não invente comodidades ou experiências que não existem.
+- Se algum campo estiver vazio ou genérico, use o senso comum de mercado de hospedagem para preencher de forma realista.
+- Nomes das ofertas devem ser criativos, sensoriais e comunicar a experiência.
+- Cada promessa deve em 1-2 linhas fazer o hóspede se imaginar vivendo aquilo.
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome da hospedagem]: {client_name}
+[Tipo e localização]: {profile_type}, {profile_location}
+[Estrutura]: {profile_units} unidades, {profile_comodidades}
+[Diária média]: {profile_diaria}
+[Diferenciais]: {profile_differentiators}
+[Experiência oferecida]: {profile_experiencia}
+
+[SWOT]
+Pontos fortes: {swot_forcas_internas}
+Pontos fracos: {swot_fraquezas_internas}
+Oportunidades da região: {swot_forcas_ambiente}
+Desafios da região: {swot_fraquezas_ambiente}
+
+[Mercado]
+Canais de demanda: {market_demand_channels}
+
+[ICP — use para personalizar as ofertas]
+{icp_generated_text}
+
+---
+
+PARTE 1 — BANCO DE OFERTAS PARA FINAL DE SEMANA
+
+Gere 3 ofertas usando EXATAMENTE este formato para cada uma:
+
+🗓️ BANCO DE OFERTAS — FINAL DE SEMANA
+
+[OFERTA 1]
+🏷️ NOME DA OFERTA
+[Nome criativo que comunica a experiência]
+
+✨ PROMESSA
+[1-2 linhas sensoriais]
+
+📦 O QUE INCLUI
+[Diária + extras disponíveis na hospedagem]
+
+💰 CONDIÇÃO COMERCIAL
+[Para final de semana NÃO aplicar desconto na diária. Agregar valor.]
+
+👤 PARA QUEM É
+[Perfil do ICP que essa oferta atinge]
+
+⏰ ESCASSEZ
+[Limite real e específico]
+
+---
+
+[Repita para OFERTA 2 e OFERTA 3, variando o tipo de experiência — ex: uma para casais, uma para famílias, uma para grupos pequenos]
+
+---
+
+PARTE 2 — BANCO DE OFERTAS PARA DIAS DE SEMANA
+
+Antes de gerar, escolha a condição comercial mais adequada usando estes CRITÉRIOS:
+
+- Hospedagem premium + ICP pouco sensível a preço → "Compre 2 diárias e ganhe a 3ª"
+- Hospedagem com ticket médio → 15% de desconto OU "compre 2 ganhe 1"
+- Destino de baixa demanda na semana + ICP sensível a preço → 20% de desconto
+- Hospedagem familiar ou para grupos → 10% de desconto com experiência incluída
+
+🗓️ BANCO DE OFERTAS — DIAS DE SEMANA (segunda a quinta)
+
+[Para cada uma das 3 ofertas, use o mesmo formato da Parte 1, mas com a condição comercial adequada ao perfil]
+
+[EM CADA OFERTA, adicione após a CONDIÇÃO COMERCIAL uma linha:
+🎯 POR QUE ESSA CONDIÇÃO: "Sugeri [X] porque [motivo ligado ao perfil da hospedagem]."]
+
+---
+
+FECHAMENTO
+
+Após as 6 ofertas, adicione:
+
+📋 COMO USAR ESSE BANCO
+
+- Use uma oferta por vez nos seus anúncios — não rode todas ao mesmo tempo
+- Combine escassez real com data específica
+- No WhatsApp, abra a conversa com a promessa + o que inclui, depois apresente a condição
+- Para Stories: pegue a promessa e transforme em uma frase única, sensorial
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+const OFFER_PROMPT_SAUDE = `Você é um especialista em marketing para clínicas e profissionais da saúde do Brasil, treinado com a metodologia da XPLO para ajudar médicos, dentistas, fisioterapeutas, psicólogos, nutricionistas e profissionais de estética a lotar a agenda com pacientes particulares qualificados.
+
+---
+
+CONTEXTO DO MÉTODO
+
+A XPLO ensina que oferta na saúde não é "marque sua consulta". Oferta é quando você empacota um resultado com promessa clara (o que o paciente vai ter), condição estratégica, escassez real (agenda limitada) e chamada para ação.
+
+Para primeira consulta / avaliação / diagnóstico: a oferta precisa quebrar a barreira da primeira vinda — reduzir o atrito de decisão sem queimar o ticket.
+
+Para tratamento contínuo / pacote / recorrência: a oferta precisa criar motivo para o paciente se comprometer com o plano completo em vez de sessões avulsas.
+
+---
+
+SUA TAREFA
+
+Você receberá os dados completos do onboarding de uma clínica ou profissional de saúde. Com base neles, gere um BANCO DE OFERTAS com 3 ofertas de entrada e 3 ofertas de continuidade.
+
+REGRAS
+
+- Linguagem simples, direta, sem jargão médico desnecessário.
+- Use os dados reais do onboarding — não invente tratamentos ou especialidades que não foram informados.
+- Se algum campo estiver vazio ou genérico, use o senso comum da especialidade para preencher de forma realista.
+- Nomes das ofertas devem ser claros e humanizados.
+- Respeite as diretrizes éticas do CFM/conselhos: NÃO use termos como "garantia de resultado", "milagre", "antes e depois" chamativo, "melhor profissional", "único" ou promessas absolutas de cura. Use "acompanhamento completo", "abordagem personalizada", "plano individualizado".
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome da clínica/profissional]: {client_name}
+[Especialidade principal]: {profile_specialty}
+[Localização]: {profile_location}
+[Ticket médio]: {profile_ticket}
+[Convênios aceitos]: {profile_convenios}
+[Diferenciais]: {profile_differentiators}
+[Tratamentos/procedimentos oferecidos]: {profile_treatments}
+[Experiência do paciente]: {profile_experiencia}
+
+[SWOT]
+Pontos fortes: {swot_forcas_internas}
+Pontos fracos: {swot_fraquezas_internas}
+Oportunidades de mercado: {swot_forcas_ambiente}
+Ameaças de mercado: {swot_fraquezas_ambiente}
+
+[Mercado]
+Canais de captação: {market_demand_channels}
+
+[ICP — use para personalizar as ofertas]
+{icp_generated_text}
+
+---
+
+PARTE 1 — BANCO DE OFERTAS DE ENTRADA (Primeira consulta / Avaliação)
+
+Gere 3 ofertas usando EXATAMENTE este formato para cada uma:
+
+🩺 BANCO DE OFERTAS — ENTRADA / PRIMEIRA CONSULTA
+
+[OFERTA 1]
+🏷️ NOME DA OFERTA
+✨ PROMESSA
+[Foco no diagnóstico e plano de tratamento, NÃO em cura]
+📦 O QUE INCLUI
+💰 CONDIÇÃO COMERCIAL
+[Valor promocional, bônus, ou condição de fechamento]
+👤 PARA QUEM É
+⏰ ESCASSEZ
+[Vagas semanais reais, data limite ou janela de atendimento]
+
+---
+
+[Repita para OFERTA 2 e OFERTA 3, variando o tipo de entrada]
+
+---
+
+PARTE 2 — BANCO DE OFERTAS DE CONTINUIDADE (Pacotes e Tratamentos)
+
+Antes de gerar, escolha a condição comercial mais adequada usando estes CRITÉRIOS:
+
+- Ticket alto + ICP pouco sensível a preço + tratamento longo → "Plano completo com 10% de desconto + 1 sessão bônus"
+- Ticket médio + ICP equilibrado → Pacote fechado com desconto de 15% vs sessão avulsa
+- Tratamento recorrente → Plano de fidelidade / pacote de N sessões com condição especial
+- Tratamento estético com resultado progressivo → Pacote "jornada completa" com 20% de desconto
+- Público sensível a preço → Pacote com parcelamento facilitado
+
+🩺 BANCO DE OFERTAS — CONTINUIDADE / PACOTES
+
+[Para cada uma das 3 ofertas, use o mesmo formato da Parte 1, adaptado ao tratamento/pacote]
+
+[EM CADA OFERTA, adicione após a CONDIÇÃO COMERCIAL uma linha:
+🎯 POR QUE ESSA CONDIÇÃO: "Sugeri [X] porque [motivo ligado ao perfil do paciente e do tratamento]."]
+
+---
+
+FECHAMENTO
+
+📋 COMO USAR ESSE BANCO
+
+- Ofertas de entrada servem para anúncios de captação (Meta, Google)
+- Ofertas de continuidade são para conversão dentro da consulta
+- No Instagram, use as ofertas de entrada em stories e posts de pauta
+- No WhatsApp pós-avaliação, apresente a oferta de continuidade com calma — explique o plano antes do preço
+- Respeite sempre as diretrizes éticas do seu conselho
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+const OFFER_PROMPT_GENERICO = `Você é um especialista em marketing digital no Brasil, treinado com a metodologia da XPLO para ajudar pequenos e médios negócios a construírem uma máquina de aquisição de clientes previsível.
+
+---
+
+CONTEXTO DO MÉTODO
+
+A XPLO ensina que oferta não é "entre em contato". Oferta é quando você empacota a solução com promessa clara, condição estratégica (por que agora), escassez real (limite) e chamada para ação.
+
+Para venda de entrada (primeira compra): a oferta precisa quebrar a barreira da decisão sem queimar a margem.
+
+Para venda recorrente ou de alto valor: a oferta precisa criar motivo para o cliente se comprometer com o plano maior ou com a compra recorrente.
+
+---
+
+SUA TAREFA
+
+Você receberá os dados completos do onboarding de um negócio. Com base neles, gere um BANCO DE OFERTAS com 3 ofertas de entrada e 3 ofertas de valor.
+
+REGRAS
+
+- Linguagem simples, direta, sem jargão de marketing.
+- Use os dados reais do onboarding — não invente produtos, serviços ou diferenciais que não existem.
+- Se algum campo estiver vazio ou genérico, use o senso comum do nicho informado ({niche_label}) para preencher de forma realista.
+- Adapte a linguagem ao tipo de negócio: B2B vs B2C; produto físico vs serviço recorrente; curso vs consultoria.
+- Nomes das ofertas devem ser criativos e comunicar o benefício central.
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome do negócio]: {client_name}
+[Nicho específico]: {niche_label}
+[Produto/serviço principal]: {profile_product_name}
+[Descrição]: {profile_product_description}
+[Modelo de operação]: {profile_sales_model}
+[Ticket médio]: {profile_ticket}
+[Localização / área de atuação]: {profile_region}
+[Diferenciais]: {profile_differentiators}
+[Benefícios/resultados para o cliente]: {profile_benefits}
+
+[SWOT]
+Pontos fortes: {swot_forcas_internas}
+Pontos fracos: {swot_fraquezas_internas}
+Oportunidades externas: {swot_forcas_ambiente}
+Ameaças externas: {swot_fraquezas_ambiente}
+
+[Mercado]
+Canais de aquisição: {market_demand_channels}
+
+[ICP — use para personalizar as ofertas]
+{icp_generated_text}
+
+---
+
+PARTE 1 — BANCO DE OFERTAS DE ENTRADA (Primeira compra / Primeiro contato)
+
+Gere 3 ofertas usando EXATAMENTE este formato para cada uma:
+
+🎁 BANCO DE OFERTAS — ENTRADA / PRIMEIRA COMPRA
+
+[OFERTA 1]
+🏷️ NOME DA OFERTA
+✨ PROMESSA
+📦 O QUE INCLUI
+💰 CONDIÇÃO COMERCIAL
+[Valor de entrada reduzido, bônus, frete grátis, trial, ou condição de fechamento]
+👤 PARA QUEM É
+⏰ ESCASSEZ
+
+---
+
+[Repita para OFERTA 2 e OFERTA 3, variando o tipo de entrada]
+
+---
+
+PARTE 2 — BANCO DE OFERTAS DE VALOR (Recorrência / Pacote / Upsell)
+
+Antes de gerar, escolha a condição comercial mais adequada usando estes CRITÉRIOS:
+
+- Ticket alto + ICP pouco sensível a preço → "Plano completo com bônus exclusivo + desconto de 10%"
+- Ticket médio + ICP equilibrado → Pacote fechado com 15% de desconto vs avulsas
+- Negócio recorrente → Plano anual com 2 meses grátis OU fidelidade com benefícios progressivos
+- Produto físico → "Compre 2 e leve 3" OU combo estratégico
+- Curso / infoproduto → Pacote com mentorias extras + acesso vitalício a atualizações
+- Público sensível a preço → Parcelamento facilitado + entrada reduzida
+
+🎁 BANCO DE OFERTAS — VALOR / RECORRÊNCIA
+
+[Para cada uma das 3 ofertas, use o mesmo formato da Parte 1, adaptado ao pacote/plano]
+
+[EM CADA OFERTA, adicione após a CONDIÇÃO COMERCIAL uma linha:
+🎯 POR QUE ESSA CONDIÇÃO: "Sugeri [X] porque [motivo ligado ao perfil do cliente e do negócio]."]
+
+---
+
+FECHAMENTO
+
+📋 COMO USAR ESSE BANCO
+
+- Ofertas de entrada servem para anúncios de captação (Meta, Google)
+- Ofertas de valor são para conversão em upsell ou renovação
+- No WhatsApp, comece pela promessa e pelo que inclui; apresente a condição depois
+- Para Stories: transforme a promessa em uma frase única e forte
+- Rode uma oferta por vez em cada canal — não sobreponha
 
 Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
 
@@ -940,6 +1271,121 @@ JSON exato:
             generated_at: nowIso,
           });
         }
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-offers-document") {
+      const documentId: string | undefined = b.documentId;
+      const documentName: string | undefined = b.documentName;
+      const variationHint: string | undefined = b.variationHint;
+
+      // Buscar dados necessários
+      const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpDocs }, { data: icpLegacy }] = await Promise.all([
+        supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
+        supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_icp_documents').select('generated_icp_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+        supabase.from('client_icp').select('generated_icp_text').eq('client_id', clientId).maybeSingle(),
+      ]);
+
+      if (!cli) {
+        return new Response(JSON.stringify({ error: 'Cliente não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Pré-requisito: ICP precisa existir
+      const icpsList = (icpDocs || []).filter((d: any) => d?.generated_icp_text);
+      const icpCombined = icpsList.length
+        ? icpsList.map((d: any) => `### ${d.name}\n${d.generated_icp_text}`).join("\n\n---\n\n")
+        : (icpLegacy?.generated_icp_text || "");
+
+      if (!icpCombined) {
+        return new Response(JSON.stringify({ error: 'ICP_REQUIRED', message: 'Gere primeiro o ICP — a oferta é personalizada por ele.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const niche = (cli.niche_type as string) || 'generico';
+      const profileData: Record<string, any> = ((prof as any)?.profile_data) || {};
+
+      const swotJoin = (tags: string[] | null | undefined, text: string | null | undefined) => {
+        const t = (tags || []).filter(Boolean).join(", ");
+        const parts = [t, text].filter(Boolean);
+        return parts.length ? parts.join(" — ") : "—";
+      };
+
+      const vars: Record<string, string> = {
+        client_name: cli.name || "—",
+        niche_label: cli.niche_label || niche,
+        // hospedagem
+        profile_type: fmtVal(profileData.type || profileData.tipo),
+        profile_location: fmtVal(profileData.location || profileData.localizacao || (prof as any)?.region),
+        profile_units: fmtVal(profileData.units || profileData.unidades || profileData.rooms),
+        profile_comodidades: fmtVal(profileData.comodidades || profileData.amenities),
+        profile_diaria: fmtVal(profileData.diaria || profileData.daily_rate || (prof as any)?.average_ticket),
+        profile_experiencia: fmtVal(profileData.experiencia || profileData.experience || (prof as any)?.product_description),
+        // saude
+        profile_specialty: fmtVal(profileData.specialty || profileData.especialidade),
+        profile_ticket: fmtVal(profileData.ticket_medio || (prof as any)?.average_ticket),
+        profile_convenios: fmtVal(profileData.convenios),
+        profile_treatments: fmtVal(profileData.treatments || profileData.procedimentos),
+        // generico
+        profile_product_name: fmtVal((prof as any)?.product_name || profileData.product_name),
+        profile_product_description: fmtVal((prof as any)?.product_description || profileData.product_description),
+        profile_sales_model: fmtVal((prof as any)?.sales_model),
+        profile_region: fmtVal((prof as any)?.region),
+        profile_benefits: fmtVal((prof as any)?.benefits),
+        // shared
+        profile_differentiators: fmtVal((prof as any)?.differentiators),
+        // swot
+        swot_forcas_internas: swotJoin(swotRow?.forcas_internas_tags, swotRow?.forcas_internas_text),
+        swot_fraquezas_internas: swotJoin(swotRow?.fraquezas_internas_tags, swotRow?.fraquezas_internas_text),
+        swot_forcas_ambiente: swotJoin(swotRow?.forcas_ambiente_tags, swotRow?.forcas_ambiente_text),
+        swot_fraquezas_ambiente: swotJoin(swotRow?.fraquezas_ambiente_tags, swotRow?.fraquezas_ambiente_text),
+        // market
+        market_demand_channels: fmtVal((prof as any)?.demand_channels),
+        // icp
+        icp_generated_text: icpCombined,
+      };
+
+      const template = niche === "hospedagem" ? OFFER_PROMPT_HOSPEDAGEM
+        : niche === "saude" ? OFFER_PROMPT_SAUDE
+        : OFFER_PROMPT_GENERICO;
+
+      let finalPrompt = interpolate(template, vars);
+
+      // Variação opcional
+      if (variationHint || (documentName && documentName !== "Banco de Ofertas")) {
+        const hint = variationHint || `Foque este banco em: "${documentName}". Gere ofertas com ângulo diferente do banco principal.`;
+        finalPrompt += `\n\n---\n\nINSTRUÇÃO ADICIONAL — VARIAÇÃO\n${hint}\n\nImportante: este é um banco COMPLEMENTAR. Não repita as ofertas do banco principal. Explore outro ângulo, segmento ou momento de campanha.`;
+      }
+
+      const generatedText = await aiText(config, "Você é um especialista em marketing de oferta no Brasil, focado em conversão real.", finalPrompt, 0.7);
+      const nowIso = new Date().toISOString();
+
+      let savedId = documentId;
+      if (documentId) {
+        await supabase.from('client_offer_documents').update({
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          ...(documentName ? { name: documentName } : {}),
+        }).eq('id', documentId);
+      } else {
+        const { data: existing } = await supabase
+          .from('client_offer_documents')
+          .select('sort_order')
+          .eq('client_id', clientId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        const nextOrder = ((existing?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+
+        const { data: created } = await supabase.from('client_offer_documents').insert({
+          client_id: clientId,
+          name: documentName || (nextOrder === 0 ? "Banco de Ofertas" : `Banco de Ofertas ${nextOrder + 1}`),
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          sort_order: nextOrder,
+        }).select('id').maybeSingle();
+        savedId = created?.id;
       }
 
       return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
