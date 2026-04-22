@@ -495,7 +495,27 @@ export function OnboardingPDFTemplate({
         </div>
       )}
 
-      {/* Footer */}
+      {/* 7. ICP — CLIENTE IDEAL (gerado por IA) */}
+      {generatedIcpText && (
+        <div style={sectionStyle}>
+          <h2 style={sectionTitleStyle}>7. ICP — CLIENTE IDEAL</h2>
+          <div
+            style={{
+              backgroundColor: "#fafafa",
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+              whiteSpace: "pre-wrap",
+              fontSize: "10.5pt",
+              color: "#1f2937",
+              lineHeight: 1.65,
+              pageBreakInside: "avoid",
+            }}
+          >
+            {generatedIcpText}
+          </div>
+        </div>
+      )}
       <div
         style={{
           marginTop: "30px",
