@@ -73,7 +73,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     setIsLoading(false);
   };
 
-  const handleGoToGenerator = (type?: "offer" | "lp" | "ads") => {
+  const handleGoToGenerator = (type?: "offer" | "ads") => {
     const params = new URLSearchParams({ client: client.id });
     if (type) {
       params.set("type", type);
