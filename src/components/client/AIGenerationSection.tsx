@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { ICPDocumentCard } from "./ICPDocumentCard";
 
 type Client = Tables<"clients">;
 
@@ -126,70 +127,74 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
   const allGenerated = status.hasOffer && status.hasLandingPage && status.hasAds;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              Geração com IA
-            </CardTitle>
-            <CardDescription>
-              Use os dados do PPP para gerar ofertas, LPs e anúncios
-            </CardDescription>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Geração com IA
+              </CardTitle>
+              <CardDescription>
+                Use os dados do PPP para gerar ofertas, LPs e anúncios
+              </CardDescription>
+            </div>
+            {allGenerated && (
+              <Badge variant="default" className="gap-1">
+                <CheckCircle className="h-3 w-3" />
+                Tudo gerado
+              </Badge>
+            )}
           </div>
-          {allGenerated && (
-            <Badge variant="default" className="gap-1">
-              <CheckCircle className="h-3 w-3" />
-              Tudo gerado
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {generationItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.id}
-                className="flex flex-col gap-2 rounded-lg border p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-medium text-sm">{item.name}</span>
-                  </div>
-                  {item.generated && (
-                    <Badge variant="secondary" className="text-xs">
-                      {item.count}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
-                <Button
-                  variant={item.generated ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => handleGoToGenerator(item.id)}
-                  className="mt-auto gap-2"
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {generationItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-2 rounded-lg border p-4"
                 >
-                  {item.generated ? (
-                    <>
-                      <Eye className="h-3 w-3" />
-                      Ver Gerados
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-3 w-3" />
-                      Gerar
-                    </>
-                  )}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-medium text-sm">{item.name}</span>
+                    </div>
+                    {item.generated && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.count}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                  <Button
+                    variant={item.generated ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => handleGoToGenerator(item.id)}
+                    className="mt-auto gap-2"
+                  >
+                    {item.generated ? (
+                      <>
+                        <Eye className="h-3 w-3" />
+                        Ver Gerados
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-3 w-3" />
+                        Gerar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <ICPDocumentCard clientId={client.id} clientName={client.name} />
+    </div>
   );
 }
