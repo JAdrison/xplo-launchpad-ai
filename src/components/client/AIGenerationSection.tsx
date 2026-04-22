@@ -5,18 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Sparkles,
-  FileText,
   Layout,
   Video,
   Loader2,
   CheckCircle,
-  ArrowRight,
   Eye,
   Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { ICPDocumentCard } from "./ICPDocumentCard";
+import { OfferBancoCard } from "./OfferBancoCard";
 
 type Client = Tables<"clients">;
 
