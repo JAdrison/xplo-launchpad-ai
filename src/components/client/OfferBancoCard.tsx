@@ -126,6 +126,14 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
   const [newName, setNewName] = useState("");
   const [newHint, setNewHint] = useState("");
 
+  // Diálogo único para coletar instrução em qualquer regeneração
+  const [regenDialog, setRegenDialog] = useState<
+    | { kind: "all"; docId: string; docName: string }
+    | { kind: "single"; docId: string; offerId: string; offerName: string }
+    | null
+  >(null);
+  const [regenInstruction, setRegenInstruction] = useState("");
+
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
 
   useEffect(() => {
@@ -169,6 +177,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     documentName?: string;
     variationHint?: string;
     regenerateOfferId?: string;
+    userInstruction?: string;
     offerContext?: { partLabel: string; offerNumber: number; currentText: string; existingFullText: string };
   }) => {
     const aiConfig = getAIConfig();
@@ -199,10 +208,14 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     }
   };
 
-  const handleRegenerateAll = async (doc: OfferDoc) => {
+  const handleRegenerateAll = async (doc: OfferDoc, instruction: string) => {
     setGeneratingId(doc.id);
     try {
-      await callGenerate({ documentId: doc.id, documentName: doc.name });
+      await callGenerate({
+        documentId: doc.id,
+        documentName: doc.name,
+        variationHint: instruction.trim() || undefined,
+      });
       await load();
       toast.success(`${doc.name} regenerado!`);
     } catch (e: any) {
@@ -212,7 +225,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     }
   };
 
-  const handleRegenerateSingle = async (doc: OfferDoc, offerId: string) => {
+  const handleRegenerateSingle = async (doc: OfferDoc, offerId: string, instruction: string) => {
     const parsed = parseOfferBank(doc.generated_text || "");
     const offer = parsed.offers.find((o) => o.id === offerId);
     if (!offer) {
@@ -225,6 +238,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
       const res = await callGenerate({
         documentId: doc.id,
         regenerateOfferId: offerId,
+        userInstruction: instruction.trim() || undefined,
         offerContext: {
           partLabel: offer.partLabel,
           offerNumber: offer.offerNumber,
@@ -465,14 +479,20 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
               onSaveEdit={handleSaveEdit}
               onCancelEdit={() => setEditingId(null)}
               isGenerating={generatingId === doc.id}
-              onRegenerateAll={() => handleRegenerateAll(doc)}
+              onRegenerateAll={() => {
+                setRegenInstruction("");
+                setRegenDialog({ kind: "all", docId: doc.id, docName: doc.name });
+              }}
               onCopy={() => handleCopyDoc(doc)}
               onPDF={() => pdfTriggers[doc.id]?.()}
               onDeleteDoc={() => setDeleteId(doc.id)}
               onToggleEnabled={(offerId, enabled) => toggleEnabled(doc, offerId, enabled)}
               onRequestDeleteOffer={(offerId) => setDeleteOfferKey(`${doc.id}:${offerId}`)}
               onRestoreOffer={(offerId) => setDeleted(doc, offerId, false)}
-              onRegenerateSingle={(offerId) => handleRegenerateSingle(doc, offerId)}
+              onRegenerateSingle={(offerId, offerName) => {
+                setRegenInstruction("");
+                setRegenDialog({ kind: "single", docId: doc.id, offerId, offerName });
+              }}
               regeneratingOfferId={
                 regeneratingOfferKey?.startsWith(`${doc.id}:`)
                   ? regeneratingOfferKey.split(":")[1]
@@ -576,6 +596,73 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={!!regenDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRegenDialog(null);
+            setRegenInstruction("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {regenDialog?.kind === "single"
+                ? `Regenerar oferta: ${regenDialog.offerName}`
+                : `Regenerar banco completo${regenDialog?.kind === "all" ? `: ${regenDialog.docName}` : ""}`}
+            </DialogTitle>
+            <DialogDescription>
+              Descreva o que você quer mudar nesta regeneração. Deixe em branco para a IA decidir um novo ângulo automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label className="text-xs">Instrução para a IA (opcional)</Label>
+            <Textarea
+              value={regenInstruction}
+              onChange={(e) => setRegenInstruction(e.target.value)}
+              placeholder={
+                regenDialog?.kind === "single"
+                  ? "Ex: deixar mais agressiva, focar em casais sem filhos, trocar a escassez por bônus surpresa..."
+                  : "Ex: tom mais consultivo, focar em alta temporada, trocar promessa principal..."
+              }
+              className="min-h-[100px]"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRegenDialog(null);
+                setRegenInstruction("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!regenDialog) return;
+                const instruction = regenInstruction;
+                const dialog = regenDialog;
+                setRegenDialog(null);
+                setRegenInstruction("");
+                if (dialog.kind === "all") {
+                  const doc = docs.find((d) => d.id === dialog.docId);
+                  if (doc) void handleRegenerateAll(doc, instruction);
+                } else {
+                  const doc = docs.find((d) => d.id === dialog.docId);
+                  if (doc) void handleRegenerateSingle(doc, dialog.offerId, instruction);
+                }
+              }}
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" /> Regenerar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -601,7 +688,7 @@ interface OfferDocBlockProps {
   onToggleEnabled: (offerId: string, enabled: boolean) => void;
   onRequestDeleteOffer: (offerId: string) => void;
   onRestoreOffer: (offerId: string) => void;
-  onRegenerateSingle: (offerId: string) => void;
+  onRegenerateSingle: (offerId: string, offerName: string) => void;
   regeneratingOfferId: string | null;
 }
 
@@ -757,7 +844,7 @@ function OfferDocBlock(props: OfferDocBlockProps) {
                         {!isRegen && (
                           <div className="flex flex-wrap gap-2">
                             <Button
-                              onClick={() => onRegenerateSingle(offer.id)}
+                              onClick={() => onRegenerateSingle(offer.id, offer.name)}
                               variant="outline"
                               size="sm"
                               className="gap-2"
