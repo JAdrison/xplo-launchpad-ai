@@ -169,6 +169,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     documentName?: string;
     variationHint?: string;
     regenerateOfferId?: string;
+    userInstruction?: string;
     offerContext?: { partLabel: string; offerNumber: number; currentText: string; existingFullText: string };
   }) => {
     const aiConfig = getAIConfig();
@@ -199,10 +200,14 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     }
   };
 
-  const handleRegenerateAll = async (doc: OfferDoc) => {
+  const handleRegenerateAll = async (doc: OfferDoc, instruction: string) => {
     setGeneratingId(doc.id);
     try {
-      await callGenerate({ documentId: doc.id, documentName: doc.name });
+      await callGenerate({
+        documentId: doc.id,
+        documentName: doc.name,
+        variationHint: instruction.trim() || undefined,
+      });
       await load();
       toast.success(`${doc.name} regenerado!`);
     } catch (e: any) {
@@ -212,7 +217,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     }
   };
 
-  const handleRegenerateSingle = async (doc: OfferDoc, offerId: string) => {
+  const handleRegenerateSingle = async (doc: OfferDoc, offerId: string, instruction: string) => {
     const parsed = parseOfferBank(doc.generated_text || "");
     const offer = parsed.offers.find((o) => o.id === offerId);
     if (!offer) {
@@ -225,6 +230,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
       const res = await callGenerate({
         documentId: doc.id,
         regenerateOfferId: offerId,
+        userInstruction: instruction.trim() || undefined,
         offerContext: {
           partLabel: offer.partLabel,
           offerNumber: offer.offerNumber,
