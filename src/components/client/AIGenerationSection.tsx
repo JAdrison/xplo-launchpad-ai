@@ -128,6 +128,8 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
 
   return (
     <div className="space-y-4">
+      <ICPDocumentCard clientId={client.id} clientName={client.name} />
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -194,7 +196,6 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
         </CardContent>
       </Card>
 
-      <ICPDocumentCard clientId={client.id} clientName={client.name} />
     </div>
   );
 }
