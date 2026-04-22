@@ -815,6 +815,91 @@ JSON exato:
 }`;
       const res = await ai(config, sys, prompt, 0.8);
       return new Response(JSON.stringify({ success: true, swot: (res as any).swot }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-icp-document") {
+      // Buscar todos os dados necessários
+      const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpRow }] = await Promise.all([
+        supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
+        supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_icp').select('*').eq('client_id', clientId).maybeSingle(),
+      ]);
+
+      if (!cli) {
+        return new Response(JSON.stringify({ error: 'Cliente não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const niche = (cli.niche_type as string) || 'generico';
+      const profileData: Record<string, any> = ((prof as any)?.profile_data) || {};
+      const marketData: Record<string, any> = ((prof as any)?.market_data) || {};
+
+      const swotJoin = (tags: string[] | null | undefined, text: string | null | undefined) => {
+        const t = (tags || []).filter(Boolean).join(", ");
+        const parts = [t, text].filter(Boolean);
+        return parts.length ? parts.join(" — ") : "—";
+      };
+
+      const vars: Record<string, string> = {
+        client_name: cli.name || "—",
+        niche_label: cli.niche_label || niche,
+        // hospedagem
+        profile_type: fmtVal(profileData.type || profileData.tipo),
+        profile_location: fmtVal(profileData.location || profileData.localizacao || (prof as any)?.region),
+        profile_units: fmtVal(profileData.units || profileData.unidades || profileData.rooms),
+        profile_comodidades: fmtVal(profileData.comodidades || profileData.amenities),
+        profile_diaria: fmtVal(profileData.diaria || profileData.daily_rate || (prof as any)?.average_ticket),
+        profile_experiencia: fmtVal(profileData.experiencia || profileData.experience || (prof as any)?.product_description),
+        // saude
+        profile_specialty: fmtVal(profileData.specialty || profileData.especialidade),
+        profile_ticket: fmtVal(profileData.ticket_medio || (prof as any)?.average_ticket),
+        profile_convenios: fmtVal(profileData.convenios),
+        profile_treatments: fmtVal(profileData.treatments || profileData.procedimentos),
+        // generico
+        profile_product_name: fmtVal((prof as any)?.product_name || profileData.product_name),
+        profile_product_description: fmtVal((prof as any)?.product_description || profileData.product_description),
+        profile_sales_model: fmtVal((prof as any)?.sales_model),
+        profile_region: fmtVal((prof as any)?.region),
+        profile_benefits: fmtVal((prof as any)?.benefits),
+        // shared
+        profile_differentiators: fmtVal((prof as any)?.differentiators),
+        // swot
+        swot_forcas_internas: swotJoin(swotRow?.forcas_internas_tags, swotRow?.forcas_internas_text),
+        swot_fraquezas_internas: swotJoin(swotRow?.fraquezas_internas_tags, swotRow?.fraquezas_internas_text),
+        swot_forcas_ambiente: swotJoin(swotRow?.forcas_ambiente_tags, swotRow?.forcas_ambiente_text),
+        swot_fraquezas_ambiente: swotJoin(swotRow?.fraquezas_ambiente_tags, swotRow?.fraquezas_ambiente_text),
+        // market
+        market_demand_channels: fmtVal((prof as any)?.demand_channels),
+        market_concorrentes: fmtCompetitors((prof as any)?.local_competitor_1, (prof as any)?.local_competitor_2),
+        // icp blocos
+        icp_bloco1: fmtBlock((icpRow as any)?.bloco1_data),
+        icp_bloco2: fmtBlock((icpRow as any)?.bloco2_data),
+        icp_bloco3: fmtBlock((icpRow as any)?.bloco3_data),
+      };
+
+      const template = niche === "hospedagem" ? PROMPT_HOSPEDAGEM
+        : niche === "saude" ? PROMPT_SAUDE
+        : PROMPT_GENERICO;
+
+      const finalPrompt = interpolate(template, vars);
+      const generatedText = await aiText(config, "Você é um especialista em marketing digital brasileiro.", finalPrompt, 0.7);
+
+      // Upsert em client_icp
+      const nowIso = new Date().toISOString();
+      if (icpRow) {
+        await supabase.from('client_icp').update({
+          generated_icp_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+        }).eq('client_id', clientId);
+      } else {
+        await supabase.from('client_icp').insert({
+          client_id: clientId,
+          generated_icp_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } else if (type === "create-video-ad") {
       const { instruction } = b;
       if (!instruction || !clientId) {
