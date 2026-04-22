@@ -196,7 +196,6 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
         </CardContent>
       </Card>
 
-      <ICPDocumentCard clientId={client.id} clientName={client.name} />
     </div>
   );
 }
