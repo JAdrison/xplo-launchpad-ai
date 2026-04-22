@@ -200,6 +200,7 @@ export type Database = {
           generated_text: string | null
           id: string
           name: string
+          offer_states: Json
           sort_order: number
           updated_at: string
         }
@@ -211,6 +212,7 @@ export type Database = {
           generated_text?: string | null
           id?: string
           name?: string
+          offer_states?: Json
           sort_order?: number
           updated_at?: string
         }
@@ -222,6 +224,7 @@ export type Database = {
           generated_text?: string | null
           id?: string
           name?: string
+          offer_states?: Json
           sort_order?: number
           updated_at?: string
         }
