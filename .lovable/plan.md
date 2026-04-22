@@ -1,65 +1,71 @@
 
 
-## Ações por oferta dentro do Banco de Ofertas
+## 1. Remover criação de Landing Page do site
 
-Hoje o banco é um único texto monolítico. Vamos quebrá-lo em **6 ofertas individuais**, cada uma com 3 ações: **habilitar/desabilitar**, **regenerar só ela**, e **excluir** (com opção de manter no documento).
+A geração de LP some da UI, mas as LPs já criadas continuam visíveis (somente leitura/exclusão) para não perder histórico. A tabela `landing_pages` e os componentes de visualização ficam — só o **ato de gerar** é removido.
 
-### O que muda
+### O que sai da UI
 
-#### 1. Estrutura — parser + estado por oferta
+- **`src/components/client/AIGenerationSection.tsx`**: remover o item `lp` do array `generationItems`. Sobra só **Anúncios** no grid (passa para `grid-cols-1`). Ajustar `allGenerated` para considerar apenas anúncios.
+- **`src/pages/Generator.tsx`**: 
+  - Remover toda a seção "Landing Page" do checklist (bloco com Checkbox `id="lp"`, RadioGroup de variantes Direta/Consultiva/Agressiva, e estado `selectedLpVariant`).
+  - Remover `"lp"` do tipo `GenerationType` → fica `"offer" | "ads"`.
+  - Remover lógica de envio `body.lpVariant` em `handleGenerate`.
+  - Remover textos/toasts que mencionam "LP" ou "landing page".
+- **`src/components/onboarding/PPPIntroCard.tsx`**: ajustar copy "ofertas, landing pages e anúncios" → "ofertas e anúncios".
+- **`src/components/client/OnboardingX1Section.tsx`** (se referenciar geração de LP em CTAs): remover atalhos para gerar LP.
 
-- Criar `src/lib/offerParser.ts` com:
-  - `parseOfferBank(text)` → divide o texto em `{ header, offers: [{id, rawText, name, partLabel}], footer }` usando o marcador `[OFERTA N]` e os títulos `🗓️/🩺/🎁 BANCO DE OFERTAS — ...` para identificar a parte (Entrada / Continuidade etc).
-  - `serializeOfferBank(parsed, { skipDisabled })` → reconstrói o texto, opcionalmente omitindo ofertas desabilitadas/excluídas (usado para PDF e cópia).
-- Cada oferta extraída recebe um `id` estável (hash do índice + parte) para mapear no estado de habilitação.
+### O que fica (não mexe)
 
-#### 2. Banco — nova coluna `offer_states` em `client_offer_documents`
+- **`GeneratedAssetsSection.tsx`** e **`GeneratedContentViewer.tsx`**: continuam listando LPs antigas com **Visualizar / Copiar / PDF / Excluir** — só não há mais botão "Gerar nova".
+- Backend `generate-content` (`type === "lp"`): mantido por compatibilidade, apenas deixa de ser chamado pelo front.
+- Tabela `landing_pages`, `LandingPageViewer`, `LandingPagePDFTemplate`: intactos.
 
-- `offer_states JSONB DEFAULT '{}'` armazena `{ [offerId]: { enabled: boolean, deleted: boolean } }`.
-- Sem migração destrutiva — colunas existentes ficam intactas.
+---
 
-#### 3. UI — render por oferta dentro do card
+## 2. Corrigir anúncios para funcionar com o novo Banco de Ofertas
 
-Em `OfferBancoCard.tsx`, quando `generated_text` existir, em vez do `<div whitespace-pre-wrap>` único, renderizar:
+### Diagnóstico
 
-- **Cabeçalho do banco** (texto antes da 1ª oferta) em bloco simples.
-- Para cada oferta: um sub-card com:
-  - Título da oferta (extraído da linha após `🏷️ NOME DA OFERTA`) + badge da parte (Entrada / Continuidade etc.).
-  - Texto da oferta com `whitespace-pre-wrap`.
-  - **Switch "Ativa"** (toggle enabled/disabled — desabilitada fica com opacidade reduzida e badge "Desativada").
-  - Botão **🔄 Regenerar esta oferta** (loading individual).
-  - Botão **🗑️ Excluir** (com AlertDialog). A exclusão marca `deleted: true` mas mantém visualmente como "Excluída — restaurar?" para permitir reverter, conforme pedido ("excluir também ou deixar lá").
-- **Rodapé** (texto após a última oferta, ex.: "📋 COMO USAR ESSE BANCO") em bloco final.
+A geração de anúncios (`type === "ads"` em `generate-content/index.ts`, linhas 1453-1507) está acoplada à tabela legada `offers_hormozi`:
 
-#### 4. Backend — modo "regenerate-single-offer"
+- O `Generator.tsx` mostra um dropdown "Selecione a oferta base" lendo de `offers_hormozi` (linhas 148-156). Como o usuário agora gera ofertas no novo card **Banco de Ofertas** (tabela `client_offer_documents`), esse dropdown fica **vazio** → o checkbox de Anúncios fica **desabilitado** com a mensagem *"Gere uma oferta primeiro"*, mesmo tendo acabado de gerar 6 ofertas no novo formato.
+- No backend, mesmo se passasse um `offerId`, ele busca em `offers_hormozi` e monta contexto só com `o.promise` (uma frase curta), ignorando todo o conteúdo rico do Banco de Ofertas.
 
-Em `supabase/functions/generate-content/index.ts`, no task `generate-offers-document`:
+### Correção
 
-- Aceitar novos params: `regenerateOfferId?: string`, `existingText?: string`, `offerContext?: { partLabel, offerNumber, currentText }`.
-- Quando recebido, montar prompt curto e direcionado: *"Aqui está o banco atual: \<texto\>. Reescreva APENAS a [OFERTA N] da parte \<X\>, mantendo o mesmo formato (🏷️ NOME, ✨ PROMESSA, 📦 O QUE INCLUI, 💰 CONDIÇÃO COMERCIAL, 👤 PARA QUEM É, ⏰ ESCASSEZ). Traga um ângulo/ocasião diferente da atual. Retorne só o bloco da oferta."*
-- O frontend faz o splice: substitui a oferta pelo novo bloco no array, re-serializa e dá `update` no documento.
-- Reusa `aiText()` e o mesmo modelo (GPT-5.2).
+**A. Frontend `Generator.tsx`**
 
-#### 5. Cópia, PDF e exportação respeitam estado
+- Substituir `fetchOffersForClient` para ler de `client_offer_documents` (id, name, generated_text, offer_states).
+- Para cada documento, usar `parseOfferBank()` (já existe em `src/lib/offerParser.ts`) para listar as ofertas individuais ATIVAS (enabled=true, deleted=false).
+- O dropdown "Selecione a oferta base" passa a mostrar opções no formato `"<Nome do Banco> — <Nome da oferta individual>"` (ex.: *"Banco de Ofertas — Pacote Romântico Fim de Semana"*). Cada opção carrega `{ documentId, offerId, rawText }`.
+- O `selectedOfferId` vira `selectedBankOffer: { documentId, offerId, rawText } | null`.
+- Habilitar o checkbox de Anúncios assim que houver pelo menos 1 documento de banco com ofertas ativas.
+- No `handleGenerate`, enviar para a edge function: `bankOfferText: selectedBankOffer.rawText`, `bankOfferDocumentId`, `bankOfferId` (em vez do antigo `offerId`).
 
-- **Copiar** e **PDF** chamam `serializeOfferBank` com `skipDisabled: true` (omitem desabilitadas e excluídas). Botão de copiar/PDF do banco completo continua existindo no nível do card.
-- **Exclusão "soft"**: a oferta excluída fica oculta do PDF/cópia, mas aparece numa pequena seção "Ofertas removidas" no card com botão "Restaurar".
-- O texto bruto (`generated_text`) **não é modificado** ao habilitar/desabilitar/excluir — só `offer_states` muda. Só é reescrito ao **regenerar individual** ou na edição manual existente.
+**B. Backend `supabase/functions/generate-content/index.ts` (bloco `type === "ads"`)**
 
-#### 6. Edição manual — preservada
+- Aceitar novos params: `bankOfferText?: string`, `bankOfferDocumentId?: string`, `bankOfferId?: string`. Manter `offerId` legado como fallback.
+- Quando `bankOfferText` chega: usar **o texto completo da oferta** (com promessa, mecanismo, o que inclui, condição, escassez) como `oCtx`, em vez do `o.promise`. Isso dá à IA muito mais contexto rico.
+- `vOid` (variável usada para vincular `ads.offer_id`) fica `null` no caso novo (a tabela `ads` já tolera `offer_id` null — confirmado em `mem://arquitetura/resiliencia-ads`).
+- A limpeza de anúncios antigos passa a usar `client_id + bankOfferId` quando aplicável: deletar de `ads` onde `client_id = X AND ad_angle_meta->>'bankOfferId' = Y` (ou simplesmente, se `vOid` null e há `bankOfferId`, deletar do cliente para regenerar limpo). Mais simples: continuar a limpeza por `client_id is_null offer_id` quando vier do novo fluxo.
+- Salvar `bankOfferId` em uma coluna nova ou reutilizar campo existente para rastreio (mínimo: gravar `client_id` corretamente já basta para listagem funcionar).
 
-O modo "Editar" atual (textarea com o texto inteiro) continua funcionando como fallback para edição livre. Após salvar, o parser re-roda automaticamente.
+**C. Texto e validação na UI**
+
+- Mensagem de bloqueio do checkbox Anúncios atualizada: *"Gere o Banco de Ofertas primeiro"* (com link para o card no detalhe do cliente).
+- Texto da seção: *"Selecione qual oferta do banco será a base dos anúncios"* (deixa claro que cada anúncio é por oferta individual, não pelo banco inteiro).
 
 ### Detalhes técnicos
 
-- **Robustez do parser**: se a IA não seguir exatamente o template, o parser cai num fallback que mostra o texto inteiro como hoje (sem quebrar a UI). Logamos um warning no console.
-- **Estado local otimista**: toggles e exclusão atualizam UI imediatamente e fazem `update` em background; em erro, revertem com toast.
-- **Modelo IA p/ regeneração unitária**: GPT-5.2 (mesmo usado no banco completo, para manter consistência de tom).
-- **Sem nova tabela** — só uma coluna `offer_states` em `client_offer_documents`.
+- **Sem migration**: tudo é leitura do `client_offer_documents` + reuso do `parseOfferBank`. A tabela `ads` já aceita `offer_id` null.
+- **Compatibilidade**: ofertas antigas em `offers_hormozi` continuam funcionando porque o backend mantém o branch `if (offerId)` legado.
+- **Geração**: sem mudança nos prompts dos 6 vídeos + 10 estáticos (caixinha de perguntas etc.). Só muda **o contexto** que alimenta o prompt — fica mais rico.
+- **Memory**: atualizar `mem://ia/configuracao-anuncios-hibridos` para refletir que a fonte da oferta agora é o Banco de Ofertas, e remover do Core qualquer menção a "Landing Page" como fluxo principal de geração.
 
 ### Fora do escopo
 
-- Não muda os 3 prompts por nicho.
-- Não cria reordenação drag-and-drop entre ofertas (só ativa/desativa/exclui).
-- Não toca no card de ICP nem nos cards de LP/Anúncios.
+- Não excluir tabela `landing_pages` nem código de visualização/PDF de LPs antigas.
+- Não migrar dados de `offers_hormozi` para `client_offer_documents`.
+- Não mudar prompts de anúncios nem o fluxo de refinamento/criação individual de vídeos.
 
