@@ -75,7 +75,7 @@ export function PPPIntroCard({ onStart, clientName }: PPPIntroCardProps) {
           <div className="rounded-lg bg-muted/50 p-4">
             <p className="text-sm text-muted-foreground">
               <strong>Por que isso é importante?</strong> Essas informações serão usadas para gerar 
-              ofertas irresistíveis, landing pages de alta conversão e anúncios personalizados com IA.
+              ofertas irresistíveis e anúncios personalizados com IA.
             </p>
           </div>
 
