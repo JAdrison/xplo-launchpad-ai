@@ -1,71 +1,53 @@
 
 
-## Revisão final e PDF completos — com tudo que foi respondido
+## Novo Documento: ICP — Definição do Cliente Ideal (3 prompts por nicho)
 
-### Objetivo
+Adicionar um quarto card de geração de IA — **"ICP — Cliente Ideal"** — junto com Oferta, LP e Anúncios. Ele gera um documento textual formatado (com emojis e seções), salvo em `client_icp.generated_icp_text`, com prompt específico por nicho (Hospedagem / Saúde / Genérico) e usando GPT‑5.2.
 
-Tanto a tela de **Revisão Final** (etapa 6) quanto o **PDF de Onboarding X1** passarão a mostrar **100% das respostas** do cliente, incluindo dados sensíveis (senhas Instagram/Facebook). Hoje os dois estão incompletos: a tela mostra só um resumo curto e o PDF foi feito para a estrutura antiga, ignorando SWOT, perfil por nicho (`profile_data`), mercado por nicho (`market_data`) e os 3 blocos de ICP novos.
+### O que será feito
 
-### Aviso importante (LGPD)
+#### 1. Backend — novo tipo no edge function `generate-content`
 
-Por segurança, nossa regra atual mascara senhas. Você está pedindo para **exibi-las em texto puro**, tanto na tela quanto no PDF. Vou seguir o pedido, mas adicionarei:
-- Um **alerta visual** de confidencialidade no topo da revisão e do PDF ("Documento confidencial — contém credenciais de acesso").
-- Marca d'água "CONFIDENCIAL" no rodapé de cada seção sensível do PDF.
+Adicionar `type: "generate-icp-document"` em `supabase/functions/generate-content/index.ts`:
 
-Se preferir manter as senhas mascaradas e mostrar só nos olhos clicando em "revelar", me avise antes que eu implemente.
+- Incluir `"generate-icp-document"` no array `STRATEGIC_TASKS` (dispara GPT‑5.2 automaticamente).
+- Buscar do banco: `clients` (nome, niche_type, niche_label), `client_profile` (profile_data, market_data, demand_channels, competitors, inspirations, current_revenue, etc.), `client_swot` (4 quadrantes), `client_icp` (bloco1/2/3_data).
+- Selecionar prompt baseado em `niche_type`: `hospedagem` / `saude` / `generico`. Os 3 prompts do briefing são salvos como constantes (`PROMPT_HOSPEDAGEM`, `PROMPT_SAUDE`, `PROMPT_GENERICO`).
+- Substituir as variáveis `{client_name}`, `{profile_data.xxx}`, `{swot.xxx}`, `{market.xxx}`, `{icp.bloco1_data}` etc. pelos valores reais (helper `interpolate(template, vars)` com fallback `"—"` para campos vazios).
+- Importante: este prompt **não** retorna JSON — retorna texto formatado puro. Para isso, fazer chamada direta ao gateway sem `response_format: json_object` (criar função `aiText()` paralela ao `ai()` existente, retornando string).
+- Salvar em `client_icp` (upsert por `client_id`): `generated_icp_text`, `generated_by_ai = true`, `generated_at = now()`.
+- Retornar `{ success: true, text: "..." }`.
 
-### O que muda
+#### 2. Frontend — card "ICP" em `AIGenerationSection.tsx`
 
-#### 1. Tela: `StepReviewV2.tsx` (etapa 6 do wizard)
+- Adicionar quarto item no `generationItems`: ícone `Target` (lucide), nome "ICP — Cliente Ideal", descrição "Documento estratégico do perfil de cliente ideal".
+- Mudar grid de `sm:grid-cols-3` para `sm:grid-cols-2 lg:grid-cols-4`.
+- Em vez de navegar para `/generator`, este card abre/expande inline um sub-componente novo `ICPDocumentCard` que:
+  - Botão **"+ Gerar"** chama `supabase.functions.invoke("generate-content", { body: { type: "generate-icp-document", clientId, aiConfig }})`.
+  - Estado de loading com spinner + texto "Gerando seu ICP..."
+  - Após geração, renderiza o texto em card off-white (`bg-muted/30`), preservando quebras de linha e emojis (via `whitespace-pre-wrap`).
+  - Botões: ✏️ **Editar manualmente** (abre Textarea editável e salva no campo), 🔄 **Regenerar** (refaz chamada), 📋 **Copiar** (clipboard), 📄 **Baixar PDF** (gera PDF dedicado só do ICP via `react-to-pdf`, layout simples com logo XPLO).
+  - Carrega `generated_icp_text` existente do `client_icp` no mount.
 
-Reescrever a revisão para mostrar **todas** as respostas, organizadas por etapa do wizard, no mesmo idioma das perguntas:
+#### 3. Integração com o PDF de Onboarding
 
-- **Etapa 1 — Cadastro**: nome do negócio, nicho, CNPJ, responsável, CPF, e-mail, telefone, faturamento atual, investimento inicial em tráfego.
-- **Etapa 2 — Sobre o negócio**: percorre dinamicamente todos os campos de `profile_data` (varia por nicho: hospedagem, saúde, genérico) — tipo, localização, unidades, diária, diferenciais, comodidades, experiência, especialidade, ticket, etc. Mostra também `product_name`, `product_description`, `differentiators`, `benefits`, `promotions`, `average_ticket`, `sales_model`.
-- **Etapa 3 — Diagnóstico (SWOT)**: 4 quadrantes com tags + texto livre, usando os títulos por nicho ("Ponto forte da hospedagem", etc.).
-- **Etapa 4 — Mercado e acessos**: faturamento, investimento mensal, meta, canais de demanda, equipe; concorrentes 1/2 (nome + motivo); inspirações 1/2; **acessos Meta Ads**: Instagram link, login, **senha em texto puro**, Facebook login, **senha em texto puro**, WhatsApp, Google Meu Negócio; e todo o `market_data` extra do nicho.
-- **Etapa 5 — Perfil dos principais clientes**: 3 blocos completos (`bloco1_data`, `bloco2_data`, `bloco3_data`) com todos os campos preenchidos (motivação, perfil, comportamento, o que evitar, etc.).
-- Banner de aviso "Documento confidencial" no topo.
-
-Componente auxiliar interno `RenderJSON` para listar pares chave→valor de objetos `profile_data`/`market_data`/`bloco*_data`, com labels amigáveis (mapa de tradução pt-BR, fallback para a chave bruta) e tratamento de arrays/strings.
-
-#### 2. PDF: `OnboardingPDFTemplate.tsx`
-
-Reescrever para receber a mesma estrutura nova que `OnboardingX1Section.tsx` já monta em `pdfContent` (props: `client`, `company`, `product`, `swot`, `market` com `market_data`, `icp` com 3 blocos). Seções:
-
-1. Capa + aviso "Documento confidencial — contém credenciais"
-2. Cadastro (todos os campos)
-3. Sobre o negócio (product + todo `profile_data` por nicho)
-4. Diagnóstico SWOT (4 quadrantes: tags + texto)
-5. Mercado e investimento (revenue, meta, canais, equipe + `market_data` extra)
-6. Concorrentes e inspirações
-7. **Redes sociais e acessos Meta Ads** — exibir senhas em texto puro + selo "CONFIDENCIAL"
-8. Perfil dos clientes — 3 blocos completos com todas as chaves
-9. Promessa (se existir)
-10. Rodapé com data e nota de confidencialidade
-
-Reaproveita o estilo atual (logo XPLO em todas as páginas, margens, `pageBreakInside`).
-
-#### 3. Ajuste em `OnboardingX1Section.tsx`
-
-O `pdfContent` já existe mas está incompleto. Adicionar ao objeto `market`:
-- `instagram_link`, `instagram_login`, `instagram_password`
-- `facebook_login`, `facebook_password`
-- `whatsapp_number`, `google_my_business`
-- `local_competitor_1/2`, `inspiration_company_1/2`
-
-E acrescentar `profile_data` cru ao objeto `product` (para o template iterar campos por nicho).
+- Em `OnboardingPDFTemplate.tsx`: adicionar nova prop opcional `generatedIcpText?: string | null`.
+- Quando presente, renderizar **Seção 7 — ICP — Cliente Ideal** (após "5. Perfil dos Principais Clientes" e antes de "6. Promessa", renumerando "6. Promessa" → "7. Promessa" se ICP existir, ou manter ICP como "7" depois de Promessa). **Decisão**: ICP vai como **seção final 7**, após Promessa (mais natural — fecha o documento estratégico).
+- Renderizar `generatedIcpText` com `white-space: pre-wrap` mantendo emojis e estrutura.
+- Em `OnboardingX1Section.tsx`: ler `client_icp.generated_icp_text` no fetch e passar para `<PDFExportButton>` → `OnboardingPDFTemplate`.
+- Atualizar `PDFExportButton.tsx` para repassar a nova prop.
 
 ### Detalhes técnicos
 
-- **Sem migração de banco** — todos os dados já existem nas tabelas `clients`, `client_profile`, `client_swot`, `client_icp`.
-- Campo `market_data` e `profile_data` são `jsonb` livres → renderização dinâmica via `Object.entries` + dicionário de labels (`LABELS_PT`) para chaves conhecidas (`type`, `units`, `diaria`, `experiencia`, `differentiators`, `comodidades`, `motivacao`, etc.); chaves desconhecidas caem para `humanize(key)`.
-- Senhas: removidas as funções `mask()` e a nota "por segurança não exibimos senhas". Em vez disso, badge vermelho "Confidencial".
-- PDF mantém `react-to-pdf` com layout A4.
+- **Modelo IA**: GPT‑5.2 via Lovable AI Gateway (já configurado em `STRATEGIC_TASKS`).
+- **Mapeamento dinâmico de variáveis**: como `profile_data` é um `jsonb` livre que varia por nicho, usar acesso seguro `data?.profile_data?.[chave] ?? "—"`. Para arrays (ex: `differentiators`, `comodidades`), juntar com `.join(", ")`. Para objetos (ex: `bloco1_data`), serializar como bloco de "chave: valor" linha por linha (reaproveitando `humanizeKey`/`formatValue` de `fieldLabels.ts`).
+- **Sem nova migração**: o campo `client_icp.generated_icp_text` (text) e `generated_by_ai` (bool), `generated_at` (timestamp) já existem na tabela.
+- **Fallback de niche**: se `niche_type` for null, usar prompt genérico.
+- **Reuso PDF**: o botão "Baixar PDF" do card de ICP usa `react-to-pdf` igual aos outros exports, com template novo simples `ICPPDFTemplate.tsx` (logo + título + texto formatado).
 
 ### Fora do escopo
 
-- Não muda o fluxo de salvar/concluir.
-- Não muda o estilo visual geral da plataforma.
-- Não cria histórico/versão do PDF.
+- Não muda os 3 prompts existentes (`generate-icps`, `generate-promise`, etc.).
+- Não muda o fluxo de wizard de onboarding nem a tabela `icps` (legada).
+- Não cria histórico/versionamento do texto gerado (apenas substitui).
 
