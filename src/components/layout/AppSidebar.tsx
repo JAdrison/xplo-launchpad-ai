@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Kanban,
   CheckSquare,
+  Contact,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,8 @@ const navigation = [
   { name: "Onboarding X1", href: "/onboarding", icon: ClipboardList },
   { name: "CRM", href: "/crm", icon: Kanban },
   { name: "Atividades", href: "/crm/atividades", icon: CheckSquare },
+  { name: "Contatos", href: "/crm/contatos", icon: Contact },
+  { name: "CRM Config", href: "/crm/config", icon: SlidersHorizontal },
   { name: "Gerador IA", href: "/generator", icon: Sparkles },
   { name: "Ativos", href: "/assets", icon: FileStack },
   { name: "Configurações", href: "/settings", icon: Settings },

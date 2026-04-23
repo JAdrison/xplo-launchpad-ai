@@ -22,6 +22,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CrmKanban from "./pages/CrmKanban";
 import CrmActivities from "./pages/CrmActivities";
+import CrmContacts from "./pages/CrmContacts";
+import CrmConfig from "./pages/CrmConfig";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,8 @@ const App = () => (
               <Route path="/assets" element={<Assets />} />
               <Route path="/crm" element={<CrmKanban />} />
               <Route path="/crm/atividades" element={<CrmActivities />} />
+              <Route path="/crm/contatos" element={<CrmContacts />} />
+              <Route path="/crm/config" element={<CrmConfig />} />
               <Route path="/settings" element={<Settings />} />
               
               {/* Admin only route */}
