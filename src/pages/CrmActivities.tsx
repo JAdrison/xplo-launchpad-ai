@@ -257,3 +257,5 @@ export function CrmActivitiesView() {
     </div>
   );
 }
+
+export default function CrmActivities() { return <CrmActivitiesView />; }

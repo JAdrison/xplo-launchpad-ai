@@ -195,3 +195,5 @@ export function CrmContactsView() {
     </div>
   );
 }
+
+export default function CrmContacts() { return <CrmContactsView />; }
