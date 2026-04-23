@@ -69,6 +69,7 @@ interface OnboardingPDFTemplateProps {
   } | null;
   generatedIcpText?: string | null;
   generatedOffersText?: string | null;
+  generatedTrafficPlanText?: string | null;
   // Backward compat (unused mas mantém typing)
   pains?: any;
   icps?: any;
@@ -197,6 +198,7 @@ export function OnboardingPDFTemplate({
   promise,
   generatedIcpText,
   generatedOffersText,
+  generatedTrafficPlanText,
 }: OnboardingPDFTemplateProps) {
   const formattedDate = new Date(createdAt).toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -537,6 +539,28 @@ export function OnboardingPDFTemplate({
             }}
           >
             {generatedOffersText}
+          </div>
+        </div>
+      )}
+
+      {/* 9. PLANO DE DEMANDA (gerado por IA) */}
+      {generatedTrafficPlanText && (
+        <div style={sectionStyle}>
+          <h2 style={sectionTitleStyle}>9. PLANO DE DEMANDA</h2>
+          <div
+            style={{
+              backgroundColor: "#fafafa",
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid #e5e7eb",
+              whiteSpace: "pre-wrap",
+              fontSize: "10.5pt",
+              color: "#1f2937",
+              lineHeight: 1.65,
+              pageBreakInside: "avoid",
+            }}
+          >
+            {generatedTrafficPlanText}
           </div>
         </div>
       )}

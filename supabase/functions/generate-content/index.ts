@@ -21,6 +21,7 @@ const STRATEGIC_TASKS = [
   "generate-swot",
   "generate-icp-document",
   "generate-offers-document",
+  "generate-traffic-plan-document",
   "offer",
   "lp",
   "ads",
@@ -605,6 +606,357 @@ FECHAMENTO
 - No WhatsApp, comece pela promessa e pelo que inclui; apresente a condição depois
 - Para Stories: transforme a promessa em uma frase única e forte
 - Rode uma oferta por vez em cada canal — não sobreponha
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+// ============================================================
+// PROMPTS DO PLANO DE DEMANDA — 1 por nicho
+// ============================================================
+const TRAFFIC_PLAN_PROMPT_HOSPEDAGEM = `Você é um estrategista de tráfego pago, especialista em marketing para hospedagens do Brasil. Você foi treinado com a metodologia do Check-in Lotado — método da XPLO que ajuda hospedagens a lotar fins de semana sem depender de OTAs.
+
+Você PENSA como estrategista, não como redator. Seu output é ACIONÁVEL — o dono da hospedagem precisa conseguir implementar o plano nos próximos 7 dias. Você é DIRETO. Cada palavra precisa justificar sua presença no documento.
+
+---
+
+PRINCÍPIOS NÃO-NEGOCIÁVEIS
+
+- A ESTRATÉGIA PRINCIPAL é SEMPRE Meta Ads com 2 campanhas: 1 TESTE (5 criativos) + 1 REMARKETING.
+- As outras estratégias (Google, Instagram orgânico, WhatsApp) são SUGESTÕES COMPLEMENTARES — cards curtos, nunca detalhadas ao nível da principal.
+- Nada de parágrafos corridos longos. Use listas, bullets curtos, bold em métricas.
+- Nada de jargão vazio. Seja concreto.
+- Output final precisa caber em uma tela — não em 3 páginas de PDF.
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome]: {client_name}
+[Tipo e localização]: {profile_data.type}, {profile_data.location}
+[Diária média]: {profile_data.diaria}
+[Diferenciais]: {profile_data.differentiators}
+[Experiência]: {profile_data.experiencia}
+
+[Mercado]
+Canais atuais: {market.demand_channels}
+Ocupação: {market.ocupacao}
+Dificuldades: {market.dificuldade}
+Investimento inicial: {financial.initial_traffic_investment}
+
+[ICP]
+{icp.generated_icp_text}
+
+[OFERTAS GERADAS]
+{offers.generated_text}
+
+---
+
+TEMPLATE DE SAÍDA (siga EXATAMENTE — sem acréscimos, sem supressões)
+
+📊 PLANO DE DEMANDA — [NOME DA HOSPEDAGEM]
+
+🎯 DIAGNÓSTICO
+[3-4 linhas MÁXIMO. Problema real + oportunidade central + ângulo estratégico vencedor.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 ESTRATÉGIA PRINCIPAL — META ADS
+[70% do budget = R$ X,XX baseado em {financial.initial_traffic_investment}]
+
+▸ CAMPANHA 1 — TESTE (60% dessa verba)
+
+Objetivo: Mensagens no WhatsApp OU Conversões
+Público: [1 público ÚNICO baseado no ICP — geo + interesse + faixa etária.]
+Exclusões: [2–3 exclusões práticas.]
+
+5 criativos para testar (1 ângulo por criativo):
+1. [Ângulo + formato]
+2. [...]
+3. [...]
+4. [...]
+5. [...]
+
+Oferta ancorada: [Nome da oferta do banco que faz mais sentido para tráfego frio]
+CTA: [Único e direto]
+
+▸ CAMPANHA 2 — REMARKETING (40% dessa verba)
+
+Objetivo: Mensagens no WhatsApp
+Público: [Lista concreta — engajamento IG 30d, visitantes site 14d, vídeo-views 50%+.]
+Exclusões: [Quem já enviou mensagem nos últimos 7 dias.]
+
+Ângulo: [Prova social ou urgência.]
+3 criativos vencedores: [Top 3 CTR da Campanha 1 após 7 dias.]
+Oferta ancorada: [Oferta com escassez]
+
+📊 KPIs para validar a campanha
+- CPL máximo: R$ X–Y
+- Taxa de resposta no WhatsApp: Y%
+- Taxa de conversão (lead → reserva): Y%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 ESTRATÉGIAS COMPLEMENTARES (sugestões — 30% do budget somadas)
+
+🔍 GOOGLE ADS — Captura de intenção (15%)
+[3 linhas MÁX.]
+
+📱 INSTAGRAM ORGÂNICO — Prova viva (10%)
+[3 linhas MÁX.]
+
+💬 WHATSAPP — Motor de conversão (5%)
+[3 linhas MÁX.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📅 CRONOGRAMA — 3 SEMANAS
+
+SEMANA 1 — SETUP
+[2–3 linhas.]
+
+SEMANA 2 — TESTE
+[2–3 linhas.]
+
+SEMANA 3 — OTIMIZAÇÃO E ESCALA
+[2–3 linhas.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ ALERTAS ESTRATÉGICOS
+[2–3 bullets CRÍTICOS baseados em SWOT/mercado.]
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois. Sem introdução. Sem despedida.`;
+
+const TRAFFIC_PLAN_PROMPT_SAUDE = `Você é um estrategista de tráfego pago, especialista em marketing para clínicas e profissionais da saúde do Brasil. Treinado com a metodologia da XPLO para ajudar médicos, dentistas, fisioterapeutas, psicólogos, nutricionistas e profissionais de estética a lotar a agenda com pacientes particulares qualificados.
+
+Você PENSA como estrategista, não como redator. Output ACIONÁVEL para implementar nos próximos 7 dias. Você é DIRETO.
+
+---
+
+PRINCÍPIOS NÃO-NEGOCIÁVEIS
+
+- ESTRATÉGIA PRINCIPAL é SEMPRE Meta Ads com 2 campanhas: 1 TESTE (5 criativos) + 1 REMARKETING.
+- Google Search tem peso relevante em saúde — mas continua sendo SUGESTÃO complementar.
+- RESPEITAR ética CFM/CRO/conselhos: nunca prometer cura, resultado garantido, "melhor profissional", antes/depois chamativo.
+- Bullets curtos. Bold em métricas. Output em uma tela.
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome]: {client_name}
+[Especialidade]: {profile_data.specialty}
+[Localização]: {profile_data.location}
+[Ticket médio]: {profile_data.ticket_medio}
+[Tipo de atendimento]: {profile_data.attendance_types}
+[Convênios]: {profile_data.convenios}
+[Diferenciais]: {profile_data.differentiators}
+[Tratamentos]: {profile_data.treatments}
+
+[Mercado]
+Canais atuais: {market.demand_channels}
+Volume pacientes: {market.volume_pacientes}
+Dificuldades: {market.dificuldade}
+Investimento inicial: {financial.initial_traffic_investment}
+
+[ICP]
+{icp.generated_icp_text}
+
+[OFERTAS GERADAS]
+{offers.generated_text}
+
+---
+
+TEMPLATE DE SAÍDA (siga EXATAMENTE)
+
+📊 PLANO DE DEMANDA — [NOME DA CLÍNICA / PROFISSIONAL]
+
+🎯 DIAGNÓSTICO
+[3-4 linhas MÁXIMO.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 ESTRATÉGIA PRINCIPAL — META ADS
+[70% do budget = R$ X,XX]
+
+▸ CAMPANHA 1 — TESTE (60% dessa verba)
+
+Objetivo: Mensagens no WhatsApp OU Formulário com qualificação
+Público: [1 público ÚNICO — geo + interesse em dor/tratamento + faixa etária.]
+Exclusões: [Profissionais da mesma área + pacientes já convertidos.]
+
+5 criativos para testar:
+1. [Ângulo + formato]
+2. [...]
+3. [...]
+4. [...]
+5. [...]
+
+Oferta ancorada: [Oferta de ENTRADA do banco — primeira consulta/avaliação]
+CTA: [Ex: "Agende pelo WhatsApp"]
+
+▸ CAMPANHA 2 — REMARKETING (40% dessa verba)
+
+Objetivo: Mensagens no WhatsApp
+Público: [Engajamento IG 30d + visitantes site 14d + vídeo-views 50%+ + form aberto não enviado.]
+Exclusões: [Quem já agendou nos últimos 30 dias.]
+
+Ângulo: [Prova social profissional + urgência de agenda.]
+3 criativos vencedores: [Top 3 CTR da Campanha 1.]
+Oferta ancorada: [Entrada com urgência de agenda]
+
+📊 KPIs
+- CPL máximo: R$ X–Y
+- Taxa de comparecimento: Y%+
+- Taxa de conversão em pacote: Y%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 ESTRATÉGIAS COMPLEMENTARES (30% do budget somadas)
+
+🔍 GOOGLE ADS — Captura de urgência (20%)
+[3 linhas MÁX.]
+
+📱 INSTAGRAM ORGÂNICO — Prova e autoridade (5%)
+[3 linhas MÁX.]
+
+💬 WHATSAPP — Fechamento (5%)
+[3 linhas MÁX.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📅 CRONOGRAMA — 3 SEMANAS
+
+SEMANA 1 — SETUP
+[2–3 linhas.]
+
+SEMANA 2 — TESTE
+[2–3 linhas.]
+
+SEMANA 3 — OTIMIZAÇÃO E ESCALA
+[2–3 linhas.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ ALERTAS ESTRATÉGICOS
+[2–3 bullets CRÍTICOS — incluir alerta sobre ética CFM/CRO.]
+
+Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
+
+const TRAFFIC_PLAN_PROMPT_GENERICO = `Você é um estrategista de tráfego pago, especialista em marketing digital no Brasil. Treinado com a metodologia da XPLO para ajudar pequenos e médios negócios a construírem uma máquina de aquisição previsível.
+
+Você PENSA como estrategista, não como redator. Output ACIONÁVEL nos próximos 7 dias. Você é DIRETO.
+
+---
+
+PRINCÍPIOS NÃO-NEGOCIÁVEIS
+
+- ESTRATÉGIA PRINCIPAL é SEMPRE Meta Ads com 2 campanhas: 1 TESTE (5 criativos) + 1 REMARKETING.
+- ADAPTE a linguagem ao tipo de negócio: B2B ≠ B2C, produto ≠ serviço.
+- Estratégias complementares são SUGESTÕES CURTAS — nunca detalhadas ao nível da principal.
+- Bullets curtos. Bold em métricas. Output em uma tela.
+
+---
+
+DADOS DO ONBOARDING
+
+[Nome]: {client_name}
+[Nicho]: {niche_label}
+[Produto/serviço]: {profile_data.product_name}
+[Modelo]: {profile_data.sales_model}
+[Ticket]: {profile_data.average_ticket}
+[Localização]: {profile_data.region}
+[Diferenciais]: {profile_data.differentiators}
+[Benefícios]: {profile_data.benefits}
+
+[Mercado]
+Canais atuais: {market.demand_channels}
+Volume: {market.volume}
+Dificuldades: {market.dificuldade}
+Investimento inicial: {financial.initial_traffic_investment}
+
+[ICP]
+{icp.generated_icp_text}
+
+[OFERTAS GERADAS]
+{offers.generated_text}
+
+---
+
+TEMPLATE DE SAÍDA (siga EXATAMENTE)
+
+📊 PLANO DE DEMANDA — [NOME DO NEGÓCIO]
+
+🎯 DIAGNÓSTICO
+[3-4 linhas MÁXIMO.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 ESTRATÉGIA PRINCIPAL — META ADS
+[70% do budget = R$ X,XX]
+
+▸ CAMPANHA 1 — TESTE (60% dessa verba)
+
+Objetivo: [Mensagens no WhatsApp / Formulário / Conversão no site — escolher o mais adequado]
+Público: [1 público ÚNICO baseado no ICP.]
+Exclusões: [2–3 exclusões práticas.]
+
+5 criativos para testar:
+1. [Adequar ao tipo de negócio]
+2. [...]
+3. [...]
+4. [...]
+5. [...]
+
+Oferta ancorada: [Oferta de ENTRADA do banco]
+CTA: [Único e direto]
+
+▸ CAMPANHA 2 — REMARKETING (40% dessa verba)
+
+Objetivo: [Canal de conversão]
+Público: [Engajamento IG 30d + visitantes site 14d + vídeo-views 50%+.]
+Exclusões: [Convertidos nos últimos 30 dias.]
+
+Ângulo: [Prova social / urgência / reforço da oferta.]
+3 criativos vencedores: [Top 3 CTR da Campanha 1.]
+Oferta ancorada: [Oferta para público quente]
+
+📊 KPIs
+- CPL máximo: R$ X–Y
+- Taxa de conversão: Y%
+- CAC máximo: R$ X (se aplicável)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 ESTRATÉGIAS COMPLEMENTARES (30% do budget somadas)
+
+[Escolher as 3 mais relevantes para o nicho.]
+
+🔍 GOOGLE ADS — Captura de intenção ([X]%)
+[3 linhas MÁX.]
+
+📱 INSTAGRAM ORGÂNICO — Construção de autoridade ([X]%)
+[3 linhas MÁX.]
+
+💬 WHATSAPP / EMAIL — Conversão ([X]%)
+[3 linhas MÁX.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📅 CRONOGRAMA — 3 SEMANAS
+
+SEMANA 1 — SETUP
+[2–3 linhas.]
+
+SEMANA 2 — TESTE
+[2–3 linhas.]
+
+SEMANA 3 — OTIMIZAÇÃO E ESCALA
+[2–3 linhas.]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ ALERTAS ESTRATÉGICOS
+[2–3 bullets CRÍTICOS baseados no contexto do negócio.]
 
 Retorne APENAS o documento formatado. Sem comentários antes ou depois.`;
 
@@ -1401,6 +1753,131 @@ JSON exato:
         const { data: created } = await supabase.from('client_offer_documents').insert({
           client_id: clientId,
           name: documentName || (nextOrder === 0 ? "Banco de Ofertas" : `Banco de Ofertas ${nextOrder + 1}`),
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          sort_order: nextOrder,
+        }).select('id').maybeSingle();
+        savedId = created?.id;
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-traffic-plan-document") {
+      const documentId: string | undefined = b.documentId;
+      const documentName: string | undefined = b.documentName;
+      const userInstruction: string = (b.userInstruction || "").trim();
+
+      const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpDocs }, { data: icpLegacy }, { data: offerDocs }] = await Promise.all([
+        supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
+        supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_icp_documents').select('generated_icp_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+        supabase.from('client_icp').select('generated_icp_text').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_offer_documents').select('generated_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+      ]);
+
+      if (!cli) {
+        return new Response(JSON.stringify({ error: 'Cliente não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Pré-requisitos
+      const icpsList = (icpDocs || []).filter((d: any) => d?.generated_icp_text);
+      const icpCombined = icpsList.length
+        ? icpsList.map((d: any) => `### ${d.name}\n${d.generated_icp_text}`).join("\n\n---\n\n")
+        : (icpLegacy?.generated_icp_text || "");
+      if (!icpCombined) {
+        return new Response(JSON.stringify({ error: 'ICP_REQUIRED', message: 'Gere primeiro o ICP.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const offersList = (offerDocs || []).filter((d: any) => d?.generated_text);
+      if (!offersList.length) {
+        return new Response(JSON.stringify({ error: 'OFFERS_REQUIRED', message: 'Gere primeiro o Banco de Ofertas.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const offersCombined = offersList
+        .map((d: any) => `### ${d.name}\n${d.generated_text}`)
+        .join("\n\n---\n\n");
+
+      const niche = (cli.niche_type as string) || 'generico';
+      const profileData: Record<string, any> = ((prof as any)?.profile_data) || {};
+      const marketData: Record<string, any> = ((prof as any)?.market_data) || {};
+
+      const vars: Record<string, string> = {
+        client_name: cli.name || "—",
+        niche_label: cli.niche_label || niche,
+        // hospedagem
+        "profile_data.type": fmtVal(profileData.type || profileData.tipo),
+        "profile_data.location": fmtVal(profileData.location || profileData.localizacao || (prof as any)?.region),
+        "profile_data.diaria": fmtVal(profileData.diaria || profileData.daily_rate || (prof as any)?.average_ticket),
+        "profile_data.differentiators": fmtVal((prof as any)?.differentiators),
+        "profile_data.experiencia": fmtVal(profileData.experiencia || profileData.experience || (prof as any)?.product_description),
+        // saude
+        "profile_data.specialty": fmtVal(profileData.specialty || profileData.especialidade),
+        "profile_data.ticket_medio": fmtVal(profileData.ticket_medio || (prof as any)?.average_ticket),
+        "profile_data.attendance_types": fmtVal(profileData.attendance_types || profileData.tipos_atendimento),
+        "profile_data.convenios": fmtVal(profileData.convenios),
+        "profile_data.treatments": fmtVal(profileData.treatments || profileData.procedimentos),
+        // generico
+        "profile_data.product_name": fmtVal((prof as any)?.product_name || profileData.product_name),
+        "profile_data.sales_model": fmtVal((prof as any)?.sales_model),
+        "profile_data.average_ticket": fmtVal((prof as any)?.average_ticket),
+        "profile_data.region": fmtVal((prof as any)?.region),
+        "profile_data.benefits": fmtVal((prof as any)?.benefits),
+        // market
+        "market.demand_channels": fmtVal((prof as any)?.demand_channels),
+        "market.ocupacao": fmtVal(marketData.ocupacao || marketData.occupation),
+        "market.dificuldade": fmtVal(marketData.dificuldade || marketData.difficulty),
+        "market.volume_pacientes": fmtVal(marketData.volume_pacientes || marketData.patient_volume),
+        "market.volume": fmtVal(marketData.volume),
+        // financial
+        "financial.initial_traffic_investment": fmtVal((prof as any)?.initial_traffic_investment),
+        // icp + offers
+        "icp.generated_icp_text": icpCombined,
+        "offers.generated_text": offersCombined,
+      };
+
+      const template = niche === "hospedagem" ? TRAFFIC_PLAN_PROMPT_HOSPEDAGEM
+        : niche === "saude" ? TRAFFIC_PLAN_PROMPT_SAUDE
+        : TRAFFIC_PLAN_PROMPT_GENERICO;
+
+      // Interpolate dotted vars manually then fall through normal interpolate for {single_word}
+      let finalPrompt = template;
+      for (const [k, v] of Object.entries(vars)) {
+        const re = new RegExp("\\{" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\}", "g");
+        finalPrompt = finalPrompt.replace(re, v);
+      }
+
+      if (userInstruction) {
+        finalPrompt += `\n\n---\n\nINSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): ${userInstruction}`;
+      }
+
+      const generatedText = await aiText(
+        config,
+        "Você é um estrategista sênior de tráfego pago no Brasil. Escreva planos acionáveis, diretos e enxutos. Nunca acrescente comentários fora do template.",
+        finalPrompt,
+        0.7,
+      );
+
+      const nowIso = new Date().toISOString();
+      let savedId = documentId;
+      if (documentId) {
+        await supabase.from('client_traffic_plan_documents').update({
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          ...(documentName ? { name: documentName } : {}),
+        }).eq('id', documentId);
+      } else {
+        const { data: existing } = await supabase
+          .from('client_traffic_plan_documents')
+          .select('sort_order')
+          .eq('client_id', clientId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        const nextOrder = ((existing?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+
+        const { data: created } = await supabase.from('client_traffic_plan_documents').insert({
+          client_id: clientId,
+          name: documentName || (nextOrder === 0 ? "Plano de Demanda" : `Plano de Demanda ${nextOrder + 1}`),
           generated_text: generatedText,
           generated_by_ai: true,
           generated_at: nowIso,
