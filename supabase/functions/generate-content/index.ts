@@ -1689,6 +1689,14 @@ JSON exato:
 
       let finalPrompt = interpolate(template, vars);
 
+      // Anexa contexto completo do onboarding (dores, financeiro, promessa, etc)
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        finalPrompt += `\n\n${serializeOnboardingContext(pkg)}`;
+      } catch (e) {
+        console.error('[generate-icp-document] onboarding context error:', e);
+      }
+
       // Se for um ICP adicional/variação, adicionar instrução para diferenciar
       if (variationHint || (documentName && documentName !== "ICP Principal")) {
         const hint = variationHint || `Foque este ICP em: "${documentName}". Gere um perfil diferente do ICP principal, explorando outro ângulo do público-alvo.`;
