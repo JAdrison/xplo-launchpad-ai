@@ -989,6 +989,124 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "—");
 }
 
+// ============================================================
+// CONTEXTO COMPLETO DO ONBOARDING (7 etapas) — usado por todos
+// os geradores estratégicos (ICP, Ofertas, Plano de Demanda, Anúncios)
+// ============================================================
+type OnboardingPkg = {
+  client: any;
+  profile: any;
+  swot: any;
+  promise: any;
+  icpDocs: any[];
+  icpLegacy: any;
+  offerDocs: any[];
+};
+
+async function buildOnboardingContext(supabase: any, clientId: string): Promise<OnboardingPkg> {
+  const [
+    { data: client },
+    { data: profile },
+    { data: swot },
+    { data: promise },
+    { data: icpDocs },
+    { data: icpLegacy },
+    { data: offerDocs },
+  ] = await Promise.all([
+    supabase.from('clients').select('name, niche_type, niche_label, niche').eq('id', clientId).maybeSingle(),
+    supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+    supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+    supabase.from('client_promise').select('promise_text').eq('client_id', clientId).maybeSingle(),
+    supabase.from('client_icp_documents').select('generated_icp_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+    supabase.from('client_icp').select('generated_icp_text, bloco1_data, bloco2_data, bloco3_data').eq('client_id', clientId).maybeSingle(),
+    supabase.from('client_offer_documents').select('generated_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+  ]);
+  return {
+    client,
+    profile,
+    swot,
+    promise,
+    icpDocs: icpDocs || [],
+    icpLegacy,
+    offerDocs: offerDocs || [],
+  };
+}
+
+function combineIcpText(pkg: OnboardingPkg): string {
+  const list = (pkg.icpDocs || []).filter((d: any) => d?.generated_icp_text);
+  if (list.length) return list.map((d: any) => `### ${d.name}\n${d.generated_icp_text}`).join("\n\n---\n\n");
+  return pkg.icpLegacy?.generated_icp_text || "";
+}
+
+function combineOffersText(pkg: OnboardingPkg): string {
+  const list = (pkg.offerDocs || []).filter((d: any) => d?.generated_text);
+  if (!list.length) return "";
+  return list.map((d: any) => `### ${d.name}\n${d.generated_text}`).join("\n\n---\n\n");
+}
+
+/**
+ * Gera um bloco de texto rotulado (Markdown leve) com TODO o contexto
+ * do onboarding pronto para anexar ao prompt da IA. Campos vazios viram "—".
+ * Princípio: passe tudo, a IA ignora o que estiver vazio.
+ */
+function serializeOnboardingContext(pkg: OnboardingPkg): string {
+  const p: any = pkg.profile || {};
+  const s: any = pkg.swot || {};
+  const swotJoin = (tags: string[] | null | undefined, text: string | null | undefined) => {
+    const t = (tags || []).filter(Boolean).join(", ");
+    const parts = [t, text].filter(Boolean);
+    return parts.length ? parts.join(" — ") : "—";
+  };
+  const lines: string[] = [];
+
+  lines.push("════════════════ CONTEXTO COMPLETO DO ONBOARDING ════════════════");
+  lines.push("(Use TODO o contexto fornecido. Se um campo estiver vazio (—), apenas ignore — não invente.)");
+  lines.push("");
+
+  lines.push("[DORES E DESEJOS DO NEGÓCIO — VOZ DO DONO]");
+  lines.push(`Dor principal: ${fmtVal(p.main_pain)}`);
+  lines.push(`Dor secundária: ${fmtVal(p.secondary_pain)}`);
+  lines.push(`Impactos no dia a dia: ${fmtVal(p.daily_impacts)}`);
+  lines.push(`Desejo principal: ${fmtVal(p.desire_1)}`);
+  lines.push(`Desejo secundário: ${fmtVal(p.desire_2)}`);
+  lines.push("");
+
+  lines.push("[CONTEXTO FINANCEIRO E COMERCIAL]");
+  lines.push(`Faturamento atual: ${fmtVal(p.current_revenue)}`);
+  lines.push(`Meta de faturamento: ${fmtVal(p.revenue_goal)}`);
+  lines.push(`Investimento mensal em marketing: ${fmtVal(p.monthly_investment)}`);
+  lines.push(`Investimento inicial em tráfego: ${fmtVal(p.initial_traffic_investment)}`);
+  lines.push(`Modelo de venda: ${fmtVal(p.sales_model)}`);
+  lines.push(`Equipe de vendas: ${fmtVal(p.sales_team_size)}`);
+  lines.push(`Promoções ativas: ${fmtVal(p.promotions)}`);
+  lines.push(`Canais de demanda: ${fmtVal(p.demand_channels)}`);
+  lines.push("");
+
+  lines.push("[DIFERENCIAIS E BENEFÍCIOS]");
+  lines.push(`Diferenciais: ${fmtVal(p.differentiators)}`);
+  lines.push(`Benefícios entregues: ${fmtVal(p.benefits)}`);
+  lines.push("");
+
+  lines.push("[CONCORRENTES E REFERÊNCIAS]");
+  lines.push(`Concorrentes locais: ${fmtCompetitors(p.local_competitor_1, p.local_competitor_2)}`);
+  lines.push(`Inspirações de mercado: ${fmtCompetitors(p.inspiration_company_1, p.inspiration_company_2)}`);
+  lines.push("");
+
+  lines.push("[SWOT — VISÃO GERAL]");
+  lines.push(`Forças internas: ${swotJoin(s.forcas_internas_tags, s.forcas_internas_text)}`);
+  lines.push(`Fraquezas internas: ${swotJoin(s.fraquezas_internas_tags, s.fraquezas_internas_text)}`);
+  lines.push(`Forças do ambiente: ${swotJoin(s.forcas_ambiente_tags, s.forcas_ambiente_text)}`);
+  lines.push(`Fraquezas do ambiente: ${swotJoin(s.fraquezas_ambiente_tags, s.fraquezas_ambiente_text)}`);
+  lines.push("");
+
+  lines.push("[PROMESSA HORMOZI VALIDADA]");
+  lines.push(fmtVal(pkg.promise?.promise_text));
+  lines.push("");
+
+  lines.push("══════════════════════════════════════════════════════════════════");
+  return lines.join("\n");
+}
+
 async function aiText(config: AIConfig, sys: string, usr: string, t = 0.7): Promise<string> {
   let url: string;
   let headers: Record<string, string>;
@@ -1571,6 +1689,14 @@ JSON exato:
 
       let finalPrompt = interpolate(template, vars);
 
+      // Anexa contexto completo do onboarding (dores, financeiro, promessa, etc)
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        finalPrompt += `\n\n${serializeOnboardingContext(pkg)}`;
+      } catch (e) {
+        console.error('[generate-icp-document] onboarding context error:', e);
+      }
+
       // Se for um ICP adicional/variação, adicionar instrução para diferenciar
       if (variationHint || (documentName && documentName !== "ICP Principal")) {
         const hint = variationHint || `Foque este ICP em: "${documentName}". Gere um perfil diferente do ICP principal, explorando outro ângulo do público-alvo.`;
@@ -1724,6 +1850,14 @@ JSON exato:
 
       let finalPrompt = interpolate(template, vars);
 
+      // Anexa contexto completo do onboarding
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        finalPrompt += `\n\n${serializeOnboardingContext(pkg)}`;
+      } catch (e) {
+        console.error('[generate-offers-document] onboarding context error:', e);
+      }
+
       // Variação opcional
       if (variationHint || (documentName && documentName !== "Banco de Ofertas")) {
         const hint = variationHint || `Foque este banco em: "${documentName}". Gere ofertas com ângulo diferente do banco principal.`;
@@ -1846,6 +1980,14 @@ JSON exato:
         finalPrompt = finalPrompt.replace(re, v);
       }
 
+      // Anexa contexto completo do onboarding
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        finalPrompt += `\n\n${serializeOnboardingContext(pkg)}`;
+      } catch (e) {
+        console.error('[generate-traffic-plan-document] onboarding context error:', e);
+      }
+
       if (userInstruction) {
         finalPrompt += `\n\n---\n\nINSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): ${userInstruction}`;
       }
@@ -1942,8 +2084,20 @@ JSON exato:
         const { data: o } = await supabase.from('offers_hormozi').select('*').eq('id', offerId).maybeSingle();
         if (o) { vOid = offerId; oCtx = `Oferta: ${o.promise || ''}`; }
       }
-      const bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
-      sys = `Ads expert brasileiro. Crie 6 anúncios de vídeo:
+      // Contexto completo do onboarding (banco prevalece sobre pppData)
+      let bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        const fullCtx = serializeOnboardingContext(pkg);
+        const icpText = combineIcpText(pkg);
+        const icpBlock = icpText ? `\n\n[ICP — CLIENTES IDEAIS]\n${icpText}` : '';
+        bp = `${fullCtx}${icpBlock}`;
+      } catch (e) {
+        console.error('[ads] onboarding context error:', e);
+      }
+      sys = `Ads expert brasileiro. Você tem acesso ao perfil completo do negócio, ICP, SWOT, promessa Hormozi, concorrentes e referências. Use TUDO isso para personalizar cada anúncio — evite genérico, fale a língua do cliente real. Ignore campos vazios (—).
+
+Crie 6 anúncios de vídeo:
 - 5 vídeos criativos com estilos variados (20-80s cada)
 - 1 vídeo OBRIGATÓRIO tipo "question_box" (Caixinha de Perguntas)
 
