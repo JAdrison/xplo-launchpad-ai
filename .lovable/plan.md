@@ -1,68 +1,88 @@
 
 
-## Card "Plano de Demanda" — 3 prompts por nicho
+## Enriquecer geração de IA com TODOS os dados do Onboarding 7 etapas
 
-Adicionar um novo card **"Plano de Demanda"** na seção "Geração com IA" do detalhe do cliente, seguindo exatamente o mesmo padrão dos cards **ICP** e **Banco de Ofertas** já implementados: documento gerado em texto formatado via GPT-5.2, salvo em tabela própria, com Editar / Regenerar (com instrução) / Copiar / PDF / Excluir.
+### Diagnóstico atual — o que cada gerador realmente lê hoje
 
-### O que muda
+| Gerador | Onboarding usa | O que está faltando |
+|---|---|---|
+| **ICP** | ✅ Profile (parcial), SWOT, blocos `client_icp`, mercado (canais + 2 concorrentes) | ❌ **Dores e desejos globais** (`main_pain`, `secondary_pain`, `daily_impacts`, `desire_1`, `desire_2`), **financeiro** (faturamento, meta, investimento), **modelo de venda** (`sales_model`, `sales_team_size`), **promoções**, **inspirações** (`inspiration_company_1/2`), **Promessa Hormozi** (`client_promise`) |
+| **Banco de Ofertas** | ✅ Profile, SWOT, ICP combinado, canais de demanda | ❌ Mesmas lacunas: dores/desejos, financeiro completo, **promoções existentes**, modelo de venda, **promessa Hormozi** já validada, inspirações |
+| **Plano de Demanda** | ✅ Profile (campos pontuais), `initial_traffic_investment`, ICP, Ofertas | ❌ **SWOT inteiro**, dores/desejos globais, **demais campos financeiros** (`current_revenue`, `monthly_investment`, `revenue_goal`), `sales_model`, `sales_team_size`, `demand_channels`, **concorrentes locais**, **inspirações** (super útil pra benchmark de criativo), promessa Hormozi |
+| **Anúncios (16)** | ✅ `bankOfferText`, niche, produto, dor principal, desejo 1, região (via `pppData`) | ❌ **`secondary_pain`, `daily_impacts`, `desire_2`, diferenciais, benefícios, ICP completo (texto), SWOT, promessa Hormozi, concorrentes (pra evitar paridade), inspirações** (pra inspirar estilo) |
 
-#### 1. Banco — nova tabela `client_traffic_plan_documents`
+Hoje a IA está vendo **menos de 40%** do que o cliente preencheu nas 7 etapas — por isso os documentos parecem genéricos quando o onboarding foi rico.
 
-Espelho de `client_offer_documents`, sem migration destrutiva:
+### O que vamos mudar
 
-- `id`, `client_id`, `name` (default "Plano de Demanda"), `generated_text`, `generated_by_ai`, `generated_at`, `sort_order`, `created_at`, `updated_at`.
-- RLS público (igual aos outros documentos do cliente).
+**1. Helper único de contexto completo** (`buildOnboardingContext`)
 
-#### 2. Backend — novo task em `generate-content/index.ts`
+Criar uma função no edge function `generate-content/index.ts` que, dado um `clientId`, retorna **um pacote completo** com TODOS os campos das 7 etapas + tabelas relacionadas:
 
-Adicionar `type === "generate-traffic-plan-document"`:
+- `clients`: name, niche_type, niche_label
+- `client_profile`: tudo (incluindo `main_pain`, `secondary_pain`, `daily_impacts`, `desire_1`, `desire_2`, `current_revenue`, `monthly_investment`, `initial_traffic_investment`, `revenue_goal`, `sales_model`, `sales_team_size`, `demand_channels`, `promotions`, `differentiators`, `benefits`, `local_competitor_1/2`, `inspiration_company_1/2`, `profile_data`, `market_data`)
+- `client_swot`: 4 quadrantes (tags + texto)
+- `client_promise`: `promise_text` (Hormozi)
+- `client_icp_documents` + legacy `client_icp` (blocos)
+- `client_offer_documents` (quando aplicável)
 
-- **Validação obrigatória**: busca `client_icp_documents` (ou legado `client_icp`) E `client_offer_documents` com `generated_text`. Se faltar qualquer um → retorna erro estruturado (`ICP_REQUIRED` / `OFFERS_REQUIRED`) que o frontend traduz em toast.
-- **Seleção do prompt por nicho**: lê `clients.niche_type` (`hospedagem` / `saude` / `generico`) e seleciona o prompt correspondente. Os 3 prompts ficam como constantes no topo do task (mesmo padrão dos prompts atuais de ICP/Ofertas).
-- **Substituição de variáveis** `{client_name}`, `{profile_data.*}`, `{market.*}`, `{financial.initial_traffic_investment}`, `{icp.generated_icp_text}` (do ICP mais recente), `{offers.generated_text}` (do banco mais recente, já filtrado pelas ofertas ativas via `serializeOfferBank` adaptado server-side ou texto cru).
-- **Modelo**: GPT-5.2 (consistente com os outros documentos estratégicos). Sem `response_format json` — saída é texto formatado direto.
-- **Modo regeneração com instrução**: aceita `documentId` + `userInstruction` opcional. Quando vem instrução, é injetada como bloco prioritário no prompt: *"INSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): {userInstruction}"* (mesmo padrão do Banco de Ofertas).
-- Salva em `client_traffic_plan_documents` com `generated_by_ai=true` e `generated_at=now()`.
+E um `serializeOnboardingContext(pkg, niche)` que devolve um **bloco de texto rotulado** (Markdown leve) pronto pra injetar nos prompts. Cada bloco tem header tipo `[DORES E DESEJOS GLOBAIS]`, `[FINANCEIRO]`, `[MODELO DE VENDA]`, `[CONCORRENTES LOCAIS]`, `[INSPIRAÇÕES]`, `[PROMESSA HORMOZI]` etc, com fallback `—` para vazios (não polui o prompt).
 
-Os 3 prompts longos (Hospedagem / Saúde / Genérico) entram exatamente como descritos pelo usuário, com o template de saída obrigatório (Diagnóstico → Estratégia Principal Meta → Complementares → Cronograma 3 semanas → Alertas).
+**2. Expandir variáveis nos 3 prompts de documento (ICP, Ofertas, Plano de Demanda)**
 
-#### 3. Frontend — novo `TrafficPlanCard.tsx`
+Adicionar nos prompts (todas as 9 versões — 3 niches × 3 documentos) novos blocos opcionais ao final do contexto, antes do template de saída:
 
-Espelho enxuto de `OfferBancoCard.tsx` (sem a complexidade de offer_states, já que aqui o documento é monolítico):
+```
+[DORES E DESEJOS DO NEGÓCIO — VOZ DO DONO]
+{global_main_pain}
+{global_secondary_pain}
+{global_daily_impacts}
+{global_desire_1}
+{global_desire_2}
 
-- Botão **"Novo Plano"** (com `Lock` + tooltip *"Gere o ICP e o Banco de Ofertas primeiro"* quando faltar dependência).
-- Verificação de dependências no `load()`: consulta `client_icp_documents`/`client_icp` E `client_offer_documents`. Se faltar, botão desabilitado com mensagem específica.
-- Diálogo "Novo Plano" com campo opcional **"Instrução de variação"** (textarea).
-- Lista os documentos gerados com:
-  - Texto renderizado em `whitespace-pre-wrap` (preserva os divisores `━━━` e emojis do template).
-  - Botões: ✏️ **Editar** (textarea), 🔄 **Regenerar** (abre Dialog com campo de instrução, igual ao Banco de Ofertas), 📋 **Copiar**, 📄 **PDF**, 🗑️ **Excluir**.
+[CONTEXTO FINANCEIRO E COMERCIAL]
+Faturamento atual: {current_revenue}
+Meta de faturamento: {revenue_goal}
+Investimento mensal em mkt: {monthly_investment}
+Investimento inicial em tráfego: {initial_traffic_investment}
+Modelo de venda: {sales_model}
+Equipe de vendas: {sales_team_size}
+Promoções ativas: {promotions}
 
-Não vamos quebrar o documento em sub-cards individuais (não há ações por seção como no Banco de Ofertas) — o texto é exibido inteiro com a formatação visual já contida no próprio prompt.
+[CONCORRENTES E REFERÊNCIAS]
+Concorrentes locais: {local_competitors}
+Inspirações de mercado: {inspirations}
 
-#### 4. Integração no `AIGenerationSection.tsx`
+[PROMESSA HORMOZI VALIDADA]
+{promise_text}
+```
 
-Adicionar `<TrafficPlanCard />` entre `<OfferBancoCard />` e o card de Anúncios, refletindo a ordem estratégica recomendada: **ICP → Ofertas → Plano de Demanda → Anúncios**.
+E adicionar uma instrução **discreta** no topo de cada prompt: *"Use TODO o contexto fornecido. Se um campo estiver vazio (—), apenas ignore — não invente."*
 
-#### 5. Exportação PDF
+**3. Anúncios — passar contexto completo via backend (sem depender de `pppData` do front)**
 
-- Novo `TrafficPlanPDFTemplate.tsx` (espelho de `OfferBancoPDFTemplate.tsx`) — render simples com `whitespace-pre-wrap`, logo XPLO no canto, margens padrão da memória de exportação.
-- Atualizar `OnboardingPDFTemplate.tsx` para incluir uma nova seção **"Plano de Demanda"** após a seção de Ofertas, lendo o `generated_text` mais recente de `client_traffic_plan_documents`.
+Hoje o `type === "ads"` depende do `pppData` que o `Generator.tsx` monta no front (incompleto por design). Mudar a branch para:
 
-#### 6. Remoção do antigo editor de demanda
+- Buscar internamente `buildOnboardingContext(clientId)` (mesmo helper).
+- Substituir o atual `bp` (3 linhas) por um **bloco rico** com: dores 1+2, impactos diários, desejos 1+2, diferenciais, benefícios, ICP combinado (texto curto extraído de `client_icp_documents`), SWOT (1 linha por quadrante), promessa Hormozi, concorrentes locais (pra IA evitar paridade), inspirações (pra IA pegar tom).
+- Manter `pppData` aceito para retrocompatibilidade, mas sempre **mesclar** com o que vem do banco (banco prevalece quando não-vazio).
+- Atualizar o `sys` dos anúncios pra mencionar: *"Você tem acesso ao perfil completo do negócio, ICP, SWOT, promessa e referências. Use isso pra personalizar cada anúncio — evite genérico."*
 
-O componente `DemandPlanEditor.tsx` (acoplado a `offers_hormozi.demand_generation_strategies`) deixa de ser usado pelo novo fluxo. Como ele ainda é referenciado em `GeneratedContentViewer.tsx` para ofertas Hormozi legadas, mantemos o arquivo intacto **apenas para compatibilidade** com ofertas antigas — não há remoção, apenas o novo card passa a ser a fonte oficial.
+**4. Sem tocar em**: estrutura de saída (16 anúncios, template ICP, formato do banco de ofertas, template do plano de demanda), schemas de tabela, frontend de geração (`Generator.tsx`, `AIGenerationSection.tsx`, `TrafficPlanCard.tsx`), prompts de outras tasks (`offer` legado Hormozi, `generate-icps`, `generate-promise`, `generate-swot`, `create-video-ad`).
 
 ### Detalhes técnicos
 
-- **Migration**: criar tabela `client_traffic_plan_documents` (idempotente, com RLS público).
-- **Sem mudança em prompts existentes** (ICP, Ofertas, Anúncios).
-- **Resolução de variáveis no backend**: helper interno que mapeia `{caminho.aninhado}` para os campos reais de `client_profile.profile_data`, `client_profile.market_data`, `client_profile`, etc. Variáveis ausentes viram string vazia (não quebra o prompt).
-- **Memória**: criar `mem://ia/plano-demanda-3-nichos` documentando os 3 prompts, dependência de ICP+Ofertas, modelo GPT-5.2 e estrutura única de output. Atualizar `mem://index.md`. Substitui em uso o antigo `mem://ia/consultoria-demanda` (que mantemos como referência histórica do Hormozi legado).
+- **Helpers novos** (todos no `generate-content/index.ts`, mantendo o arquivo único):
+  - `buildOnboardingContext(supabase, clientId): Promise<OnboardingPkg>` — uma função, 6 queries paralelas.
+  - `serializeOnboardingContext(pkg, niche): string` — texto rotulado.
+  - `extractOnboardingVars(pkg): Record<string,string>` — variáveis pra `interpolate`.
+- **Reuso**: as branches `generate-icp-document`, `generate-offers-document`, `generate-traffic-plan-document` substituem suas 6 queries individuais por **uma única chamada** ao helper, eliminando duplicação.
+- **Anúncios**: branch `type === "ads"` chama o helper e adiciona `[CONTEXTO COMPLETO]\n${serializeOnboardingContext(pkg, niche)}` antes do `oCtx` no `prompt`.
+- **Memória nova**: `mem://ia/contexto-onboarding-completo` — documenta o helper, lista todos os campos passados pra IA e o princípio "use tudo, ignore vazios". Atualizar `mem://index.md` na seção Memories. Marcar `mem://arquitetura/contexto-geracao-anuncios` como obsoleta (não remover, só anotar a substituição).
+- **Sem migration**: usa só tabelas e colunas que já existem.
+- **Sem mudança de modelo**: continua tudo em GPT-5.2 via `STRATEGIC_TASKS`.
 
-### Fora do escopo
+### Resultado esperado
 
-- Não excluir `offers_hormozi` nem `DemandPlanEditor.tsx` (compat com ofertas antigas).
-- Não criar quebra do plano em sub-cards editáveis seção-a-seção — render é texto formatado único, igual ao Banco de Ofertas no nível do documento.
-- Não mudar prompts de ICP/Ofertas/Anúncios.
-- Não tocar no fluxo de geração de Anúncios (que já usa o Banco de Ofertas como contexto).
+Os 4 documentos passam a refletir **fielmente** o que o cliente disse no onboarding — incluindo dores na voz do dono, contexto financeiro real, promoções vigentes, concorrentes a evitar e inspirações de estilo. Documentos ficam mais específicos sem mudar nada na UI.
 
