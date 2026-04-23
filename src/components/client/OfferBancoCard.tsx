@@ -866,12 +866,6 @@ function OfferDocBlock(props: OfferDocBlockProps) {
                     );
                   })}
 
-                  {parsed.footer && (
-                    <div className="rounded-lg border bg-muted/20 p-3 whitespace-pre-wrap text-sm leading-relaxed">
-                      {parsed.footer}
-                    </div>
-                  )}
-
                   {deletedOffers.length > 0 && (
                     <div className="rounded-lg border border-dashed p-3 space-y-2">
                       <p className="text-xs font-medium text-muted-foreground">
