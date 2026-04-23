@@ -1,0 +1,56 @@
+# Project Memory
+
+## Core
+- Light mode only. Minimalist, white bg, primary color #8B5CF6.
+- Domain: starter.xplo.com.br. Admin auth: xplolabcreator@gmail.com.
+- AI: GPT-5.2 for strategy (Brain), Gemini 3 Flash for ops (Arm).
+- AI constraint: Never use for objective data (company/pains), only subjective (ICPs/promises).
+- LGPD Compliance: Mask all passwords. Protect user PII strictly.
+- Data integrity: Unlink offers before deleting ICPs. Ads must tolerate null offer_id.
+
+## Memories
+- [Identidade visual](mem://style/identidade-visual) — Layout, colors, states, and mobile-first approach
+- [Sidebar animada](mem://interface/sidebar-retratil-animada) — Retractable sidebar styling and animation behavior
+- [Light mode](mem://style/light-mode-permanente) — Enforces permanent light mode setup
+- [Design Starter](mem://marca/identidade-starter-layout) — Assets and static flow sidebar setup for XPLO STARTER
+- [Modelo landing page](mem://ia/modelo-landing-page) — LP 10 sections structure and version appending logic
+- [Estrutura perfis clientes](mem://fluxo/perfil-clientes-estrutura) — 5 specific narrative fields for client profiles
+- [Dores globais](mem://fluxo/pains-desacoplado-de-icp) — Pains/desires defined globally per client, not per ICP
+- [Onboarding 7 etapas](mem://fluxo/onboarding-x1-reestruturado-v2) — The 7 strategic steps of the onboarding wizard
+- [Onboarding externo](mem://fluxo/onboarding-externo-cliente) — External 7-day token logic for auto-registration flow
+- [Reiniciar onboarding](mem://funcionalidades/reiniciar-onboarding-checkpoints) — Logic for restarting specific checkpoints and status resets
+- [Ciclo vida cliente](mem://fluxo/ciclo-vida-cliente) — Onboarding statuses used to suggest next steps
+- [Cálculo leads](mem://mercado/calculo-estimativa-leads) — Math formula for lead estimation based on investment
+- [Modelos conteúdo](mem://ia/modelos-conteudo) — ICP offer generations, multi-choice, and manual edits
+- [Hormozi equation](mem://ia/hormozi-value-equation) — Hormozi formula and string pattern for Promises
+- [Consultoria demanda](mem://ia/consultoria-demanda) — AI rules for demand generation planning (FB Ads 60%, funnels)
+- [Demanda datatypes](mem://ia/plano-demanda-detalhado) — Fallbacks and data structure handling for complex demand plan fields
+- [Anúncios configuração](mem://ia/configuracao-anuncios-hibridos) — Rules for generating the 16 ads (6 video, 10 static) and string specs
+- [Caixinha perguntas](mem://ia/anuncios-caixinha-perguntas) — Tone and structure rules for the 6th video ad format
+- [Contexto anúncios](mem://arquitetura/contexto-geracao-anuncios) — [OBSOLETO — substituído por contexto-onboarding-completo] Data sources fallback mechanism for generating ads
+- [Contexto onboarding completo](mem://ia/contexto-onboarding-completo) — Helper único que injeta TODOS os dados das 7 etapas em ICP/Ofertas/Plano/Anúncios
+- [Vídeo modular](mem://funcionalidades/customizacao-anuncios-video) — Modular sections selection and inline editing for video ads
+- [Refinar anúncios IA](mem://funcionalidades/refinar-anuncios-ia-cliente) — Side-by-side refinement process for ads using AI
+- [Criar anúncios IA](mem://funcionalidades/criar-anuncios-video-ia) — Chat interface rules to create completely new video ads
+- [Webhook anúncios](mem://integracoes/webhook-anuncios-estaticos) — Static ad export logic to user-configured webhook
+- [Geração de ICPs reais](mem://ia/perfil-cliente-geracao-ia) — Rules for generating 3 real Brazilian personas based on strategy context
+- [Uso seletivo IA](mem://ia/uso-seletivo-criterios) — Details on which fields should and shouldn't use AI assistance
+- [Histórico versionamento](mem://funcionalidades/historico) — Rules for storing iterations and edits
+- [Dashboard métricas](mem://funcionalidades/dashboard-dinamico) — Real-time metrics logic for the main dashboard
+- [Exportação PDF](mem://funcionalidades/exportacao-pdf) — Margin and break controls for generic PDF exports
+- [PDF margens seguras](mem://exportacao/margem-seguranca-paginas) — 15mm buffer and global margins for PDFs
+- [PDF quebras oferta](mem://exportacao/controle-quebra-paginas-offers) — Page-break configurations specifically for complex Offer sections
+- [PDF logo XPLO](mem://exportacao/logo-xplo-posicionamento-pdf) — Absolute positioning constraint to avoid layout shifts in UI
+- [Aprovação master](mem://auth/fluxo-aprovacao-master) — Admin master account flow for approving pending users
+- [Admin emails reais](mem://funcionalidades/admin-emails-usuarios) — Edge function permission logic for viewing true user emails
+- [Infra Auth e IA](mem://arquitetura/infraestrutura-auth-ia) — Routing logic for Lovable standard infra vs custom API keys in LocalStorage
+- [Resiliência ads nulos](mem://arquitetura/resiliencia-ads) — Ad FK constraints handling when offers are removed
+- [Integridade ICPs](mem://arquitetura/integridade-referencial-perfis) — Foreign key safeguards when removing client profiles
+- [Admin gestão usuários](mem://funcionalidades/admin-gestao-usuarios) — Revogar/suspender/reset/definir senha em /admin/users com proteção do master
+- [CRM arquitetura](mem://crm/arquitetura-modulo) — Tabelas, RLS, triggers e componentes do Kanban /crm (Fase 1)
+- [CRM ↔ onboarding](mem://crm/integracao-onboarding) — Cliente vira deal; modal linka para /clients/:id
+- [CRM Fase 2](mem://crm/fase2-automacoes-atividades) — Automações por coluna (templates de tarefa) + tela /crm/atividades global filtrável
+- [CRM Fase 3](mem://crm/fase3-contatos-config) — /crm/contatos (tabela + CSV) e /crm/config (pipelines, tags, campos, templates)
+- [LGPD regras](mem://seguranca/conformidade-lgpd) — Rules for handling and showing PII and sensitive data
+- [Dominio Subdomain](mem://infra/dominio-starter-subdomain) — Subdomain constraints and cross-system coexistence
+- [Dual AI](mem://ia/arquitetura-dual-xplo) — Specifications on GPT vs Gemini usage contexts
