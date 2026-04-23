@@ -1,88 +1,61 @@
 
 
-## Enriquecer geração de IA com TODOS os dados do Onboarding 7 etapas
+## Gestão completa de usuários (revogar acesso, redefinir senha, suspender)
 
-### Diagnóstico atual — o que cada gerador realmente lê hoje
+Hoje a tela `/admin/users` só permite **aprovar** ou **rejeitar** (apagar) usuários pendentes. Não há como bloquear um usuário ativo, redefinir a senha dele nem trocá-la manualmente. Vou adicionar essas três funcionalidades.
 
-| Gerador | Onboarding usa | O que está faltando |
-|---|---|---|
-| **ICP** | ✅ Profile (parcial), SWOT, blocos `client_icp`, mercado (canais + 2 concorrentes) | ❌ **Dores e desejos globais** (`main_pain`, `secondary_pain`, `daily_impacts`, `desire_1`, `desire_2`), **financeiro** (faturamento, meta, investimento), **modelo de venda** (`sales_model`, `sales_team_size`), **promoções**, **inspirações** (`inspiration_company_1/2`), **Promessa Hormozi** (`client_promise`) |
-| **Banco de Ofertas** | ✅ Profile, SWOT, ICP combinado, canais de demanda | ❌ Mesmas lacunas: dores/desejos, financeiro completo, **promoções existentes**, modelo de venda, **promessa Hormozi** já validada, inspirações |
-| **Plano de Demanda** | ✅ Profile (campos pontuais), `initial_traffic_investment`, ICP, Ofertas | ❌ **SWOT inteiro**, dores/desejos globais, **demais campos financeiros** (`current_revenue`, `monthly_investment`, `revenue_goal`), `sales_model`, `sales_team_size`, `demand_channels`, **concorrentes locais**, **inspirações** (super útil pra benchmark de criativo), promessa Hormozi |
-| **Anúncios (16)** | ✅ `bankOfferText`, niche, produto, dor principal, desejo 1, região (via `pppData`) | ❌ **`secondary_pain`, `daily_impacts`, `desire_2`, diferenciais, benefícios, ICP completo (texto), SWOT, promessa Hormozi, concorrentes (pra evitar paridade), inspirações** (pra inspirar estilo) |
+### O que será adicionado na tela "Gerenciar Usuários"
 
-Hoje a IA está vendo **menos de 40%** do que o cliente preencheu nas 7 etapas — por isso os documentos parecem genéricos quando o onboarding foi rico.
+Para cada **usuário ativo** (admin ou usuário comum), aparecerão novas ações:
 
-### O que vamos mudar
+1. **Revogar acesso** — remove o usuário definitivamente (apaga login + papel + dados de auth). Confirmação obrigatória.
+2. **Suspender / Reativar** — bloqueia o login sem apagar a conta (toggle). Usuário suspenso aparece com badge laranja "Suspenso".
+3. **Enviar e-mail de redefinição de senha** — dispara o e-mail nativo de "esqueci minha senha" para o endereço do usuário.
+4. **Definir nova senha manualmente** — abre um diálogo onde o admin digita uma senha temporária (mínimo 8 caracteres, mascarada por padrão com botão "mostrar"). Conforme regra LGPD do projeto, a senha nunca é exibida depois de salva.
 
-**1. Helper único de contexto completo** (`buildOnboardingContext`)
+Admin master (`xplolabcreator@gmail.com`) fica **protegido**: nenhum dos 4 botões acima aparece para ele, evitando auto-bloqueio.
 
-Criar uma função no edge function `generate-content/index.ts` que, dado um `clientId`, retorna **um pacote completo** com TODOS os campos das 7 etapas + tabelas relacionadas:
+### Diagrama da linha do usuário ativo
 
-- `clients`: name, niche_type, niche_label
-- `client_profile`: tudo (incluindo `main_pain`, `secondary_pain`, `daily_impacts`, `desire_1`, `desire_2`, `current_revenue`, `monthly_investment`, `initial_traffic_investment`, `revenue_goal`, `sales_model`, `sales_team_size`, `demand_channels`, `promotions`, `differentiators`, `benefits`, `local_competitor_1/2`, `inspiration_company_1/2`, `profile_data`, `market_data`)
-- `client_swot`: 4 quadrantes (tags + texto)
-- `client_promise`: `promise_text` (Hormozi)
-- `client_icp_documents` + legacy `client_icp` (blocos)
-- `client_offer_documents` (quando aplicável)
-
-E um `serializeOnboardingContext(pkg, niche)` que devolve um **bloco de texto rotulado** (Markdown leve) pronto pra injetar nos prompts. Cada bloco tem header tipo `[DORES E DESEJOS GLOBAIS]`, `[FINANCEIRO]`, `[MODELO DE VENDA]`, `[CONCORRENTES LOCAIS]`, `[INSPIRAÇÕES]`, `[PROMESSA HORMOZI]` etc, com fallback `—` para vazios (não polui o prompt).
-
-**2. Expandir variáveis nos 3 prompts de documento (ICP, Ofertas, Plano de Demanda)**
-
-Adicionar nos prompts (todas as 9 versões — 3 niches × 3 documentos) novos blocos opcionais ao final do contexto, antes do template de saída:
-
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ fulano@email.com           [Usuário] [Ativo]                        │
+│ Desde: 12/03/2026                                                   │
+│                                                                     │
+│ [Enviar reset senha] [Definir senha] [Suspender] [Revogar acesso]  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
-[DORES E DESEJOS DO NEGÓCIO — VOZ DO DONO]
-{global_main_pain}
-{global_secondary_pain}
-{global_daily_impacts}
-{global_desire_1}
-{global_desire_2}
-
-[CONTEXTO FINANCEIRO E COMERCIAL]
-Faturamento atual: {current_revenue}
-Meta de faturamento: {revenue_goal}
-Investimento mensal em mkt: {monthly_investment}
-Investimento inicial em tráfego: {initial_traffic_investment}
-Modelo de venda: {sales_model}
-Equipe de vendas: {sales_team_size}
-Promoções ativas: {promotions}
-
-[CONCORRENTES E REFERÊNCIAS]
-Concorrentes locais: {local_competitors}
-Inspirações de mercado: {inspirations}
-
-[PROMESSA HORMOZI VALIDADA]
-{promise_text}
-```
-
-E adicionar uma instrução **discreta** no topo de cada prompt: *"Use TODO o contexto fornecido. Se um campo estiver vazio (—), apenas ignore — não invente."*
-
-**3. Anúncios — passar contexto completo via backend (sem depender de `pppData` do front)**
-
-Hoje o `type === "ads"` depende do `pppData` que o `Generator.tsx` monta no front (incompleto por design). Mudar a branch para:
-
-- Buscar internamente `buildOnboardingContext(clientId)` (mesmo helper).
-- Substituir o atual `bp` (3 linhas) por um **bloco rico** com: dores 1+2, impactos diários, desejos 1+2, diferenciais, benefícios, ICP combinado (texto curto extraído de `client_icp_documents`), SWOT (1 linha por quadrante), promessa Hormozi, concorrentes locais (pra IA evitar paridade), inspirações (pra IA pegar tom).
-- Manter `pppData` aceito para retrocompatibilidade, mas sempre **mesclar** com o que vem do banco (banco prevalece quando não-vazio).
-- Atualizar o `sys` dos anúncios pra mencionar: *"Você tem acesso ao perfil completo do negócio, ICP, SWOT, promessa e referências. Use isso pra personalizar cada anúncio — evite genérico."*
-
-**4. Sem tocar em**: estrutura de saída (16 anúncios, template ICP, formato do banco de ofertas, template do plano de demanda), schemas de tabela, frontend de geração (`Generator.tsx`, `AIGenerationSection.tsx`, `TrafficPlanCard.tsx`), prompts de outras tasks (`offer` legado Hormozi, `generate-icps`, `generate-promise`, `generate-swot`, `create-video-ad`).
 
 ### Detalhes técnicos
 
-- **Helpers novos** (todos no `generate-content/index.ts`, mantendo o arquivo único):
-  - `buildOnboardingContext(supabase, clientId): Promise<OnboardingPkg>` — uma função, 6 queries paralelas.
-  - `serializeOnboardingContext(pkg, niche): string` — texto rotulado.
-  - `extractOnboardingVars(pkg): Record<string,string>` — variáveis pra `interpolate`.
-- **Reuso**: as branches `generate-icp-document`, `generate-offers-document`, `generate-traffic-plan-document` substituem suas 6 queries individuais por **uma única chamada** ao helper, eliminando duplicação.
-- **Anúncios**: branch `type === "ads"` chama o helper e adiciona `[CONTEXTO COMPLETO]\n${serializeOnboardingContext(pkg, niche)}` antes do `oCtx` no `prompt`.
-- **Memória nova**: `mem://ia/contexto-onboarding-completo` — documenta o helper, lista todos os campos passados pra IA e o princípio "use tudo, ignore vazios". Atualizar `mem://index.md` na seção Memories. Marcar `mem://arquitetura/contexto-geracao-anuncios` como obsoleta (não remover, só anotar a substituição).
-- **Sem migration**: usa só tabelas e colunas que já existem.
-- **Sem mudança de modelo**: continua tudo em GPT-5.2 via `STRATEGIC_TASKS`.
+**1. Nova edge function `admin-user-actions`** (única, com `action` no body):
+- Verifica JWT do chamador e confirma `has_role(uid, 'admin')` (mesmo padrão do `get-user-emails`).
+- Usa `SUPABASE_SERVICE_ROLE_KEY` para chamar a API admin de auth.
+- Ações suportadas:
+  - `delete` → `supabase.auth.admin.deleteUser(userId)` + `DELETE FROM user_roles WHERE user_id`
+  - `ban` → `supabase.auth.admin.updateUserById(userId, { ban_duration: '876000h' })` (~100 anos)
+  - `unban` → `supabase.auth.admin.updateUserById(userId, { ban_duration: 'none' })`
+  - `reset_password` → `supabase.auth.admin.generateLink({ type: 'recovery', email })` e o link é enviado pelo template já configurado, OU `resetPasswordForEmail` (escolho `generateLink` para não depender de sessão)
+  - `set_password` → `supabase.auth.admin.updateUserById(userId, { password })` com validação Zod (`min 8`)
+- Bloqueia qualquer ação contra `xplolabcreator@gmail.com` no servidor (defesa extra além do front).
+- Retorna `{ success, message }` e loga ação.
 
-### Resultado esperado
+**2. Atualização de `src/pages/AdminUsers.tsx`:**
+- Buscar também `banned_until` por usuário (vindo da edge function `get-user-emails` estendida → retorna `{ email, banned_until }`).
+- Calcular `isSuspended = banned_until && new Date(banned_until) > new Date()`.
+- Renderizar 4 novos botões na linha de cada usuário ativo (oculto para admin master).
+- Diálogo de "Definir nova senha" com Input `type="password"`, toggle olho/olho-cortado, validação mínima e toast de sucesso (sem ecoar a senha).
+- Confirmação `AlertDialog` para "Revogar acesso" e "Suspender".
+- Após cada ação, refazer `fetchUsers()`.
 
-Os 4 documentos passam a refletir **fielmente** o que o cliente disse no onboarding — incluindo dores na voz do dono, contexto financeiro real, promoções vigentes, concorrentes a evitar e inspirações de estilo. Documentos ficam mais específicos sem mudar nada na UI.
+**3. Atualização de `get-user-emails`:**
+- Passa a retornar `Record<string, { email: string; banned_until: string | null }>` em vez de só email — assim a tela mostra status sem outra chamada.
+- O front de `AdminUsers.tsx` é ajustado para o novo shape.
+
+**4. Sem mudanças de schema** — usa apenas Supabase Auth (campo `banned_until` já existe em `auth.users`). Nenhuma migração SQL necessária.
+
+**5. Memória** — registro nova regra: `mem://funcionalidades/admin-gestao-usuarios` descrevendo as 4 ações, proteção do admin master e mascaramento de senha (LGPD).
+
+### Pós-implementação
+A função `admin-user-actions` é deployada automaticamente. Você poderá, na tela `/admin/users`: revogar, suspender/reativar, enviar e-mail de reset e definir senha manual para qualquer usuário (exceto o master).
 
