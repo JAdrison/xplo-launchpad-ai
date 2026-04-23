@@ -1987,9 +1987,22 @@ JSON exato:
         finalPrompt += `\n\n---\n\nINSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): ${userInstruction}`;
       }
 
+      const sysPrompt = "Você é um estrategista sênior de tráfego pago no Brasil. Escreva planos acionáveis, diretos e enxutos. Nunca acrescente comentários fora do template.";
+
+      // 🔍 DEBUG TEMPORÁRIO — captura prompt completo enviado ao GPT
+      console.log('===== [DEBUG PROMPT] generate-traffic-plan-document =====');
+      console.log('--- SYSTEM PROMPT ---');
+      console.log(sysPrompt);
+      console.log('--- USER PROMPT (length: ' + finalPrompt.length + ' chars) ---');
+      // Quebra em chunks de 4000 chars pra não truncar nos logs
+      for (let i = 0; i < finalPrompt.length; i += 4000) {
+        console.log(`[CHUNK ${Math.floor(i/4000)+1}]`, finalPrompt.slice(i, i + 4000));
+      }
+      console.log('===== [END DEBUG PROMPT] =====');
+
       const generatedText = await aiText(
         config,
-        "Você é um estrategista sênior de tráfego pago no Brasil. Escreva planos acionáveis, diretos e enxutos. Nunca acrescente comentários fora do template.",
+        sysPrompt,
         finalPrompt,
         0.7,
       );
