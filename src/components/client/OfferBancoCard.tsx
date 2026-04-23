@@ -333,7 +333,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
 
   const handleCopyDoc = async (doc: OfferDoc) => {
     const parsed = parseOfferBank(doc.generated_text || "");
-    const text = serializeOfferBank(parsed, doc.offer_states, { skipDisabled: true });
+    const text = serializeOfferBank({ ...parsed, footer: "" }, doc.offer_states, { skipDisabled: true });
     await navigator.clipboard.writeText(text);
     toast.success("Copiado para a área de transferência");
   };
@@ -504,7 +504,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
           {docs.map((doc) => {
             if (!doc.generated_text) return null;
             const parsed = parseOfferBank(doc.generated_text);
-            const exportText = serializeOfferBank(parsed, doc.offer_states, { skipDisabled: true });
+            const exportText = serializeOfferBank({ ...parsed, footer: "" }, doc.offer_states, { skipDisabled: true });
             return (
               <PDFTarget
                 key={doc.id}
@@ -865,12 +865,6 @@ function OfferDocBlock(props: OfferDocBlockProps) {
                       </div>
                     );
                   })}
-
-                  {parsed.footer && (
-                    <div className="rounded-lg border bg-muted/20 p-3 whitespace-pre-wrap text-sm leading-relaxed">
-                      {parsed.footer}
-                    </div>
-                  )}
 
                   {deletedOffers.length > 0 && (
                     <div className="rounded-lg border border-dashed p-3 space-y-2">
