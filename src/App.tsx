@@ -21,6 +21,7 @@ import Assets from "./pages/Assets";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CrmKanban from "./pages/CrmKanban";
+import CrmActivities from "./pages/CrmActivities";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/generator" element={<Generator />} />
               <Route path="/assets" element={<Assets />} />
               <Route path="/crm" element={<CrmKanban />} />
+              <Route path="/crm/atividades" element={<CrmActivities />} />
               <Route path="/settings" element={<Settings />} />
               
               {/* Admin only route */}
