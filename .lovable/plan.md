@@ -1,71 +1,68 @@
 
 
-## 1. Remover criação de Landing Page do site
+## Card "Plano de Demanda" — 3 prompts por nicho
 
-A geração de LP some da UI, mas as LPs já criadas continuam visíveis (somente leitura/exclusão) para não perder histórico. A tabela `landing_pages` e os componentes de visualização ficam — só o **ato de gerar** é removido.
+Adicionar um novo card **"Plano de Demanda"** na seção "Geração com IA" do detalhe do cliente, seguindo exatamente o mesmo padrão dos cards **ICP** e **Banco de Ofertas** já implementados: documento gerado em texto formatado via GPT-5.2, salvo em tabela própria, com Editar / Regenerar (com instrução) / Copiar / PDF / Excluir.
 
-### O que sai da UI
+### O que muda
 
-- **`src/components/client/AIGenerationSection.tsx`**: remover o item `lp` do array `generationItems`. Sobra só **Anúncios** no grid (passa para `grid-cols-1`). Ajustar `allGenerated` para considerar apenas anúncios.
-- **`src/pages/Generator.tsx`**: 
-  - Remover toda a seção "Landing Page" do checklist (bloco com Checkbox `id="lp"`, RadioGroup de variantes Direta/Consultiva/Agressiva, e estado `selectedLpVariant`).
-  - Remover `"lp"` do tipo `GenerationType` → fica `"offer" | "ads"`.
-  - Remover lógica de envio `body.lpVariant` em `handleGenerate`.
-  - Remover textos/toasts que mencionam "LP" ou "landing page".
-- **`src/components/onboarding/PPPIntroCard.tsx`**: ajustar copy "ofertas, landing pages e anúncios" → "ofertas e anúncios".
-- **`src/components/client/OnboardingX1Section.tsx`** (se referenciar geração de LP em CTAs): remover atalhos para gerar LP.
+#### 1. Banco — nova tabela `client_traffic_plan_documents`
 
-### O que fica (não mexe)
+Espelho de `client_offer_documents`, sem migration destrutiva:
 
-- **`GeneratedAssetsSection.tsx`** e **`GeneratedContentViewer.tsx`**: continuam listando LPs antigas com **Visualizar / Copiar / PDF / Excluir** — só não há mais botão "Gerar nova".
-- Backend `generate-content` (`type === "lp"`): mantido por compatibilidade, apenas deixa de ser chamado pelo front.
-- Tabela `landing_pages`, `LandingPageViewer`, `LandingPagePDFTemplate`: intactos.
+- `id`, `client_id`, `name` (default "Plano de Demanda"), `generated_text`, `generated_by_ai`, `generated_at`, `sort_order`, `created_at`, `updated_at`.
+- RLS público (igual aos outros documentos do cliente).
 
----
+#### 2. Backend — novo task em `generate-content/index.ts`
 
-## 2. Corrigir anúncios para funcionar com o novo Banco de Ofertas
+Adicionar `type === "generate-traffic-plan-document"`:
 
-### Diagnóstico
+- **Validação obrigatória**: busca `client_icp_documents` (ou legado `client_icp`) E `client_offer_documents` com `generated_text`. Se faltar qualquer um → retorna erro estruturado (`ICP_REQUIRED` / `OFFERS_REQUIRED`) que o frontend traduz em toast.
+- **Seleção do prompt por nicho**: lê `clients.niche_type` (`hospedagem` / `saude` / `generico`) e seleciona o prompt correspondente. Os 3 prompts ficam como constantes no topo do task (mesmo padrão dos prompts atuais de ICP/Ofertas).
+- **Substituição de variáveis** `{client_name}`, `{profile_data.*}`, `{market.*}`, `{financial.initial_traffic_investment}`, `{icp.generated_icp_text}` (do ICP mais recente), `{offers.generated_text}` (do banco mais recente, já filtrado pelas ofertas ativas via `serializeOfferBank` adaptado server-side ou texto cru).
+- **Modelo**: GPT-5.2 (consistente com os outros documentos estratégicos). Sem `response_format json` — saída é texto formatado direto.
+- **Modo regeneração com instrução**: aceita `documentId` + `userInstruction` opcional. Quando vem instrução, é injetada como bloco prioritário no prompt: *"INSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): {userInstruction}"* (mesmo padrão do Banco de Ofertas).
+- Salva em `client_traffic_plan_documents` com `generated_by_ai=true` e `generated_at=now()`.
 
-A geração de anúncios (`type === "ads"` em `generate-content/index.ts`, linhas 1453-1507) está acoplada à tabela legada `offers_hormozi`:
+Os 3 prompts longos (Hospedagem / Saúde / Genérico) entram exatamente como descritos pelo usuário, com o template de saída obrigatório (Diagnóstico → Estratégia Principal Meta → Complementares → Cronograma 3 semanas → Alertas).
 
-- O `Generator.tsx` mostra um dropdown "Selecione a oferta base" lendo de `offers_hormozi` (linhas 148-156). Como o usuário agora gera ofertas no novo card **Banco de Ofertas** (tabela `client_offer_documents`), esse dropdown fica **vazio** → o checkbox de Anúncios fica **desabilitado** com a mensagem *"Gere uma oferta primeiro"*, mesmo tendo acabado de gerar 6 ofertas no novo formato.
-- No backend, mesmo se passasse um `offerId`, ele busca em `offers_hormozi` e monta contexto só com `o.promise` (uma frase curta), ignorando todo o conteúdo rico do Banco de Ofertas.
+#### 3. Frontend — novo `TrafficPlanCard.tsx`
 
-### Correção
+Espelho enxuto de `OfferBancoCard.tsx` (sem a complexidade de offer_states, já que aqui o documento é monolítico):
 
-**A. Frontend `Generator.tsx`**
+- Botão **"Novo Plano"** (com `Lock` + tooltip *"Gere o ICP e o Banco de Ofertas primeiro"* quando faltar dependência).
+- Verificação de dependências no `load()`: consulta `client_icp_documents`/`client_icp` E `client_offer_documents`. Se faltar, botão desabilitado com mensagem específica.
+- Diálogo "Novo Plano" com campo opcional **"Instrução de variação"** (textarea).
+- Lista os documentos gerados com:
+  - Texto renderizado em `whitespace-pre-wrap` (preserva os divisores `━━━` e emojis do template).
+  - Botões: ✏️ **Editar** (textarea), 🔄 **Regenerar** (abre Dialog com campo de instrução, igual ao Banco de Ofertas), 📋 **Copiar**, 📄 **PDF**, 🗑️ **Excluir**.
 
-- Substituir `fetchOffersForClient` para ler de `client_offer_documents` (id, name, generated_text, offer_states).
-- Para cada documento, usar `parseOfferBank()` (já existe em `src/lib/offerParser.ts`) para listar as ofertas individuais ATIVAS (enabled=true, deleted=false).
-- O dropdown "Selecione a oferta base" passa a mostrar opções no formato `"<Nome do Banco> — <Nome da oferta individual>"` (ex.: *"Banco de Ofertas — Pacote Romântico Fim de Semana"*). Cada opção carrega `{ documentId, offerId, rawText }`.
-- O `selectedOfferId` vira `selectedBankOffer: { documentId, offerId, rawText } | null`.
-- Habilitar o checkbox de Anúncios assim que houver pelo menos 1 documento de banco com ofertas ativas.
-- No `handleGenerate`, enviar para a edge function: `bankOfferText: selectedBankOffer.rawText`, `bankOfferDocumentId`, `bankOfferId` (em vez do antigo `offerId`).
+Não vamos quebrar o documento em sub-cards individuais (não há ações por seção como no Banco de Ofertas) — o texto é exibido inteiro com a formatação visual já contida no próprio prompt.
 
-**B. Backend `supabase/functions/generate-content/index.ts` (bloco `type === "ads"`)**
+#### 4. Integração no `AIGenerationSection.tsx`
 
-- Aceitar novos params: `bankOfferText?: string`, `bankOfferDocumentId?: string`, `bankOfferId?: string`. Manter `offerId` legado como fallback.
-- Quando `bankOfferText` chega: usar **o texto completo da oferta** (com promessa, mecanismo, o que inclui, condição, escassez) como `oCtx`, em vez do `o.promise`. Isso dá à IA muito mais contexto rico.
-- `vOid` (variável usada para vincular `ads.offer_id`) fica `null` no caso novo (a tabela `ads` já tolera `offer_id` null — confirmado em `mem://arquitetura/resiliencia-ads`).
-- A limpeza de anúncios antigos passa a usar `client_id + bankOfferId` quando aplicável: deletar de `ads` onde `client_id = X AND ad_angle_meta->>'bankOfferId' = Y` (ou simplesmente, se `vOid` null e há `bankOfferId`, deletar do cliente para regenerar limpo). Mais simples: continuar a limpeza por `client_id is_null offer_id` quando vier do novo fluxo.
-- Salvar `bankOfferId` em uma coluna nova ou reutilizar campo existente para rastreio (mínimo: gravar `client_id` corretamente já basta para listagem funcionar).
+Adicionar `<TrafficPlanCard />` entre `<OfferBancoCard />` e o card de Anúncios, refletindo a ordem estratégica recomendada: **ICP → Ofertas → Plano de Demanda → Anúncios**.
 
-**C. Texto e validação na UI**
+#### 5. Exportação PDF
 
-- Mensagem de bloqueio do checkbox Anúncios atualizada: *"Gere o Banco de Ofertas primeiro"* (com link para o card no detalhe do cliente).
-- Texto da seção: *"Selecione qual oferta do banco será a base dos anúncios"* (deixa claro que cada anúncio é por oferta individual, não pelo banco inteiro).
+- Novo `TrafficPlanPDFTemplate.tsx` (espelho de `OfferBancoPDFTemplate.tsx`) — render simples com `whitespace-pre-wrap`, logo XPLO no canto, margens padrão da memória de exportação.
+- Atualizar `OnboardingPDFTemplate.tsx` para incluir uma nova seção **"Plano de Demanda"** após a seção de Ofertas, lendo o `generated_text` mais recente de `client_traffic_plan_documents`.
+
+#### 6. Remoção do antigo editor de demanda
+
+O componente `DemandPlanEditor.tsx` (acoplado a `offers_hormozi.demand_generation_strategies`) deixa de ser usado pelo novo fluxo. Como ele ainda é referenciado em `GeneratedContentViewer.tsx` para ofertas Hormozi legadas, mantemos o arquivo intacto **apenas para compatibilidade** com ofertas antigas — não há remoção, apenas o novo card passa a ser a fonte oficial.
 
 ### Detalhes técnicos
 
-- **Sem migration**: tudo é leitura do `client_offer_documents` + reuso do `parseOfferBank`. A tabela `ads` já aceita `offer_id` null.
-- **Compatibilidade**: ofertas antigas em `offers_hormozi` continuam funcionando porque o backend mantém o branch `if (offerId)` legado.
-- **Geração**: sem mudança nos prompts dos 6 vídeos + 10 estáticos (caixinha de perguntas etc.). Só muda **o contexto** que alimenta o prompt — fica mais rico.
-- **Memory**: atualizar `mem://ia/configuracao-anuncios-hibridos` para refletir que a fonte da oferta agora é o Banco de Ofertas, e remover do Core qualquer menção a "Landing Page" como fluxo principal de geração.
+- **Migration**: criar tabela `client_traffic_plan_documents` (idempotente, com RLS público).
+- **Sem mudança em prompts existentes** (ICP, Ofertas, Anúncios).
+- **Resolução de variáveis no backend**: helper interno que mapeia `{caminho.aninhado}` para os campos reais de `client_profile.profile_data`, `client_profile.market_data`, `client_profile`, etc. Variáveis ausentes viram string vazia (não quebra o prompt).
+- **Memória**: criar `mem://ia/plano-demanda-3-nichos` documentando os 3 prompts, dependência de ICP+Ofertas, modelo GPT-5.2 e estrutura única de output. Atualizar `mem://index.md`. Substitui em uso o antigo `mem://ia/consultoria-demanda` (que mantemos como referência histórica do Hormozi legado).
 
 ### Fora do escopo
 
-- Não excluir tabela `landing_pages` nem código de visualização/PDF de LPs antigas.
-- Não migrar dados de `offers_hormozi` para `client_offer_documents`.
-- Não mudar prompts de anúncios nem o fluxo de refinamento/criação individual de vídeos.
+- Não excluir `offers_hormozi` nem `DemandPlanEditor.tsx` (compat com ofertas antigas).
+- Não criar quebra do plano em sub-cards editáveis seção-a-seção — render é texto formatado único, igual ao Banco de Ofertas no nível do documento.
+- Não mudar prompts de ICP/Ofertas/Anúncios.
+- Não tocar no fluxo de geração de Anúncios (que já usa o Banco de Ofertas como contexto).
 
