@@ -8,9 +8,10 @@ interface Props {
   onMove: (dealId: string, newColumnId: string) => void;
   onAddDeal: (columnId: string) => void;
   onOpenDeal: (dealId: string) => void;
+  onColumnChanged?: () => void;
 }
 
-export function KanbanBoard({ columns, deals, onMove, onAddDeal, onOpenDeal }: Props) {
+export function KanbanBoard({ columns, deals, onMove, onAddDeal, onOpenDeal, onColumnChanged }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const handleDragEnd = (e: DragEndEvent) => {
@@ -32,6 +33,7 @@ export function KanbanBoard({ columns, deals, onMove, onAddDeal, onOpenDeal }: P
             deals={deals.filter((d) => d.column_id === col.id)}
             onAddDeal={onAddDeal}
             onOpenDeal={onOpenDeal}
+            onColumnChanged={onColumnChanged}
           />
         ))}
       </div>
