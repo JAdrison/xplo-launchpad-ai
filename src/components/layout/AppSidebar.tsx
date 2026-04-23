@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Kanban,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const navigation = [
   { name: "Clientes", href: "/clients", icon: Users },
   { name: "Onboarding X1", href: "/onboarding", icon: ClipboardList },
   { name: "CRM", href: "/crm", icon: Kanban },
+  { name: "Atividades", href: "/crm/atividades", icon: CheckSquare },
   { name: "Gerador IA", href: "/generator", icon: Sparkles },
   { name: "Ativos", href: "/assets", icon: FileStack },
   { name: "Configurações", href: "/settings", icon: Settings },
