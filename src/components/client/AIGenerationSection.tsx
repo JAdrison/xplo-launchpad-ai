@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { ICPDocumentCard } from "./ICPDocumentCard";
 import { OfferBancoCard } from "./OfferBancoCard";
+import { TrafficPlanCard } from "./TrafficPlanCard";
 
 type Client = Tables<"clients">;
 
@@ -113,6 +114,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     <div className="space-y-4">
       <ICPDocumentCard clientId={client.id} clientName={client.name} />
       <OfferBancoCard clientId={client.id} clientName={client.name} />
+      <TrafficPlanCard clientId={client.id} clientName={client.name} />
 
       <Card>
         <CardHeader>
