@@ -1316,25 +1316,26 @@ async function ai(config: AIConfig, sys: string, usr: string, t = 0.7) {
       console.log(`[AI] Using custom Gemini API with model: ${config.model}`);
     }
   } else {
-    // Lovable AI Gateway (padrão)
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("No LOVABLE_API_KEY configured");
-    
-    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    headers = { 
-      "Authorization": `Bearer ${KEY}`, 
-      "Content-Type": "application/json" 
+    // OpenAI direta (substitui o Lovable AI Gateway)
+    const KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!KEY) throw new Error("No OPENAI_API_KEY configured");
+
+    url = "https://api.openai.com/v1/chat/completions";
+    headers = {
+      "Authorization": `Bearer ${KEY}`,
+      "Content-Type": "application/json"
     };
+    const rawModel = config.model || "gpt-5.4";
+    const model = rawModel.replace(/^openai\//, "");
     body = {
-      model: config.model || "google/gemini-2.5-flash",
+      model,
       messages: [
         { role: "system", content: fullSys },
         { role: "user", content: usr }
       ],
-      temperature: t,
       response_format: { type: "json_object" }
     };
-    console.log(`[AI] Using Lovable AI Gateway with model: ${config.model || "google/gemini-2.5-flash"}`);
+    console.log(`[AI] Using OpenAI direct with model: ${model}`);
   }
 
   const r = await fetch(url, {
