@@ -1166,23 +1166,14 @@ function selectModelForTask(type: string, aiConfig: AIConfig): AIConfig {
     return aiConfig;
   }
   
-  // Arquitetura XPLO: seleção automática baseada no tipo de tarefa
+  // Arquitetura XPLO: agora 100% OpenAI direto, modelo único gpt-5.4
   if (aiConfig.source === "xplo") {
-    if (STRATEGIC_TASKS.includes(type)) {
-      console.log(`[AI] XPLO Architecture: Using strategic model (GPT-5.2) for ${type}`);
-      return {
-        source: "lovable",
-        provider: "openai",
-        model: "openai/gpt-5.2"
-      };
-    } else {
-      console.log(`[AI] XPLO Architecture: Using operational model (Gemini Flash) for ${type}`);
-      return {
-        source: "lovable",
-        provider: "gemini",
-        model: "google/gemini-3-flash-preview"
-      };
-    }
+    console.log(`[AI] XPLO Architecture: Using OpenAI gpt-5.4 for ${type}`);
+    return {
+      source: "lovable", // mantém branch "não-custom" → cai no OpenAI direto
+      provider: "openai",
+      model: "gpt-5.4"
+    };
   }
   
   return aiConfig;
