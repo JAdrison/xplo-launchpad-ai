@@ -64,6 +64,7 @@ export default function CrmKanban() {
             onMove={moveDeal}
             onAddDeal={(colId) => { setNewDealColumn(colId); setNewDealOpen(true); }}
             onOpenDeal={(id) => setOpenDealId(id)}
+            onColumnChanged={refetch}
           />
         ) : (
           <p className="p-8 text-center text-muted-foreground">Nenhum pipeline disponível.</p>
