@@ -1125,15 +1125,18 @@ async function aiText(config: AIConfig, sys: string, usr: string, t = 0.7): Prom
       body = { contents: [{ parts: [{ text: `${sys}\n\n${usr}` }] }], generationConfig: { temperature: t } };
     }
   } else {
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("No LOVABLE_API_KEY configured");
-    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    // OpenAI direta (substitui o Lovable AI Gateway)
+    const KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!KEY) throw new Error("No OPENAI_API_KEY configured");
+    url = "https://api.openai.com/v1/chat/completions";
     headers = { "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json" };
+    const rawModel = config.model || "gpt-5.4";
+    const model = rawModel.replace(/^openai\//, "");
     body = {
-      model: config.model || "google/gemini-2.5-flash",
+      model,
       messages: [{ role: "system", content: sys }, { role: "user", content: usr }],
-      temperature: t,
     };
+    console.log(`[AI Text] Using OpenAI direct with model: ${model}`);
   }
 
   const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
@@ -1163,23 +1166,14 @@ function selectModelForTask(type: string, aiConfig: AIConfig): AIConfig {
     return aiConfig;
   }
   
-  // Arquitetura XPLO: seleção automática baseada no tipo de tarefa
+  // Arquitetura XPLO: agora 100% OpenAI direto, modelo único gpt-5.4
   if (aiConfig.source === "xplo") {
-    if (STRATEGIC_TASKS.includes(type)) {
-      console.log(`[AI] XPLO Architecture: Using strategic model (GPT-5.2) for ${type}`);
-      return {
-        source: "lovable",
-        provider: "openai",
-        model: "openai/gpt-5.2"
-      };
-    } else {
-      console.log(`[AI] XPLO Architecture: Using operational model (Gemini Flash) for ${type}`);
-      return {
-        source: "lovable",
-        provider: "gemini",
-        model: "google/gemini-3-flash-preview"
-      };
-    }
+    console.log(`[AI] XPLO Architecture: Using OpenAI gpt-5.4 for ${type}`);
+    return {
+      source: "lovable", // mantém branch "não-custom" → cai no OpenAI direto
+      provider: "openai",
+      model: "gpt-5.4"
+    };
   }
   
   return aiConfig;
@@ -1313,25 +1307,26 @@ async function ai(config: AIConfig, sys: string, usr: string, t = 0.7) {
       console.log(`[AI] Using custom Gemini API with model: ${config.model}`);
     }
   } else {
-    // Lovable AI Gateway (padrão)
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("No LOVABLE_API_KEY configured");
-    
-    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    headers = { 
-      "Authorization": `Bearer ${KEY}`, 
-      "Content-Type": "application/json" 
+    // OpenAI direta (substitui o Lovable AI Gateway)
+    const KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!KEY) throw new Error("No OPENAI_API_KEY configured");
+
+    url = "https://api.openai.com/v1/chat/completions";
+    headers = {
+      "Authorization": `Bearer ${KEY}`,
+      "Content-Type": "application/json"
     };
+    const rawModel = config.model || "gpt-5.4";
+    const model = rawModel.replace(/^openai\//, "");
     body = {
-      model: config.model || "google/gemini-2.5-flash",
+      model,
       messages: [
         { role: "system", content: fullSys },
         { role: "user", content: usr }
       ],
-      temperature: t,
       response_format: { type: "json_object" }
     };
-    console.log(`[AI] Using Lovable AI Gateway with model: ${config.model || "google/gemini-2.5-flash"}`);
+    console.log(`[AI] Using OpenAI direct with model: ${model}`);
   }
 
   const r = await fetch(url, {
