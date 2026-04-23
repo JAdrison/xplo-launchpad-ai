@@ -1,7 +1,15 @@
+import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus, MoreVertical, Zap } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DealCard } from "./DealCard";
+import { ColumnAutomationDialog } from "./ColumnAutomationDialog";
 import { formatBRL } from "@/lib/crmFormat";
 import { cn } from "@/lib/utils";
 import type { PipelineColumn, DealWithMeta } from "@/hooks/useCrm";
@@ -11,11 +19,13 @@ interface Props {
   deals: DealWithMeta[];
   onAddDeal: (columnId: string) => void;
   onOpenDeal: (dealId: string) => void;
+  onColumnChanged?: () => void;
 }
 
-export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal }: Props) {
+export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal, onColumnChanged }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const total = deals.reduce((s, d) => s + (d.value_cents || 0), 0);
+  const [autoOpen, setAutoOpen] = useState(false);
 
   return (
     <div className="flex-shrink-0 w-72 flex flex-col bg-muted/30 rounded-lg">
@@ -24,14 +34,28 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal }: Props) {
         style={{ borderLeftColor: column.color }}
       >
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold truncate">{column.name}</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold truncate">{column.name}</h3>
+            {column.automation_enabled && (
+              <Zap className="h-3 w-3 text-primary shrink-0" aria-label="Automação ativa" />
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {formatBRL(total)} · {deals.length} {deals.length === 1 ? "negócio" : "negócios"}
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setAutoOpen(true)}>
+              <Zap className="h-4 w-4 mr-2" /> Configurar automações
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div
@@ -56,6 +80,13 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal }: Props) {
           <Plus className="h-4 w-4 mr-1" /> Adicionar negócio
         </Button>
       </div>
+
+      <ColumnAutomationDialog
+        open={autoOpen}
+        onOpenChange={setAutoOpen}
+        column={column}
+        onSaved={onColumnChanged}
+      />
     </div>
   );
 }
