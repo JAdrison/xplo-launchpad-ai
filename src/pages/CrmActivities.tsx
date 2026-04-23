@@ -172,7 +172,7 @@ export default function CrmActivities() {
       <Tabs value={bucket} onValueChange={(v) => setBucket(v as Bucket)} className="flex-1 flex flex-col overflow-hidden">
         <div className="px-4 pt-3">
           <TabsList>
-            <TabsTrigger value="late" className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
+            <TabsTrigger value="late" className="data-[state=active]:bg-destructive/10 data-[state=active]:text-destructive">
               🔴 Em atraso <Badge variant="secondary" className="ml-2">{counts.late}</Badge>
             </TabsTrigger>
             <TabsTrigger value="today">
