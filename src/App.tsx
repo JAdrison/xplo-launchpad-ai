@@ -20,6 +20,7 @@ import Generator from "./pages/Generator";
 import Assets from "./pages/Assets";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import CrmKanban from "./pages/CrmKanban";
 
 const queryClient = new QueryClient();
 
