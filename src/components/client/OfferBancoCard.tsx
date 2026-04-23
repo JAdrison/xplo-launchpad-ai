@@ -504,7 +504,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
           {docs.map((doc) => {
             if (!doc.generated_text) return null;
             const parsed = parseOfferBank(doc.generated_text);
-            const exportText = serializeOfferBank(parsed, doc.offer_states, { skipDisabled: true });
+            const exportText = serializeOfferBank({ ...parsed, footer: "" }, doc.offer_states, { skipDisabled: true });
             return (
               <PDFTarget
                 key={doc.id}
