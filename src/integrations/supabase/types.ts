@@ -14,6 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          attachments: Json
+          auto_generated: boolean
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          deal_id: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          responsible_id: string | null
+          scheduled_at: string | null
+          source_automation_id: string | null
+          status: Database["public"]["Enums"]["crm_activity_status"]
+          subject: string
+          type: Database["public"]["Enums"]["crm_activity_type"]
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json
+          auto_generated?: boolean
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          deal_id: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          responsible_id?: string | null
+          scheduled_at?: string | null
+          source_automation_id?: string | null
+          status?: Database["public"]["Enums"]["crm_activity_status"]
+          subject: string
+          type: Database["public"]["Enums"]["crm_activity_type"]
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json
+          auto_generated?: boolean
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          deal_id?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          responsible_id?: string | null
+          scheduled_at?: string | null
+          source_automation_id?: string | null
+          status?: Database["public"]["Enums"]["crm_activity_status"]
+          subject?: string
+          type?: Database["public"]["Enums"]["crm_activity_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_source_automation_id_fkey"
+            columns: ["source_automation_id"]
+            isOneToOne: false
+            referencedRelation: "column_automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_templates: {
+        Row: {
+          created_at: string
+          default_description: string | null
+          default_duration_minutes: number | null
+          default_subject: string | null
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["crm_activity_type"]
+        }
+        Insert: {
+          created_at?: string
+          default_description?: string | null
+          default_duration_minutes?: number | null
+          default_subject?: string | null
+          id?: string
+          name: string
+          type: Database["public"]["Enums"]["crm_activity_type"]
+        }
+        Update: {
+          created_at?: string
+          default_description?: string | null
+          default_duration_minutes?: number | null
+          default_subject?: string | null
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["crm_activity_type"]
+        }
+        Relationships: []
+      }
       ads: {
         Row: {
           ad_angle: string | null
@@ -566,6 +675,227 @@ export type Database = {
         }
         Relationships: []
       }
+      column_automations: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["crm_activity_type"]
+          column_id: string
+          created_at: string
+          days_after_entry: number
+          default_duration_minutes: number | null
+          default_responsible_id: string | null
+          description: string | null
+          id: string
+          sort_order: number
+          subject: string
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["crm_activity_type"]
+          column_id: string
+          created_at?: string
+          days_after_entry?: number
+          default_duration_minutes?: number | null
+          default_responsible_id?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number
+          subject: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["crm_activity_type"]
+          column_id?: string
+          created_at?: string
+          days_after_entry?: number
+          default_duration_minutes?: number | null
+          default_responsible_id?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "column_automations_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_columns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_fields: {
+        Row: {
+          created_at: string
+          entity_type: Database["public"]["Enums"]["crm_entity_type"]
+          field_type: Database["public"]["Enums"]["crm_custom_field_type"]
+          id: string
+          name: string
+          options: Json
+          required: boolean
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          entity_type: Database["public"]["Enums"]["crm_entity_type"]
+          field_type: Database["public"]["Enums"]["crm_custom_field_type"]
+          id?: string
+          name: string
+          options?: Json
+          required?: boolean
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          entity_type?: Database["public"]["Enums"]["crm_entity_type"]
+          field_type?: Database["public"]["Enums"]["crm_custom_field_type"]
+          id?: string
+          name?: string
+          options?: Json
+          required?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      deal_history: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          deal_id: string
+          event_data: Json
+          event_type: Database["public"]["Enums"]["crm_event_type"]
+          id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          deal_id: string
+          event_data?: Json
+          event_type: Database["public"]["Enums"]["crm_event_type"]
+          id?: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          deal_id?: string
+          event_data?: Json
+          event_type?: Database["public"]["Enums"]["crm_event_type"]
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_history_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_tags: {
+        Row: {
+          deal_id: string
+          tag_id: string
+        }
+        Insert: {
+          deal_id: string
+          tag_id: string
+        }
+        Update: {
+          deal_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_tags_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          client_id: string
+          closed_at: string | null
+          closed_reason: string | null
+          column_id: string
+          created_at: string
+          custom_fields: Json
+          entered_current_column_at: string
+          id: string
+          name: string
+          pipeline_id: string
+          responsible_id: string | null
+          sort_order: number
+          status: Database["public"]["Enums"]["crm_deal_status"]
+          updated_at: string
+          value_cents: number
+        }
+        Insert: {
+          client_id: string
+          closed_at?: string | null
+          closed_reason?: string | null
+          column_id: string
+          created_at?: string
+          custom_fields?: Json
+          entered_current_column_at?: string
+          id?: string
+          name: string
+          pipeline_id: string
+          responsible_id?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["crm_deal_status"]
+          updated_at?: string
+          value_cents?: number
+        }
+        Update: {
+          client_id?: string
+          closed_at?: string | null
+          closed_reason?: string | null
+          column_id?: string
+          created_at?: string
+          custom_fields?: Json
+          entered_current_column_at?: string
+          id?: string
+          name?: string
+          pipeline_id?: string
+          responsible_id?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["crm_deal_status"]
+          updated_at?: string
+          value_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       icp_pains: {
         Row: {
           consequence: string | null
@@ -733,6 +1063,41 @@ export type Database = {
           },
         ]
       }
+      notes: {
+        Row: {
+          attachments: Json
+          author_id: string
+          content: string
+          created_at: string
+          deal_id: string
+          id: string
+        }
+        Insert: {
+          attachments?: Json
+          author_id: string
+          content: string
+          created_at?: string
+          deal_id: string
+          id?: string
+        }
+        Update: {
+          attachments?: Json
+          author_id?: string
+          content?: string
+          created_at?: string
+          deal_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offers_hormozi: {
         Row: {
           client_id: string
@@ -808,6 +1173,112 @@ export type Database = {
           },
         ]
       }
+      pipeline_columns: {
+        Row: {
+          automation_enabled: boolean
+          color: string
+          column_type: Database["public"]["Enums"]["crm_column_type"]
+          created_at: string
+          id: string
+          name: string
+          pipeline_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          automation_enabled?: boolean
+          color?: string
+          column_type?: Database["public"]["Enums"]["crm_column_type"]
+          created_at?: string
+          id?: string
+          name: string
+          pipeline_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          automation_enabled?: boolean
+          color?: string
+          column_type?: Database["public"]["Enums"]["crm_column_type"]
+          created_at?: string
+          id?: string
+          name?: string
+          pipeline_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_columns_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipelines: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          pipeline_id: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          pipeline_id?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          pipeline_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -875,10 +1346,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_column_automations: {
+        Args: { _column_id: string; _deal_id: string }
+        Returns: undefined
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      has_crm_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -898,6 +1374,30 @@ export type Database = {
         | "offer_generated"
         | "assets_generated"
         | "archived"
+      crm_activity_status: "pending" | "completed"
+      crm_activity_type: "lembrete" | "mensagem" | "ligacao" | "email"
+      crm_column_type: "normal" | "won" | "lost"
+      crm_custom_field_type:
+        | "text"
+        | "number"
+        | "select"
+        | "multi_select"
+        | "date"
+        | "checkbox"
+      crm_deal_status: "active" | "won" | "lost"
+      crm_entity_type: "deal" | "client"
+      crm_event_type:
+        | "created"
+        | "moved"
+        | "tag_added"
+        | "tag_removed"
+        | "activity_created"
+        | "activity_completed"
+        | "value_changed"
+        | "responsible_changed"
+        | "status_changed"
+        | "note_added"
+        | "custom_field_changed"
       lp_variant: "direct" | "consultive" | "aggressive"
       niche_type: "hospedagem" | "saude" | "generico"
       sales_model: "b2b" | "b2c" | "recurring" | "project" | "hybrid"
@@ -1039,6 +1539,32 @@ export const Constants = {
         "offer_generated",
         "assets_generated",
         "archived",
+      ],
+      crm_activity_status: ["pending", "completed"],
+      crm_activity_type: ["lembrete", "mensagem", "ligacao", "email"],
+      crm_column_type: ["normal", "won", "lost"],
+      crm_custom_field_type: [
+        "text",
+        "number",
+        "select",
+        "multi_select",
+        "date",
+        "checkbox",
+      ],
+      crm_deal_status: ["active", "won", "lost"],
+      crm_entity_type: ["deal", "client"],
+      crm_event_type: [
+        "created",
+        "moved",
+        "tag_added",
+        "tag_removed",
+        "activity_created",
+        "activity_completed",
+        "value_changed",
+        "responsible_changed",
+        "status_changed",
+        "note_added",
+        "custom_field_changed",
       ],
       lp_variant: ["direct", "consultive", "aggressive"],
       niche_type: ["hospedagem", "saude", "generico"],
