@@ -1980,6 +1980,14 @@ JSON exato:
         finalPrompt = finalPrompt.replace(re, v);
       }
 
+      // Anexa contexto completo do onboarding
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        finalPrompt += `\n\n${serializeOnboardingContext(pkg)}`;
+      } catch (e) {
+        console.error('[generate-traffic-plan-document] onboarding context error:', e);
+      }
+
       if (userInstruction) {
         finalPrompt += `\n\n---\n\nINSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): ${userInstruction}`;
       }
