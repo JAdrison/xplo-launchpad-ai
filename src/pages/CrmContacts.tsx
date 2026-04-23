@@ -22,7 +22,7 @@ interface ContactRow {
   created_at: string;
 }
 
-export default function CrmContacts() {
+export function CrmContactsView() {
   const [rows, setRows] = useState<ContactRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
