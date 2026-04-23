@@ -21,6 +21,7 @@ const STRATEGIC_TASKS = [
   "generate-swot",
   "generate-icp-document",
   "generate-offers-document",
+  "generate-traffic-plan-document",
   "offer",
   "lp",
   "ads",
@@ -1401,6 +1402,131 @@ JSON exato:
         const { data: created } = await supabase.from('client_offer_documents').insert({
           client_id: clientId,
           name: documentName || (nextOrder === 0 ? "Banco de Ofertas" : `Banco de Ofertas ${nextOrder + 1}`),
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          sort_order: nextOrder,
+        }).select('id').maybeSingle();
+        savedId = created?.id;
+      }
+
+      return new Response(JSON.stringify({ success: true, text: generatedText, documentId: savedId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } else if (type === "generate-traffic-plan-document") {
+      const documentId: string | undefined = b.documentId;
+      const documentName: string | undefined = b.documentName;
+      const userInstruction: string = (b.userInstruction || "").trim();
+
+      const [{ data: cli }, { data: prof }, { data: swotRow }, { data: icpDocs }, { data: icpLegacy }, { data: offerDocs }] = await Promise.all([
+        supabase.from('clients').select('name, niche_type, niche_label').eq('id', clientId).maybeSingle(),
+        supabase.from('client_profile').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_swot').select('*').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_icp_documents').select('generated_icp_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+        supabase.from('client_icp').select('generated_icp_text').eq('client_id', clientId).maybeSingle(),
+        supabase.from('client_offer_documents').select('generated_text, name, sort_order').eq('client_id', clientId).order('sort_order', { ascending: true }),
+      ]);
+
+      if (!cli) {
+        return new Response(JSON.stringify({ error: 'Cliente não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Pré-requisitos
+      const icpsList = (icpDocs || []).filter((d: any) => d?.generated_icp_text);
+      const icpCombined = icpsList.length
+        ? icpsList.map((d: any) => `### ${d.name}\n${d.generated_icp_text}`).join("\n\n---\n\n")
+        : (icpLegacy?.generated_icp_text || "");
+      if (!icpCombined) {
+        return new Response(JSON.stringify({ error: 'ICP_REQUIRED', message: 'Gere primeiro o ICP.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const offersList = (offerDocs || []).filter((d: any) => d?.generated_text);
+      if (!offersList.length) {
+        return new Response(JSON.stringify({ error: 'OFFERS_REQUIRED', message: 'Gere primeiro o Banco de Ofertas.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const offersCombined = offersList
+        .map((d: any) => `### ${d.name}\n${d.generated_text}`)
+        .join("\n\n---\n\n");
+
+      const niche = (cli.niche_type as string) || 'generico';
+      const profileData: Record<string, any> = ((prof as any)?.profile_data) || {};
+      const marketData: Record<string, any> = ((prof as any)?.market_data) || {};
+
+      const vars: Record<string, string> = {
+        client_name: cli.name || "—",
+        niche_label: cli.niche_label || niche,
+        // hospedagem
+        "profile_data.type": fmtVal(profileData.type || profileData.tipo),
+        "profile_data.location": fmtVal(profileData.location || profileData.localizacao || (prof as any)?.region),
+        "profile_data.diaria": fmtVal(profileData.diaria || profileData.daily_rate || (prof as any)?.average_ticket),
+        "profile_data.differentiators": fmtVal((prof as any)?.differentiators),
+        "profile_data.experiencia": fmtVal(profileData.experiencia || profileData.experience || (prof as any)?.product_description),
+        // saude
+        "profile_data.specialty": fmtVal(profileData.specialty || profileData.especialidade),
+        "profile_data.ticket_medio": fmtVal(profileData.ticket_medio || (prof as any)?.average_ticket),
+        "profile_data.attendance_types": fmtVal(profileData.attendance_types || profileData.tipos_atendimento),
+        "profile_data.convenios": fmtVal(profileData.convenios),
+        "profile_data.treatments": fmtVal(profileData.treatments || profileData.procedimentos),
+        // generico
+        "profile_data.product_name": fmtVal((prof as any)?.product_name || profileData.product_name),
+        "profile_data.sales_model": fmtVal((prof as any)?.sales_model),
+        "profile_data.average_ticket": fmtVal((prof as any)?.average_ticket),
+        "profile_data.region": fmtVal((prof as any)?.region),
+        "profile_data.benefits": fmtVal((prof as any)?.benefits),
+        // market
+        "market.demand_channels": fmtVal((prof as any)?.demand_channels),
+        "market.ocupacao": fmtVal(marketData.ocupacao || marketData.occupation),
+        "market.dificuldade": fmtVal(marketData.dificuldade || marketData.difficulty),
+        "market.volume_pacientes": fmtVal(marketData.volume_pacientes || marketData.patient_volume),
+        "market.volume": fmtVal(marketData.volume),
+        // financial
+        "financial.initial_traffic_investment": fmtVal((prof as any)?.initial_traffic_investment),
+        // icp + offers
+        "icp.generated_icp_text": icpCombined,
+        "offers.generated_text": offersCombined,
+      };
+
+      const template = niche === "hospedagem" ? TRAFFIC_PLAN_PROMPT_HOSPEDAGEM
+        : niche === "saude" ? TRAFFIC_PLAN_PROMPT_SAUDE
+        : TRAFFIC_PLAN_PROMPT_GENERICO;
+
+      // Interpolate dotted vars manually then fall through normal interpolate for {single_word}
+      let finalPrompt = template;
+      for (const [k, v] of Object.entries(vars)) {
+        const re = new RegExp("\\{" + k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\}", "g");
+        finalPrompt = finalPrompt.replace(re, v);
+      }
+
+      if (userInstruction) {
+        finalPrompt += `\n\n---\n\nINSTRUÇÃO DO USUÁRIO (PRIORITÁRIA — siga à risca): ${userInstruction}`;
+      }
+
+      const generatedText = await aiText(
+        config,
+        "Você é um estrategista sênior de tráfego pago no Brasil. Escreva planos acionáveis, diretos e enxutos. Nunca acrescente comentários fora do template.",
+        finalPrompt,
+        0.7,
+      );
+
+      const nowIso = new Date().toISOString();
+      let savedId = documentId;
+      if (documentId) {
+        await supabase.from('client_traffic_plan_documents').update({
+          generated_text: generatedText,
+          generated_by_ai: true,
+          generated_at: nowIso,
+          ...(documentName ? { name: documentName } : {}),
+        }).eq('id', documentId);
+      } else {
+        const { data: existing } = await supabase
+          .from('client_traffic_plan_documents')
+          .select('sort_order')
+          .eq('client_id', clientId)
+          .order('sort_order', { ascending: false })
+          .limit(1);
+        const nextOrder = ((existing?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+
+        const { data: created } = await supabase.from('client_traffic_plan_documents').insert({
+          client_id: clientId,
+          name: documentName || (nextOrder === 0 ? "Plano de Demanda" : `Plano de Demanda ${nextOrder + 1}`),
           generated_text: generatedText,
           generated_by_ai: true,
           generated_at: nowIso,
