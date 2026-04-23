@@ -1850,6 +1850,14 @@ JSON exato:
 
       let finalPrompt = interpolate(template, vars);
 
+      // Anexa contexto completo do onboarding
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        finalPrompt += `\n\n${serializeOnboardingContext(pkg)}`;
+      } catch (e) {
+        console.error('[generate-offers-document] onboarding context error:', e);
+      }
+
       // Variação opcional
       if (variationHint || (documentName && documentName !== "Banco de Ofertas")) {
         const hint = variationHint || `Foque este banco em: "${documentName}". Gere ofertas com ângulo diferente do banco principal.`;
