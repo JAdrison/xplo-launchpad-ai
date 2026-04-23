@@ -2084,8 +2084,20 @@ JSON exato:
         const { data: o } = await supabase.from('offers_hormozi').select('*').eq('id', offerId).maybeSingle();
         if (o) { vOid = offerId; oCtx = `Oferta: ${o.promise || ''}`; }
       }
-      const bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
-      sys = `Ads expert brasileiro. Crie 6 anúncios de vídeo:
+      // Contexto completo do onboarding (banco prevalece sobre pppData)
+      let bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
+      try {
+        const pkg = await buildOnboardingContext(supabase, clientId);
+        const fullCtx = serializeOnboardingContext(pkg);
+        const icpText = combineIcpText(pkg);
+        const icpBlock = icpText ? `\n\n[ICP — CLIENTES IDEAIS]\n${icpText}` : '';
+        bp = `${fullCtx}${icpBlock}`;
+      } catch (e) {
+        console.error('[ads] onboarding context error:', e);
+      }
+      sys = `Ads expert brasileiro. Você tem acesso ao perfil completo do negócio, ICP, SWOT, promessa Hormozi, concorrentes e referências. Use TUDO isso para personalizar cada anúncio — evite genérico, fale a língua do cliente real. Ignore campos vazios (—).
+
+Crie 6 anúncios de vídeo:
 - 5 vídeos criativos com estilos variados (20-80s cada)
 - 1 vídeo OBRIGATÓRIO tipo "question_box" (Caixinha de Perguntas)
 
