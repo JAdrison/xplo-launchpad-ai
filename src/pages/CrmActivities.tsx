@@ -49,7 +49,7 @@ const TYPE_COLORS = {
 type Scope = "mine" | "all";
 type Bucket = "late" | "today" | "week" | "upcoming" | "completed";
 
-export default function CrmActivities() {
+export function CrmActivitiesView() {
   const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityRow[]>([]);
   const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
@@ -257,3 +257,5 @@ export default function CrmActivities() {
     </div>
   );
 }
+
+export default function CrmActivities() { return <CrmActivitiesView />; }

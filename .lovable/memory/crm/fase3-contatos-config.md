@@ -1,12 +1,12 @@
 ---
 name: CRM Fase 3 - Contatos e Configurações
-description: Página /crm/contatos (tabela + busca + exportar CSV) e /crm/config (CRUD pipelines, tags, custom_fields, activity_templates)
+description: Página /crm consolidada com abas Kanban/Atividades/Contatos + menu Configurar (Pipelines, Tags, Campos, Templates) em diálogos. Botões + Pipeline e + Coluna no header.
 type: feature
 ---
-- /crm/contatos: tabela única consolidando clients + último deal (pipeline/etapa/valor/status) + última activity. Busca local por nome/telefone/email/pipeline. Exportar CSV (BOM UTF-8). Link para /clients/:id.
-- /crm/config com 4 abas:
-  1. Pipelines: CRUD em pipelines (nome, descrição, cor). Excluir cascateia colunas/deals.
-  2. Tags: CRUD em tags com chip colorido.
-  3. Campos customizáveis: CRUD em custom_fields (entity_type deal/client, field_type text/number/select/multi_select/date/checkbox, required).
-  4. Templates de atividade: CRUD em activity_templates (type, default_subject, default_description, default_duration_minutes).
-- Sidebar: itens "Contatos" e "CRM Config" adicionados após "Atividades".
+- /crm é o ponto único de entrada. Header com 2 linhas:
+  1. Tabs [Kanban] [Atividades] [Contatos] + menu "⚙ Configurar" (DropdownMenu) com 4 ações que abrem Dialog modal: Pipelines, Tags, Campos customizáveis, Templates de atividade.
+  2. (Apenas na aba Kanban) Seletor de pipeline, [+ Pipeline] (abre dialog Pipelines), [+ Coluna] (NewColumnDialog cria pipeline_columns com sort_order=columns.length), busca, [+ Negócio].
+- Componentes config extraídos em src/components/crm/config/{Pipelines,Tags,Fields,Templates}Config.tsx — cada um aceita prop inDialog para renderizar sem Card wrapper.
+- CrmActivitiesView e CrmContactsView são exports nomeados reaproveitáveis; os defaults em /crm/atividades, /crm/contatos e /crm/config continuam funcionando para deep-linking, mas saíram do menu lateral.
+- Sidebar enxuta: apenas "CRM" (não há mais Atividades/Contatos/CRM Config como itens de primeiro nível).
+- Sincronização: ao salvar config (qualquer tab), chama refetch() do Kanban e refetchPipelines.
