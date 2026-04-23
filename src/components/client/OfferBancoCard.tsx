@@ -333,7 +333,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
 
   const handleCopyDoc = async (doc: OfferDoc) => {
     const parsed = parseOfferBank(doc.generated_text || "");
-    const text = serializeOfferBank(parsed, doc.offer_states, { skipDisabled: true });
+    const text = serializeOfferBank({ ...parsed, footer: "" }, doc.offer_states, { skipDisabled: true });
     await navigator.clipboard.writeText(text);
     toast.success("Copiado para a área de transferência");
   };
