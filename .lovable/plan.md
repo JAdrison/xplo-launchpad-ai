@@ -1,93 +1,96 @@
+## Redesign do Dashboard — "Command Center" XPLO
 
+Transformar o Dashboard atual (4 cards simples + lista de clientes) em um painel estilo Command Center inspirado na referência, mas adaptado ao domínio real do XPLO Starter (marketing/onboarding + CRM) e mantendo o **light mode** com acentos roxo (#8B5CF6).
 
-## Integrar Configurações do CRM dentro do próprio Kanban
-
-Hoje as configurações vivem em uma rota separada `/crm/config` no menu lateral. Vou trazer tudo para dentro do `/crm` via botões contextuais, deixando a sidebar mais enxuta.
-
-### Mudanças na navegação
-
-- **Remover do menu lateral**: itens "Atividades", "Contatos" e "CRM Config" deixam de ser links de primeiro nível.
-- Sidebar fica apenas com **CRM** (que abre o Kanban) — as outras telas viram abas/botões dentro dele.
-- Rotas continuam existindo (`/crm/atividades`, `/crm/contatos`, `/crm/config`) para deep-linking, só não aparecem mais no menu.
-
-### Nova barra de ações no topo do `/crm`
-
-Substituo o cabeçalho atual por uma barra com 2 níveis:
+### Layout proposto
 
 ```text
-┌──────────────────────────────────────────────────────────────────────┐
-│  [Kanban] [Atividades] [Contatos]              ⚙ Configurar ▾        │  ← abas + menu config
-├──────────────────────────────────────────────────────────────────────┤
-│  [Pipeline ▾]  [+ Pipeline] [+ Coluna]  [🔍 Buscar...]  [+ Negócio] │  ← contexto Kanban
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Command Center                         [Novo Cliente] [+]  │
+│  Visão geral do seu workspace em tempo real                 │
+├──────────┬──────────┬──────────┬──────────┬─────────────────┤
+│ KPI 1    │ KPI 2    │ KPI 3    │ KPI 4    │  ← 4 cards      │
+│ Clientes │ Em       │ Ofertas  │ Anúncios │    com ícone    │
+│ Ativos   │ Onboard. │ Geradas  │ Gerados  │    + delta vs   │
+│          │          │          │          │    mês anterior │
+├──────────┴──────────┴──────────┴──────────┴─────────────────┤
+│ Evolução do Portfólio (area chart, 6 meses) │ Status dos    │
+│ Novos clientes por mês                      │ Onboardings   │
+│                                             │ (donut)       │
+│                                             │ Rascunho/     │
+│                                             │ Em andamento/ │
+│                                             │ Concluído/    │
+│                                             │ Ativos        │
+├─────────────────────────────────────────────┼───────────────┤
+│ Funil CRM — Pipeline de Vendas              │ Insights IA   │
+│ (barras horizontais com gradiente roxo      │ (3 cards      │
+│  por coluna do pipeline principal)          │  estáticos    │
+│                                             │  com regras)  │
+└─────────────────────────────────────────────┴───────────────┘
 ```
 
-**Linha 1 — Abas internas** (`Tabs` shadcn) controlando 3 visões na mesma página:
-- **Kanban** (atual)
-- **Atividades** (conteúdo de `CrmActivities` embutido)
-- **Contatos** (conteúdo de `CrmContacts` embutido)
+### Métricas (todas com dados reais do Supabase)
 
-**Linha 1 (canto direito) — Menu "⚙ Configurar"** (`DropdownMenu`) com 4 opções que abrem **diálogos modais** (não saem da página):
-- Pipelines
-- Tags
-- Campos customizáveis
-- Templates de atividade
+**KPIs (4 cards grandes com delta vs mês passado)**
+1. **Clientes Ativos** — `count(clients) where status != 'archived'`
+2. **Em Onboarding** — `count(clients) where status in ('draft','ppp_in_progress')`
+3. **Ofertas Geradas** — `count(client_offer_documents)` + contexto "este mês"
+4. **Anúncios Gerados** — `count(ads)` + contexto "este mês"
 
-Cada opção abre um `Dialog` grande com o conteúdo de cada aba que hoje vive em `/crm/config` — reaproveito `PipelinesTab`, `TagsTab`, `FieldsTab`, `TemplatesTab` extraindo-os de `CrmConfig.tsx` para arquivos próprios em `src/components/crm/config/`.
+Cada card: ícone à direita, valor grande, label em cima, rodapé com `↑ +X% vs. mês anterior` (verde se +, vermelho se −). Acento roxo suave no card hover, sem o glow pesado do dark theme.
 
-**Linha 2 — Ações do Kanban** (só aparece quando a aba ativa é Kanban):
-- **+ Pipeline** (botão direto, abre o mesmo diálogo de criar pipeline)
-- **+ Coluna** (novo — hoje não existe; abre diálogo para criar coluna no pipeline ativo)
-- Seletor de pipeline, busca, **+ Negócio** (mantidos)
+**Evolução do Portfólio** (area chart Recharts)
+- Novos clientes criados por mês nos últimos 6 meses
+- Gradiente roxo (#8B5CF6 → transparente), linha sólida primária
 
-### Diagrama do fluxo
+**Status dos Onboardings** (donut chart)
+- Distribuição atual por `clients.status`: Rascunho, Em PPP, PPP Concluído, Oferta Gerada, Ativos Gerados
+- Paleta: tons de roxo + cinza para arquivados
 
-```text
-/crm
- ├── Tabs: [Kanban] [Atividades] [Contatos]
- │    └── Kanban → barra de ações + board atual
- │    └── Atividades → componente embutido (era /crm/atividades)
- │    └── Contatos → componente embutido (era /crm/contatos)
- └── Menu "⚙ Configurar"
-      ├── Dialog Pipelines  (CRUD pipelines)
-      ├── Dialog Tags
-      ├── Dialog Campos customizáveis
-      └── Dialog Templates de atividade
-```
+**Funil CRM** (barras horizontais)
+- Quantidade de deals por coluna da pipeline principal (`pipelines` + `pipeline_columns` + `deals`)
+- Gradiente roxo → ciano nas barras (mantendo acento roxo dominante)
+- Se não houver pipeline, mostra CTA "Configurar CRM"
 
-### Detalhes técnicos
+**Insights IA** (3 cards estáticos, baseados em regras)
+Cada card com ícone + título + descrição + CTA. Regras simples executadas no client após fetch:
+- "X clientes sem progresso há 7+ dias" → lista `clients` com `updated_at < now() - 7d` e status draft/ppp_in_progress
+- "Y onboardings prontos para gerar ofertas" → clientes com `ppp_completed` sem offer documents
+- "Z clientes sem anúncios gerados" → clientes com ofertas mas sem ads
+Cada card linka para `/clients` filtrado ou `/generator`.
 
-**Arquivos editados:**
-- `src/pages/CrmKanban.tsx` → vira hospedeiro de tudo: `Tabs` + barra de ações + menu Configurar.
-- `src/components/layout/AppSidebar.tsx` → remove os 3 itens (Atividades, Contatos, CRM Config) do array `navigation`.
-- `src/pages/CrmActivities.tsx` e `src/pages/CrmContacts.tsx` → exportam o conteúdo como componentes (`<CrmActivitiesView />`, `<CrmContactsView />`) reaproveitáveis. As páginas em si continuam existindo como wrapper para a rota direta funcionar.
-- `src/pages/CrmConfig.tsx` → quebrado em 4 arquivos de componente:
-  - `src/components/crm/config/PipelinesConfig.tsx`
-  - `src/components/crm/config/TagsConfig.tsx`
-  - `src/components/crm/config/FieldsConfig.tsx`
-  - `src/components/crm/config/TemplatesConfig.tsx`
-  - Cada um aceita prop opcional `inDialog?: boolean` para ajustar layout (sem `Card` wrapper quando dentro de Dialog).
-- Novo: `src/components/crm/NewColumnDialog.tsx` para o botão **+ Coluna** (cria `pipeline_columns` com `pipeline_id` ativo, `sort_order = columns.length`).
+### Design (light mode)
 
-**Estado da página `CrmKanban.tsx`:**
-```ts
-const [tab, setTab] = useState<"kanban" | "atividades" | "contatos">("kanban");
-const [configDialog, setConfigDialog] = useState<null | "pipelines" | "tags" | "fields" | "templates">(null);
-const [newColumnOpen, setNewColumnOpen] = useState(false);
-const [newPipelineOpen, setNewPipelineOpen] = useState(false);
-```
+- Fundo: branco / `bg-background`
+- Cards: `bg-card` com borda sutil `border-border`, shadow muito leve, hover com shadow roxa translúcida
+- Acentos: `#8B5CF6` para valores grandes, ícones e gráficos
+- Headline "Command Center" em roxo bold, subtítulo em muted
+- Ações rápidas movidas para um botão de ação no header (não mais uma seção inteira)
+- Lista de "Últimos Clientes" removida do dashboard (já vive em `/clients`) — substituída pelos Insights IA, que são mais úteis
 
-**Sincronização**: ao salvar algo em qualquer Dialog de configuração (ex: criar nova tag, novo pipeline), chamar `refetch()` do Kanban para refletir.
+### Arquivos a alterar
 
-**Deep-link preservado**: usuário que tinha `/crm/atividades` salvo continua abrindo a tela cheia daquela visão (via `CrmActivities.tsx` standalone). Dentro de `/crm`, é só uma aba.
+- `src/pages/Dashboard.tsx` — reescrever por completo
+- Novos componentes em `src/components/dashboard/`:
+  - `KpiCard.tsx` — card com valor + delta
+  - `PortfolioEvolutionChart.tsx` — area chart
+  - `OnboardingStatusDonut.tsx` — donut chart
+  - `CrmFunnelChart.tsx` — barras horizontais do pipeline
+  - `InsightsPanel.tsx` — 3 cards de insights baseados em regras
+- Usar `recharts` (já instalado) e componentes de `ui/chart.tsx`
 
-### Memória
+### Queries adicionais necessárias
 
-- Atualizar `mem://crm/fase3-contatos-config` notando que a navegação foi consolidada dentro de `/crm` via abas + menu de configurações.
-- Atualizar `mem://crm/arquitetura-modulo` mencionando o ponto único de entrada.
+- Histórico de `clients.created_at` agrupado por mês (últimos 6 meses) — query client-side ou RPC simples
+- Agregação de deals por `column_id` + join com `pipeline_columns` do pipeline padrão
 
 ### Fora do escopo
 
-- Não mexo em RLS, schema ou edge functions — só reorganização de UI.
-- Mantenho as rotas antigas funcionando (não quebra links salvos pelo usuário).
+- Sem migrations de schema (todos os dados já existem)
+- Sem dark mode
+- Sem chamadas de IA em tempo real (Insights são estáticos/regra)
+- Não mexe em `/crm`, `/clients` nem outras rotas
 
+### Memória
+
+- Atualizar `mem://funcionalidades/dashboard-dinamico` descrevendo o novo layout Command Center e suas seções.
