@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS tr_deal_column_change ON public.deals;
