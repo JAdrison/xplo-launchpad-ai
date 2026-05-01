@@ -1,64 +1,86 @@
 ## Objetivo
 
-Permitir que admins/funcionários da XPLO armazenem **login e senha do XPLO LAB** de cada cliente. Esse dado **não aparece no onboarding** (interno ou externo) e é gerenciado apenas dentro do painel interno em `/clients/:id`.
+Adicionar uma **barra de pipeline** no topo da página `/clients/:id` (acima do nome do cliente — entre o header com "← TESTE / Hospedagem" e o card "Informações do Cliente") que mostra **em qual coluna o lead está** no CRM e permite **movê-lo** clicando em qualquer etapa. O visual deve combinar com a identidade da plataforma (light, primário `#8B5CF6`, cantos arredondados, bordas suaves).
 
-## Onde será exibido / editado
+## Componente novo: `ClientPipelineBar`
 
-Card **"Informações do Cliente"** em `src/pages/ClientDetails.tsx`. Adiciono uma nova seção **"Acesso XPLO LAB"** abaixo de "Dados do Responsável", com:
+Arquivo: `src/components/client/ClientPipelineBar.tsx`
 
-- **Login XPLO LAB** (texto)
-- **Senha XPLO LAB** (mascarada por padrão `••••••••` com botão olho para revelar — segue o mesmo padrão já usado em Instagram/Facebook)
-- Botão **"Editar credenciais XPLO LAB"** que abre um Dialog dedicado com dois campos (login + senha) e botão Salvar.
+Props: `clientId: string`
 
-Quando vazio, mostra estado "Nenhuma credencial cadastrada" com CTA "Adicionar credenciais".
+Comportamento:
 
-## Onde NÃO aparece
+1. Busca o **deal ativo** do cliente:
+   ```
+   supabase.from("deals")
+     .select("id, pipeline_id, column_id, status")
+     .eq("client_id", clientId)
+     .order("created_at", { ascending: false })
+     .limit(1)
+   ```
+   (Existe trigger `auto_create_deal_for_client` — todo cliente já tem um deal.)
 
-- Onboarding interno (`OnboardingWizard` em `src/components/onboarding/`)
-- Onboarding externo (`/onboarding/external/:token` — `OnboardingExternal.tsx`)
-- Nenhum step (`StepCompany`, `StepRegistration`, etc.)
+2. Busca pipeline + colunas:
+   - `pipelines` (nome do pipeline para exibir como rótulo discreto à esquerda)
+   - `pipeline_columns` filtrando por `pipeline_id`, ordenado por `sort_order`
 
-O cliente final nunca vê nem preenche este campo.
+3. Renderiza um **stepper horizontal**:
 
-## Mudanças técnicas
-
-### 1. Banco de dados (migration)
-
-Adicionar duas colunas em `public.clients`:
-
-```sql
-ALTER TABLE public.clients
-  ADD COLUMN xplo_lab_login text,
-  ADD COLUMN xplo_lab_password text;
+```text
+Pipeline Principal:  [Novo] ─ [Qualificação] ─ ●Proposta ─ [Negociação] ─ [Ganho]
 ```
 
-Observação sobre RLS: a tabela `clients` hoje tem políticas públicas (`Allow public ...`). Como esses campos são sensíveis e devem ser restritos a admins/funcionários, recomendo **endurecer o acesso** — mas isso afetaria todo o app. Para escopo desta task: as colunas ficam protegidas apenas pela camada de UI (não exibidas em telas externas). Se quiser RLS estrita por role, posso fazer numa task separada.
+   - Cada etapa é um "chip" clicável.
+   - Etapa atual: fundo na cor da coluna (`column.color`, fallback `#8B5CF6`), texto branco, `ring-2 ring-primary/20`, com `CheckCircle2` se for tipo `won` ou check.
+   - Etapas anteriores (sort_order < atual): fundo `bg-primary/10`, texto `text-primary`, conector preenchido com `bg-primary`.
+   - Etapas posteriores: fundo `bg-muted`, texto `text-muted-foreground`, conector `bg-border`.
+   - Conectores: linha fina (`h-0.5`) entre os chips.
+   - Mobile (`< sm`): scroll horizontal (`overflow-x-auto`) preservando os chips lado a lado.
 
-### 2. Frontend (`src/pages/ClientDetails.tsx`)
+4. Ao clicar em uma etapa:
+   - Otimista: atualiza UI imediatamente.
+   - `supabase.from("deals").update({ column_id: newColumnId }).eq("id", deal.id)` — os triggers `handle_deal_column_change_*` cuidam de status (won/lost), `entered_current_column_at`, `deal_history` e automações.
+   - Toast de sucesso/erro (já segue padrão do projeto).
 
-- Estender state `client` para incluir `xplo_lab_login` / `xplo_lab_password` (vem automático via `Tables<"clients">` após regenerar tipos).
-- Adicionar nova seção visual no card "Informações do Cliente" entre "Dados do Responsável" e "Produto", com ícone `KeyRound` (lucide).
-- Reusar padrão de toggle de senha (`showXploPassword` state + botão `Eye`/`EyeOff`).
-- Adicionar Dialog "Editar Credenciais XPLO LAB" com 2 inputs (login text, senha com toggle) e ação que faz `supabase.from("clients").update({ xplo_lab_login, xplo_lab_password }).eq("id", id)`.
+5. Estado vazio:
+   - Se não houver deal: card discreto com link "Configurar pipeline" → `/crm`.
+   - Loading: skeleton fino do mesmo height da barra.
 
-### 3. Memória do projeto
+6. **Realtime** (opcional, leve): assina `postgres_changes` em `deals` filtrando pelo `id` do deal para refletir mudanças feitas em outros lugares (ex.: Kanban).
 
-Criar `mem://features/xplo-lab-credenciais` documentando:
-- Campos `xplo_lab_login`/`xplo_lab_password` em `clients`
-- Visíveis apenas em `/clients/:id`
-- NUNCA exibir/coletar no onboarding interno ou externo
-- Senha sempre mascarada por padrão (regra LGPD)
+## Integração em `src/pages/ClientDetails.tsx`
+
+- Importar `ClientPipelineBar`.
+- Renderizar **logo após** o bloco do header (linha onde fecha o `<div>` com nome + nicho), **antes** do `Card` "Informações do Cliente":
+
+```tsx
+<ClientPipelineBar clientId={client.id} />
+```
+
+Não modifica nenhum outro card existente.
+
+## Detalhes visuais (design system)
+
+- Container: `Card` shadcn com `p-4 sm:p-5`, `rounded-xl`, `border-border/60`.
+- Título pequeno acima: `Pipeline · {pipeline.name}` em `text-xs uppercase tracking-wide text-muted-foreground`.
+- Chips: `px-3 py-1.5 rounded-full text-xs font-medium transition-all` com hover sutil (`hover:scale-[1.02]`).
+- Acessibilidade: cada chip é `<button>` com `aria-current="step"` na atual e `aria-label="Mover para {nome}"`.
 
 ## Resumo visual
 
 ```text
-Card "Informações do Cliente"
-├─ Dados da Empresa
-├─ Dados do Responsável
-├─ 🔑 Acesso XPLO LAB         ← NOVO
-│   ├─ Login: usuario@xplo
-│   ├─ Senha: ••••••••  [👁]
-│   └─ [Editar credenciais]
-├─ Produto / Serviço
-└─ Criado em / Notas
+┌─────────────────────────────────────────────────────────────┐
+│ PIPELINE · Pipeline Principal                                │
+│                                                              │
+│  ✓Novo ─── ✓Qualif. ─── ●Proposta ─── Negoc. ─── Ganho      │
+│                          (atual)                             │
+└─────────────────────────────────────────────────────────────┘
+
+[Card "Informações do Cliente"]
+[Card "Acesso XPLO LAB"]
+...
 ```
+
+## Memória do projeto
+
+Criar `mem://crm/pipeline-bar-cliente` documentando: barra de pipeline em `/clients/:id`, lê deal ativo do cliente, click move via update direto em `deals.column_id` (triggers cuidam do resto), sincroniza com Kanban via realtime.
