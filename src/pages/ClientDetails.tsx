@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ClientPipelineBar } from "@/components/client/ClientPipelineBar";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
 import type { Tables } from "@/integrations/supabase/types";
