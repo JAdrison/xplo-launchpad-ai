@@ -54,3 +54,4 @@
 - [LGPD regras](mem://seguranca/conformidade-lgpd) — Rules for handling and showing PII and sensitive data
 - [Dominio Subdomain](mem://infra/dominio-starter-subdomain) — Subdomain constraints and cross-system coexistence
 - [Dual AI](mem://ia/arquitetura-dual-xplo) — Specifications on GPT vs Gemini usage contexts
+- [XPLO LAB credenciais](mem://features/xplo-lab-credenciais) — Login/senha XPLO LAB por cliente, só admin, nunca no onboarding

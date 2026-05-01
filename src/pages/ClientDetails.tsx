@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
@@ -80,6 +80,11 @@ export default function ClientDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showInstagramPassword, setShowInstagramPassword] = useState(false);
   const [showFacebookPassword, setShowFacebookPassword] = useState(false);
+  const [showXploLabPassword, setShowXploLabPassword] = useState(false);
+  const [isXploLabOpen, setIsXploLabOpen] = useState(false);
+  const [isSavingXploLab, setIsSavingXploLab] = useState(false);
+  const [showXploLabPasswordInput, setShowXploLabPasswordInput] = useState(false);
+  const [xploLabForm, setXploLabForm] = useState({ login: "", password: "" });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -123,8 +128,10 @@ export default function ClientDetails() {
           product_description: data.product_description || "",
           notes: data.notes || "",
         });
-
-        // Buscar profile do cliente para credenciais Meta Ads e investimentos
+        setXploLabForm({
+          login: (data as any).xplo_lab_login || "",
+          password: (data as any).xplo_lab_password || "",
+        });
         const { data: profileData } = await supabase
           .from("client_profile")
           .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password, initial_traffic_investment, monthly_investment, current_revenue, revenue_goal")
@@ -200,6 +207,42 @@ export default function ClientDetails() {
     }
 
     setIsSaving(false);
+  };
+
+  const handleSaveXploLab = async () => {
+    if (!id) return;
+    setIsSavingXploLab(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        xplo_lab_login: xploLabForm.login.trim() || null,
+        xplo_lab_password: xploLabForm.password.trim() || null,
+      } as any)
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao salvar credenciais",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setClient((prev) =>
+        prev
+          ? ({
+              ...prev,
+              xplo_lab_login: xploLabForm.login.trim() || null,
+              xplo_lab_password: xploLabForm.password.trim() || null,
+            } as any)
+          : prev
+      );
+      toast({
+        title: "Credenciais salvas",
+        description: "Acesso XPLO LAB atualizado com sucesso.",
+      });
+      setIsXploLabOpen(false);
+    }
+    setIsSavingXploLab(false);
   };
 
   const handleDelete = async () => {
@@ -369,6 +412,115 @@ export default function ClientDetails() {
               <p className="text-sm font-medium text-muted-foreground">Notas</p>
               <p className="text-foreground whitespace-pre-wrap">{client.notes}</p>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Acesso XPLO LAB (interno — somente admins/funcionários XPLO) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Acesso XPLO LAB
+              <Badge variant="secondary" className="ml-2 text-xs">Interno</Badge>
+            </CardTitle>
+            <Dialog open={isXploLabOpen} onOpenChange={setIsXploLabOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-3.5 w-3.5" />
+                  {(client as any).xplo_lab_login || (client as any).xplo_lab_password
+                    ? "Editar credenciais"
+                    : "Adicionar credenciais"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Credenciais XPLO LAB</DialogTitle>
+                  <DialogDescription>
+                    Login e senha de acesso ao XPLO LAB deste cliente. Visível apenas para a equipe XPLO — nunca exibido no onboarding.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="xplo-lab-login">Login</Label>
+                    <Input
+                      id="xplo-lab-login"
+                      autoComplete="off"
+                      value={xploLabForm.login}
+                      onChange={(e) => setXploLabForm((p) => ({ ...p, login: e.target.value }))}
+                      placeholder="usuario@xplo"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="xplo-lab-password">Senha</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="xplo-lab-password"
+                        type={showXploLabPasswordInput ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={xploLabForm.password}
+                        onChange={(e) => setXploLabForm((p) => ({ ...p, password: e.target.value }))}
+                        placeholder="••••••••"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setShowXploLabPasswordInput((v) => !v)}
+                      >
+                        {showXploLabPasswordInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsXploLabOpen(false)} disabled={isSavingXploLab}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveXploLab} disabled={isSavingXploLab}>
+                    {isSavingXploLab ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(client as any).xplo_lab_login || (client as any).xplo_lab_password ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Login</p>
+                <p className="text-foreground font-mono">{(client as any).xplo_lab_login || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-foreground">
+                    {(client as any).xplo_lab_password
+                      ? showXploLabPassword
+                        ? (client as any).xplo_lab_password
+                        : "••••••••"
+                      : "—"}
+                  </p>
+                  {(client as any).xplo_lab_password && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setShowXploLabPassword(!showXploLabPassword)}
+                    >
+                      {showXploLabPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma credencial cadastrada. Use o botão acima para adicionar.
+            </p>
           )}
         </CardContent>
       </Card>
