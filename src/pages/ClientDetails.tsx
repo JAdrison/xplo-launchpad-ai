@@ -336,6 +336,9 @@ export default function ClientDetails() {
         </div>
       </div>
 
+      {/* Pipeline do CRM */}
+      <ClientPipelineBar clientId={client.id} />
+
       {/* Informações do Cliente */}
       <Card>
         <CardHeader>
