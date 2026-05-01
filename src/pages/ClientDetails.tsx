@@ -128,8 +128,10 @@ export default function ClientDetails() {
           product_description: data.product_description || "",
           notes: data.notes || "",
         });
-
-        // Buscar profile do cliente para credenciais Meta Ads e investimentos
+        setXploLabForm({
+          login: (data as any).xplo_lab_login || "",
+          password: (data as any).xplo_lab_password || "",
+        });
         const { data: profileData } = await supabase
           .from("client_profile")
           .select("instagram_link, instagram_login, instagram_password, facebook_login, facebook_password, initial_traffic_investment, monthly_investment, current_revenue, revenue_goal")
