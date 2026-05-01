@@ -209,6 +209,42 @@ export default function ClientDetails() {
     setIsSaving(false);
   };
 
+  const handleSaveXploLab = async () => {
+    if (!id) return;
+    setIsSavingXploLab(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        xplo_lab_login: xploLabForm.login.trim() || null,
+        xplo_lab_password: xploLabForm.password.trim() || null,
+      } as any)
+      .eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Erro ao salvar credenciais",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setClient((prev) =>
+        prev
+          ? ({
+              ...prev,
+              xplo_lab_login: xploLabForm.login.trim() || null,
+              xplo_lab_password: xploLabForm.password.trim() || null,
+            } as any)
+          : prev
+      );
+      toast({
+        title: "Credenciais salvas",
+        description: "Acesso XPLO LAB atualizado com sucesso.",
+      });
+      setIsXploLabOpen(false);
+    }
+    setIsSavingXploLab(false);
+  };
+
   const handleDelete = async () => {
     if (!id) return;
 
