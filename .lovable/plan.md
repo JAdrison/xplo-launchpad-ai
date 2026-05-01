@@ -1,96 +1,64 @@
-## Redesign do Dashboard — "Command Center" XPLO
+## Objetivo
 
-Transformar o Dashboard atual (4 cards simples + lista de clientes) em um painel estilo Command Center inspirado na referência, mas adaptado ao domínio real do XPLO Starter (marketing/onboarding + CRM) e mantendo o **light mode** com acentos roxo (#8B5CF6).
+Permitir que admins/funcionários da XPLO armazenem **login e senha do XPLO LAB** de cada cliente. Esse dado **não aparece no onboarding** (interno ou externo) e é gerenciado apenas dentro do painel interno em `/clients/:id`.
 
-### Layout proposto
+## Onde será exibido / editado
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  Command Center                         [Novo Cliente] [+]  │
-│  Visão geral do seu workspace em tempo real                 │
-├──────────┬──────────┬──────────┬──────────┬─────────────────┤
-│ KPI 1    │ KPI 2    │ KPI 3    │ KPI 4    │  ← 4 cards      │
-│ Clientes │ Em       │ Ofertas  │ Anúncios │    com ícone    │
-│ Ativos   │ Onboard. │ Geradas  │ Gerados  │    + delta vs   │
-│          │          │          │          │    mês anterior │
-├──────────┴──────────┴──────────┴──────────┴─────────────────┤
-│ Evolução do Portfólio (area chart, 6 meses) │ Status dos    │
-│ Novos clientes por mês                      │ Onboardings   │
-│                                             │ (donut)       │
-│                                             │ Rascunho/     │
-│                                             │ Em andamento/ │
-│                                             │ Concluído/    │
-│                                             │ Ativos        │
-├─────────────────────────────────────────────┼───────────────┤
-│ Funil CRM — Pipeline de Vendas              │ Insights IA   │
-│ (barras horizontais com gradiente roxo      │ (3 cards      │
-│  por coluna do pipeline principal)          │  estáticos    │
-│                                             │  com regras)  │
-└─────────────────────────────────────────────┴───────────────┘
+Card **"Informações do Cliente"** em `src/pages/ClientDetails.tsx`. Adiciono uma nova seção **"Acesso XPLO LAB"** abaixo de "Dados do Responsável", com:
+
+- **Login XPLO LAB** (texto)
+- **Senha XPLO LAB** (mascarada por padrão `••••••••` com botão olho para revelar — segue o mesmo padrão já usado em Instagram/Facebook)
+- Botão **"Editar credenciais XPLO LAB"** que abre um Dialog dedicado com dois campos (login + senha) e botão Salvar.
+
+Quando vazio, mostra estado "Nenhuma credencial cadastrada" com CTA "Adicionar credenciais".
+
+## Onde NÃO aparece
+
+- Onboarding interno (`OnboardingWizard` em `src/components/onboarding/`)
+- Onboarding externo (`/onboarding/external/:token` — `OnboardingExternal.tsx`)
+- Nenhum step (`StepCompany`, `StepRegistration`, etc.)
+
+O cliente final nunca vê nem preenche este campo.
+
+## Mudanças técnicas
+
+### 1. Banco de dados (migration)
+
+Adicionar duas colunas em `public.clients`:
+
+```sql
+ALTER TABLE public.clients
+  ADD COLUMN xplo_lab_login text,
+  ADD COLUMN xplo_lab_password text;
 ```
 
-### Métricas (todas com dados reais do Supabase)
+Observação sobre RLS: a tabela `clients` hoje tem políticas públicas (`Allow public ...`). Como esses campos são sensíveis e devem ser restritos a admins/funcionários, recomendo **endurecer o acesso** — mas isso afetaria todo o app. Para escopo desta task: as colunas ficam protegidas apenas pela camada de UI (não exibidas em telas externas). Se quiser RLS estrita por role, posso fazer numa task separada.
 
-**KPIs (4 cards grandes com delta vs mês passado)**
-1. **Clientes Ativos** — `count(clients) where status != 'archived'`
-2. **Em Onboarding** — `count(clients) where status in ('draft','ppp_in_progress')`
-3. **Ofertas Geradas** — `count(client_offer_documents)` + contexto "este mês"
-4. **Anúncios Gerados** — `count(ads)` + contexto "este mês"
+### 2. Frontend (`src/pages/ClientDetails.tsx`)
 
-Cada card: ícone à direita, valor grande, label em cima, rodapé com `↑ +X% vs. mês anterior` (verde se +, vermelho se −). Acento roxo suave no card hover, sem o glow pesado do dark theme.
+- Estender state `client` para incluir `xplo_lab_login` / `xplo_lab_password` (vem automático via `Tables<"clients">` após regenerar tipos).
+- Adicionar nova seção visual no card "Informações do Cliente" entre "Dados do Responsável" e "Produto", com ícone `KeyRound` (lucide).
+- Reusar padrão de toggle de senha (`showXploPassword` state + botão `Eye`/`EyeOff`).
+- Adicionar Dialog "Editar Credenciais XPLO LAB" com 2 inputs (login text, senha com toggle) e ação que faz `supabase.from("clients").update({ xplo_lab_login, xplo_lab_password }).eq("id", id)`.
 
-**Evolução do Portfólio** (area chart Recharts)
-- Novos clientes criados por mês nos últimos 6 meses
-- Gradiente roxo (#8B5CF6 → transparente), linha sólida primária
+### 3. Memória do projeto
 
-**Status dos Onboardings** (donut chart)
-- Distribuição atual por `clients.status`: Rascunho, Em PPP, PPP Concluído, Oferta Gerada, Ativos Gerados
-- Paleta: tons de roxo + cinza para arquivados
+Criar `mem://features/xplo-lab-credenciais` documentando:
+- Campos `xplo_lab_login`/`xplo_lab_password` em `clients`
+- Visíveis apenas em `/clients/:id`
+- NUNCA exibir/coletar no onboarding interno ou externo
+- Senha sempre mascarada por padrão (regra LGPD)
 
-**Funil CRM** (barras horizontais)
-- Quantidade de deals por coluna da pipeline principal (`pipelines` + `pipeline_columns` + `deals`)
-- Gradiente roxo → ciano nas barras (mantendo acento roxo dominante)
-- Se não houver pipeline, mostra CTA "Configurar CRM"
+## Resumo visual
 
-**Insights IA** (3 cards estáticos, baseados em regras)
-Cada card com ícone + título + descrição + CTA. Regras simples executadas no client após fetch:
-- "X clientes sem progresso há 7+ dias" → lista `clients` com `updated_at < now() - 7d` e status draft/ppp_in_progress
-- "Y onboardings prontos para gerar ofertas" → clientes com `ppp_completed` sem offer documents
-- "Z clientes sem anúncios gerados" → clientes com ofertas mas sem ads
-Cada card linka para `/clients` filtrado ou `/generator`.
-
-### Design (light mode)
-
-- Fundo: branco / `bg-background`
-- Cards: `bg-card` com borda sutil `border-border`, shadow muito leve, hover com shadow roxa translúcida
-- Acentos: `#8B5CF6` para valores grandes, ícones e gráficos
-- Headline "Command Center" em roxo bold, subtítulo em muted
-- Ações rápidas movidas para um botão de ação no header (não mais uma seção inteira)
-- Lista de "Últimos Clientes" removida do dashboard (já vive em `/clients`) — substituída pelos Insights IA, que são mais úteis
-
-### Arquivos a alterar
-
-- `src/pages/Dashboard.tsx` — reescrever por completo
-- Novos componentes em `src/components/dashboard/`:
-  - `KpiCard.tsx` — card com valor + delta
-  - `PortfolioEvolutionChart.tsx` — area chart
-  - `OnboardingStatusDonut.tsx` — donut chart
-  - `CrmFunnelChart.tsx` — barras horizontais do pipeline
-  - `InsightsPanel.tsx` — 3 cards de insights baseados em regras
-- Usar `recharts` (já instalado) e componentes de `ui/chart.tsx`
-
-### Queries adicionais necessárias
-
-- Histórico de `clients.created_at` agrupado por mês (últimos 6 meses) — query client-side ou RPC simples
-- Agregação de deals por `column_id` + join com `pipeline_columns` do pipeline padrão
-
-### Fora do escopo
-
-- Sem migrations de schema (todos os dados já existem)
-- Sem dark mode
-- Sem chamadas de IA em tempo real (Insights são estáticos/regra)
-- Não mexe em `/crm`, `/clients` nem outras rotas
-
-### Memória
-
-- Atualizar `mem://funcionalidades/dashboard-dinamico` descrevendo o novo layout Command Center e suas seções.
+```text
+Card "Informações do Cliente"
+├─ Dados da Empresa
+├─ Dados do Responsável
+├─ 🔑 Acesso XPLO LAB         ← NOVO
+│   ├─ Login: usuario@xplo
+│   ├─ Senha: ••••••••  [👁]
+│   └─ [Editar credenciais]
+├─ Produto / Serviço
+└─ Criado em / Notas
+```

@@ -638,6 +638,8 @@ export type Database = {
           responsible_name: string | null
           status: Database["public"]["Enums"]["client_status"]
           updated_at: string
+          xplo_lab_login: string | null
+          xplo_lab_password: string | null
         }
         Insert: {
           cnpj?: string | null
@@ -655,6 +657,8 @@ export type Database = {
           responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
+          xplo_lab_login?: string | null
+          xplo_lab_password?: string | null
         }
         Update: {
           cnpj?: string | null
@@ -672,6 +676,8 @@ export type Database = {
           responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
+          xplo_lab_login?: string | null
+          xplo_lab_password?: string | null
         }
         Relationships: []
       }
