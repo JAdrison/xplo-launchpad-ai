@@ -80,6 +80,11 @@ export default function ClientDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showInstagramPassword, setShowInstagramPassword] = useState(false);
   const [showFacebookPassword, setShowFacebookPassword] = useState(false);
+  const [showXploLabPassword, setShowXploLabPassword] = useState(false);
+  const [isXploLabOpen, setIsXploLabOpen] = useState(false);
+  const [isSavingXploLab, setIsSavingXploLab] = useState(false);
+  const [showXploLabPasswordInput, setShowXploLabPasswordInput] = useState(false);
+  const [xploLabForm, setXploLabForm] = useState({ login: "", password: "" });
 
   const [formData, setFormData] = useState({
     name: "",
