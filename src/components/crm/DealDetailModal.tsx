@@ -293,6 +293,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                           🔁 a cada {a.recurrence_days}d
                                         </span>
                                       )}
+                                      {a.required_function && (
+                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${JOB_FUNCTION_COLORS[a.required_function]}`}>
+                                          {JOB_FUNCTION_LABELS[a.required_function]}
+                                        </span>
+                                      )}
                                     </div>
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
