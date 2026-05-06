@@ -29,6 +29,7 @@ export type Database = {
           id: string
           recurrence_days: number | null
           required_bonus: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_function: Database["public"]["Enums"]["job_function"] | null
           required_plan: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id: string | null
           scheduled_at: string | null
@@ -53,6 +54,7 @@ export type Database = {
           id?: string
           recurrence_days?: number | null
           required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_function?: Database["public"]["Enums"]["job_function"] | null
           required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id?: string | null
           scheduled_at?: string | null
@@ -77,6 +79,7 @@ export type Database = {
           id?: string
           recurrence_days?: number | null
           required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_function?: Database["public"]["Enums"]["job_function"] | null
           required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id?: string | null
           scheduled_at?: string | null
@@ -1351,6 +1354,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_job_functions: {
+        Row: {
+          created_at: string
+          id: string
+          job_function: Database["public"]["Enums"]["job_function"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_function: Database["public"]["Enums"]["job_function"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_function?: Database["public"]["Enums"]["job_function"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1472,6 +1496,15 @@ export type Database = {
         | "status_changed"
         | "note_added"
         | "custom_field_changed"
+      job_function:
+        | "gestor_trafego"
+        | "designer"
+        | "copywriter"
+        | "sdr"
+        | "vendedor"
+        | "contato_cliente"
+        | "gestor_projetos"
+        | "ia_specialist"
       lp_variant: "direct" | "consultive" | "aggressive"
       niche_type: "hospedagem" | "saude" | "generico"
       sales_model: "b2b" | "b2c" | "recurring" | "project" | "hybrid"
@@ -1641,6 +1674,16 @@ export const Constants = {
         "status_changed",
         "note_added",
         "custom_field_changed",
+      ],
+      job_function: [
+        "gestor_trafego",
+        "designer",
+        "copywriter",
+        "sdr",
+        "vendedor",
+        "contato_cliente",
+        "gestor_projetos",
+        "ia_specialist",
       ],
       lp_variant: ["direct", "consultive", "aggressive"],
       niche_type: ["hospedagem", "saude", "generico"],
