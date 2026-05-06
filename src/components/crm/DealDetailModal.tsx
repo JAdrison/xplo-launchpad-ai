@@ -365,7 +365,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               {/* Atividades */}
               <TabsContent value="atividades" className="flex-1 overflow-y-auto p-6 mt-0">
                 <div className="flex justify-end mb-4">
-                  <Button size="sm" onClick={() => setActDialog(true)}>
+                  <Button size="sm" onClick={() => { setEditingActivity(null); setActDialog(true); }}>
                     <Plus className="h-4 w-4 mr-1" /> Criar atividade
                   </Button>
                 </div>
@@ -392,6 +392,12 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                               </p>
                             )}
                           </div>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -444,9 +450,10 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
 
         <ActivityFormDialog
           open={actDialog}
-          onOpenChange={setActDialog}
+          onOpenChange={(v) => { setActDialog(v); if (!v) setEditingActivity(null); }}
           dealId={deal.id}
           clientId={deal.client_id}
+          activity={editingActivity}
           onCreated={() => { refetch(); onChanged(); }}
         />
       </DialogContent>
