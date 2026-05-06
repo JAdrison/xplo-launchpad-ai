@@ -162,8 +162,17 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
           responsible_cpf: form.responsible_cpf.trim() || null,
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
-        })
+          xplo_plan: xploPlan,
+          xplo_bonuses: xploBonuses,
+        } as any)
         .eq("id", clientId);
+
+      // Cria tarefas do processo no deal automaticamente (se já existir um deal)
+      try {
+        await updateClientPlanAndSync(clientId, xploPlan, xploBonuses);
+      } catch (err) {
+        console.warn("Sync de tarefas falhou (deal pode ainda não existir):", err);
+      }
 
       const traffic = form.initial_traffic_investment === "outro" ? customTraffic : form.initial_traffic_investment;
 
