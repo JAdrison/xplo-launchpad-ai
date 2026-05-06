@@ -1,42 +1,35 @@
 ---
-name: Pipeline Entrega + Manutenção recorrente
-description: Pipeline único com 5 colunas espelhando o processo XPLO + 2 colunas de manutenção. Auto-advance e tarefas recorrentes via triggers.
+name: Pipeline de entrega e manutenção
+description: Estrutura do Kanban XPLO com checkpoints 01–05, coluna única de Manutenção com badges de estado e Clientes finalizados
 type: feature
 ---
+# Pipeline "Entrega de Serviços"
 
-## Estrutura
+Colunas (na ordem):
+1. **01 Cadastro** (`01`) — prazo 3d
+2. **02 Início** (`02`) — prazo 5d
+3. **03 Estratégia** (`03`) — prazo 10d
+4. **04 Tráfego** (`04`) — prazo 10d
+5. **05 Entrega** (`05`) — prazo 7d
+6. **Manutenção** (`maint_active`) — coluna única, sem prazo de coluna; estado vem das tarefas
+7. **Clientes finalizados** (`finished`)
+8. **Ganho** (`won`) / **Perdido** (`lost`)
 
-Pipeline único "Entrega de Serviços" com colunas (em ordem) e `pipeline_columns.checkpoint_code`:
+## Coluna Manutenção — estados dinâmicos por deal
+Calculado a partir das `activities` com `checkpoint_code = '06'`:
+- ⚪ **Aguardando início** — nenhuma tarefa de manutenção criada. Card mostra hint e o modal exibe botão **"Iniciar manutenção"** que chama RPC `start_maintenance_for_deal(_deal_id)`.
+- 🟢 **Em dia** — tem tarefas, nenhuma vencida nem para hoje. Mostra "Próx. em Nd".
+- 🟡 **Para hoje** — alguma tarefa pendente vence hoje.
+- 🔴 **Atrasado** — alguma tarefa pendente já passou do `scheduled_at`. Mostra "N há Xd".
 
-| Coluna | code |
-|---|---|
-| 01 Cadastro | `01` |
-| 02 Início | `02` |
-| 03 Estratégia | `03` |
-| 04 Tráfego | `04` |
-| 05 Entrega | `05` |
-| Manutenção pendente | `maint_pending` |
-| Manutenção ativa | `maint_active` |
-| Ganho | `won` |
-| Perdido | `lost` |
+Cabeçalho da coluna mostra resumo agregado: 🔴 X atrasado · 🟡 Y hoje · 🟢 Z em dia · ⚪ W aguardando.
 
-## Auto-advance (01 → 05 → maint_pending)
+## Geração das tarefas de manutenção
+5 tarefas recorrentes (Instagram 30d, tráfego 7/15/30d, IA 15d) são criadas:
+- Automaticamente quando o trigger `seed_maintenance_tasks` detecta entrada em `maint_active` (incluindo o salto automático vindo da etapa 05).
+- Manualmente via RPC `start_maintenance_for_deal` quando o usuário clica em "Iniciar manutenção" no modal.
 
-Trigger `trg_activity_completion` em `activities`. Quando uma tarefa do checkpoint atual é marcada concluída e **todas** as tarefas aplicáveis ao plano daquele checkpoint estão concluídas, o deal pula para a próxima coluna na ordem. Última coluna 05 → cai em "Manutenção pendente".
-
-## Tarefas recorrentes (Manutenção ativa)
-
-Ao mover um deal para a coluna `maint_active` pela primeira vez, o trigger `trg_seed_maintenance` semeia as 5 tarefas recorrentes (Instagram 30d, Verif. tráfego 7d, Relatório 15d, Troca campanhas 30d, IA 15d — última só Pro), cada uma com `recurrence_days` definido e `scheduled_at = now() + days`.
-
-Quando uma tarefa com `recurrence_days IS NOT NULL` é concluída, o trigger `trg_activity_completion` cria automaticamente a próxima ocorrência (template_key sufixado com epoch para preservar idempotência), com nova data agendada.
-
-## Idempotência
-
-- Tarefas recorrentes só são geradas novamente se **não existir** outra ocorrência pendente do mesmo template_key base no mesmo deal.
-- Seed de manutenção checa por `NOT EXISTS` antes de inserir.
-- Colunas têm `UNIQUE (pipeline_id, checkpoint_code) WHERE checkpoint_code IS NOT NULL`.
-
-## UI
-
-- `KanbanColumn`: badge `AUTO` no header das colunas 01–05 (avanço automático).
-- `DealDetailModal` aba Negócios: tarefas com `recurrence_days` recebem badge `🔁 a cada Nd` em verde.
+## Migração realizada (2026-05-06)
+- Removida a coluna intermediária "Manutenção pendente" (`maint_pending`).
+- Trigger `handle_activity_completion` agora envia o deal de `05` direto para `maint_active`.
+- Deals que estavam em `maint_pending` foram migrados para `maint_active`.

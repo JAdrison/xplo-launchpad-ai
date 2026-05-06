@@ -1,110 +1,94 @@
-## Objetivo
+## Diagnóstico — por que está confuso hoje
 
-Toda tarefa do CRM passa a ter uma **data de vencimento** (`scheduled_at`). Tarefas criadas automaticamente recebem prazo conforme o checkpoint ou recorrência. Tarefas vencidas não concluídas aparecem em destaque vermelho e ordenadas no topo.
+Hoje o Kanban tem **duas colunas separadas** logo após "05 Entrega":
 
-## Prazos definidos
+| Coluna atual | Significado original | Problema |
+|---|---|---|
+| **Manutenção pendente** (`maint_pending`) | Para onde o deal vai automaticamente quando termina a etapa 05. Espera alguém **mover manualmente** para "Manutenção ativa" para começar. | O nome sugere "tem tarefa atrasada", mas é só uma sala de espera. |
+| **Manutenção ativa** (`maint_active`) | Quando o deal entra aqui, o sistema **gera automaticamente** as 5 tarefas recorrentes (Instagram 30d, tráfego 7/15/30d, IA 15d). | Confunde com "está ativo agora", mesmo quando não há tarefa pendente. |
 
-**Checkpoints (a partir de quando o deal entra na coluna):**
+Resultado: o usuário não sabe a diferença entre "pendente" (coluna) e "pendente" (status da tarefa), e fica sem entender quando um cliente está em dia, quando tem tarefa atrasada, ou quando a manutenção ainda nem começou.
 
-| Checkpoint | Prazo |
-|---|---|
-| 01 Cadastro | 3 dias |
-| 02 Início | 5 dias |
-| 03 Estratégia | 10 dias |
-| 04 Tráfego | 10 dias |
-| 05 Entrega | 7 dias |
+Você também disse uma regra importante:
+> "pode ser manutenção pendente e concluída quando não tiver manutenção para fazer"
 
-**Manutenção:** já tem `recurrence_days` — usar como prazo (Instagram 30d → vence em 30 dias, Tráfego 7d → vence em 7 dias, etc.). Hoje a função `seed_maintenance_tasks` já preenche `scheduled_at = now() + days`. Falta apenas exibir corretamente.
+Ou seja: o estado "pendente" ou "em dia" deve vir do **status real das tarefas**, não de uma coluna fixa.
 
-## Mudanças
+---
 
-### 1. Banco — preencher `scheduled_at` automaticamente
+## Proposta — uma coluna só, com estado dinâmico
 
-- Atualizar `seed_xplo_template_tasks(_deal_id, _client_id, _checkpoint)` para calcular `scheduled_at = entered_current_column_at + prazo_do_checkpoint` ao inserir cada tarefa-template.
-- Manter `seed_maintenance_tasks` como está (já agenda corretamente).
-- Nas tarefas criadas via `apply_column_automations` o `scheduled_at` já é preenchido (`now() + days_after_entry`). Sem alteração.
+Substituir as duas colunas por **uma única coluna chamada "Manutenção"** (entre "05 Entrega" e "Clientes finalizados"). O estado de cada cliente dentro dela é mostrado por um **badge colorido** no card, calculado em tempo real a partir das tarefas:
 
-### 2. Backfill (rodar uma vez)
-
-Para cada tarefa pendente sem `scheduled_at`:
-- Se for de checkpoint 01–05 → `scheduled_at = deals.entered_current_column_at + prazo do checkpoint`.
-- Se tiver `recurrence_days` → `scheduled_at = activities.created_at + recurrence_days`.
-- Tarefas manuais sem data permanecem sem data (não força).
-
-### 3. UI — destaque visual de atraso
-
-**`src/pages/CrmActivities.tsx`** (lista global) e **`src/components/crm/DealDetailModal.tsx`** (dentro do deal):
-- Data exibida em **vermelho (`text-destructive`)** quando vencida e pendente.
-- Badge **"Atrasada Xd"** (vermelha) ao lado do assunto.
-- Dentro de cada agrupamento, ordenar atrasadas no topo e em seguida por `scheduled_at` ascendente.
-- Manter o filtro "🔴 Em atraso" que já existe na CrmActivitiesView.
-
-**`src/components/crm/ActivityFormDialog.tsx`**: nenhum ajuste obrigatório (campo "Agendar para" já existe). Renomear o label para **"Vencimento"** para deixar claro que é prazo final.
-
-### 4. Sem alterações em
-
-- Auto-advance entre checkpoints (continua quando todas tarefas concluídas).
-- RLS, schema de `activities`.
-- Triggers de manutenção e completion.
-
-## Detalhes técnicos
-
-**Migração SQL** (1 migration, sem afetar dados existentes além do backfill):
-
-```sql
--- 1. Helper interno: prazo por checkpoint
-CREATE OR REPLACE FUNCTION public.checkpoint_due_days(_chk text)
-RETURNS int LANGUAGE sql IMMUTABLE AS $$
-  SELECT CASE _chk
-    WHEN '01' THEN 3
-    WHEN '02' THEN 5
-    WHEN '03' THEN 10
-    WHEN '04' THEN 10
-    WHEN '05' THEN 7
-    ELSE NULL
-  END
-$$;
-
--- 2. Atualizar seed_xplo_template_tasks: incluir scheduled_at no INSERT
---    scheduled_at := COALESCE(d.entered_current_column_at, now()) + checkpoint_due_days(_checkpoint) * interval '1 day'
-
--- 3. Backfill
-UPDATE public.activities a
-SET scheduled_at = d.entered_current_column_at + (public.checkpoint_due_days(a.checkpoint_code) || ' days')::interval
-FROM public.deals d
-WHERE a.deal_id = d.id
-  AND a.scheduled_at IS NULL
-  AND a.status = 'pending'
-  AND a.checkpoint_code IN ('01','02','03','04','05');
-
-UPDATE public.activities
-SET scheduled_at = created_at + (recurrence_days || ' days')::interval
-WHERE scheduled_at IS NULL
-  AND status = 'pending'
-  AND recurrence_days IS NOT NULL;
+```text
+┌─────────────────────────────┐
+│  Manutenção                 │
+│  ─────────────────────────  │
+│  ⚪ Pousada Mar Azul        │  → Aguardando início
+│     Sem tarefas geradas     │
+│                             │
+│  🟢 Clínica Bem-Estar       │  → Em dia
+│     Próx.: 7d (tráfego)     │
+│                             │
+│  🟡 Hotel Serra              │  → Tem pendência
+│     2 tarefas para hoje     │
+│                             │
+│  🔴 Restaurante X            │  → Atrasado
+│     3 atrasadas há 5d       │
+└─────────────────────────────┘
 ```
 
-**Frontend — helper compartilhado** em `src/lib/crmFormat.ts`:
-```ts
-export function getDueState(scheduledAt: string | null, status: string) {
-  if (!scheduledAt || status === "completed") return { overdue: false, daysLate: 0 };
-  const due = new Date(scheduledAt);
-  const now = new Date();
-  if (due >= now) return { overdue: false, daysLate: 0 };
-  const daysLate = Math.floor((now.getTime() - due.getTime()) / 86400000);
-  return { overdue: true, daysLate };
-}
+### Os 4 estados do badge
+
+| Badge | Quando aparece | Cor |
+|---|---|---|
+| **⚪ Aguardando início** | Cliente acabou de chegar na coluna; nenhuma tarefa de manutenção foi gerada ainda. Botão "Iniciar manutenção" gera as 5 tarefas recorrentes. | Cinza |
+| **🟢 Em dia** | Tem tarefas de manutenção, nenhuma vencida, nenhuma para hoje. | Verde |
+| **🟡 Para hoje** | Tem tarefa(s) com vencimento hoje, mas nada atrasado. | Amarelo |
+| **🔴 Atrasado** | Tem 1+ tarefa com vencimento já passado. Mostra quantas e há quantos dias. | Vermelho |
+
+> **Importante:** "concluída quando não tiver manutenção para fazer" = quando o usuário marca todas como concluídas e ainda não chegou a data da próxima recorrência, o cliente fica **🟢 Em dia** (não some da coluna). Ele só sai dessa coluna se você arrastar para "Clientes finalizados".
+
+### Iniciar a manutenção
+
+Hoje a geração das tarefas só dispara quando alguém move o deal para "Manutenção ativa". Com uma coluna só, a geração passa a acontecer de duas formas:
+
+- **Automático:** quando o deal cai automaticamente nessa coluna ao terminar a etapa 05. As 5 tarefas são criadas na hora.
+- **Manual:** se o deal já está na coluna sem tarefas (cliente antigo, ou alguém arrastou), aparece um botão **"Iniciar manutenção"** no card e no modal do deal, que gera as 5 tarefas.
+
+### Resumo lateral no topo da coluna
+
+No cabeçalho da coluna, um pequeno resumo:
 ```
-Usar nesse helper em CrmActivities e DealDetailModal para badge "Atrasada Xd" e classe `text-destructive`.
+Manutenção (12)
+🔴 2 atrasados • 🟡 1 hoje • 🟢 8 em dia • ⚪ 1 aguardando
+```
 
-## Arquivos afetados
+---
 
-- **Nova migração SQL** (funções + backfill).
-- `src/lib/crmFormat.ts` — adicionar `getDueState`.
-- `src/pages/CrmActivities.tsx` — badge vermelho + ordenação.
-- `src/components/crm/DealDetailModal.tsx` — badge vermelho + ordenação nas listas de tarefas.
-- `src/components/crm/ActivityFormDialog.tsx` — renomear label "Agendar para" → "Vencimento".
+## O que muda em cada lugar
 
-## Memória
+### Banco de dados
+- **Renomear** a coluna `maint_active` para apenas `Manutenção` (mantém `checkpoint_code = 'maint_active'` internamente para não quebrar triggers e tarefas já criadas — só muda o **nome visível**).
+- **Remover** a coluna `Manutenção pendente` (`maint_pending`). Deals que estiverem nela hoje são movidos para `maint_active`.
+- **Ajustar** o trigger `handle_activity_completion` (que hoje manda etapa 05 → `maint_pending`) para mandar direto para `maint_active`.
+- **Ajustar** o trigger `seed_maintenance_tasks` para também ser chamado quando o deal já está em `maint_active` mas ainda não tem tarefas (suporta o botão manual "Iniciar manutenção").
 
-Atualizar `mem://crm/pipeline-entrega-manutencao.md` com a tabela de prazos por checkpoint e a regra "toda tarefa tem `scheduled_at`; vencida = atraso".
+### Frontend
+- `KanbanColumn` / `DealCard` (`src/components/crm/`): calcular o estado do deal a partir das `activities` com `checkpoint_code = '06'` e renderizar o badge colorido + linha de status.
+- Cabeçalho da coluna "Manutenção": mostrar o resumo agregado.
+- `DealDetailModal`: botão "Iniciar manutenção" quando o deal está na coluna mas sem tarefas geradas.
+- Atualizar memória `mem://crm/pipeline-entrega-manutencao` para refletir a nova estrutura.
+
+### O que **não** muda
+- Tarefas já existentes continuam funcionando (template_key, recurrence_days, prazos atuais).
+- Lógica de tarefas atrasadas (badge vermelho na lista) já implementada continua valendo.
+- Colunas "Clientes finalizados", "Ganho", "Perdido" não mexem.
+
+---
+
+## Pergunta antes de executar
+
+Você concorda com a proposta de **fundir as duas colunas em uma única "Manutenção"** com badges dinâmicos por estado? Ou prefere manter duas colunas mas só **renomear** para nomes mais claros (ex.: "Aguardando manutenção" e "Em manutenção")?
+
+Se aprovar a fusão, sigo com o plano acima. Se preferir só renomear, ajusto o plano para uma versão mais leve (só muda nomes + textos de ajuda, sem mexer em triggers).

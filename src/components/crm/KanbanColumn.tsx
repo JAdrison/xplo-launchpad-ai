@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DealCard } from "./DealCard";
 import { ColumnAutomationDialog } from "./ColumnAutomationDialog";
-import { formatBRL } from "@/lib/crmFormat";
+import { formatBRL, getMaintenanceStatus } from "@/lib/crmFormat";
 import { cn } from "@/lib/utils";
 import type { PipelineColumn, DealWithMeta } from "@/hooks/useCrm";
 
@@ -26,6 +26,18 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal, onColumnCha
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const total = deals.reduce((s, d) => s + (d.value_cents || 0), 0);
   const [autoOpen, setAutoOpen] = useState(false);
+
+  const isMaintenance = column.checkpoint_code === "maint_active";
+  const maintSummary = isMaintenance
+    ? deals.reduce(
+        (acc, d) => {
+          const s = getMaintenanceStatus(d.maintenance);
+          acc[s] = (acc[s] || 0) + 1;
+          return acc;
+        },
+        { waiting: 0, ontrack: 0, today: 0, overdue: 0 } as Record<string, number>,
+      )
+    : null;
 
   return (
     <div className="flex-shrink-0 w-72 flex flex-col bg-muted/30 rounded-lg">
@@ -48,6 +60,22 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal, onColumnCha
           <p className="text-xs text-muted-foreground">
             {formatBRL(total)} · {deals.length} {deals.length === 1 ? "negócio" : "negócios"}
           </p>
+          {maintSummary && deals.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] font-medium">
+              {maintSummary.overdue > 0 && (
+                <span className="text-red-600">🔴 {maintSummary.overdue} atrasado{maintSummary.overdue > 1 ? "s" : ""}</span>
+              )}
+              {maintSummary.today > 0 && (
+                <span className="text-amber-700">🟡 {maintSummary.today} hoje</span>
+              )}
+              {maintSummary.ontrack > 0 && (
+                <span className="text-emerald-700">🟢 {maintSummary.ontrack} em dia</span>
+              )}
+              {maintSummary.waiting > 0 && (
+                <span className="text-slate-600">⚪ {maintSummary.waiting} aguardando</span>
+              )}
+            </div>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -71,7 +99,7 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal, onColumnCha
         )}
       >
         {deals.map((d) => (
-          <DealCard key={d.id} deal={d} onClick={() => onOpenDeal(d.id)} />
+          <DealCard key={d.id} deal={d} columnCheckpoint={column.checkpoint_code} onClick={() => onOpenDeal(d.id)} />
         ))}
       </div>
 

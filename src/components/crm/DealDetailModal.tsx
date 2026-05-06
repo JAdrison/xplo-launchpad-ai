@@ -33,7 +33,7 @@ interface DealFull {
   responsible_id: string | null; entered_current_column_at: string;
 }
 interface ClientLite { id: string; name: string; phone: string | null; email: string | null; xplo_plan?: XploPlan | null; xplo_bonuses?: XploBonus[] | null; }
-interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; }
+interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; checkpoint_code?: string | null; }
 interface Activity {
   id: string; type: "lembrete" | "mensagem" | "ligacao" | "email"; subject: string; description: string | null;
   scheduled_at: string | null; status: string; completed_at: string | null;
@@ -69,7 +69,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
 
     const [cRes, colRes, aRes, nRes, hRes] = await Promise.all([
       supabase.from("clients").select("id, name, phone, email, xplo_plan, xplo_bonuses").eq("id", d.client_id).maybeSingle(),
-      supabase.from("pipeline_columns").select("id, name, color, sort_order, column_type").eq("pipeline_id", d.pipeline_id).order("sort_order"),
+      supabase.from("pipeline_columns").select("id, name, color, sort_order, column_type, checkpoint_code").eq("pipeline_id", d.pipeline_id).order("sort_order"),
       supabase.from("activities").select("*").eq("deal_id", dealId).order("scheduled_at", { ascending: true, nullsFirst: false }),
       supabase.from("notes").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
       supabase.from("deal_history").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
@@ -271,6 +271,33 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     </button>
                   ))}
                 </div>
+                {(() => {
+                  const inMaint = currentCol?.checkpoint_code === "maint_active";
+                  const hasMaintTasks = activities.some((a) => a.checkpoint_code === "06");
+                  if (!inMaint || hasMaintTasks) return null;
+                  return (
+                    <div className="mb-4 p-3 rounded-md border border-dashed border-primary/40 bg-primary/5">
+                      <p className="text-sm font-semibold mb-1">Manutenção ainda não iniciada</p>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Gere as 5 tarefas recorrentes (Instagram, tráfego e I.A) para começar a operar a manutenção desse cliente.
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const { error } = await supabase.rpc("start_maintenance_for_deal", { _deal_id: deal.id });
+                          if (error) {
+                            toast({ title: "Erro ao iniciar manutenção", description: error.message, variant: "destructive" });
+                          } else {
+                            toast({ title: "Manutenção iniciada", description: "Tarefas recorrentes geradas." });
+                            refetch();
+                          }
+                        }}
+                      >
+                        Iniciar manutenção
+                      </Button>
+                    </div>
+                  );
+                })()}
                 <h4 className="font-semibold mb-2 text-sm">Checkpoints do processo XPLO</h4>
                 {(() => {
                   const groups = new Map<string, { code: string; label: string; items: Activity[] }>();

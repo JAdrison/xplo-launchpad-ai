@@ -1465,6 +1465,10 @@ export type Database = {
         Args: { _checkpoint: string; _client_id: string; _deal_id: string }
         Returns: undefined
       }
+      start_maintenance_for_deal: {
+        Args: { _deal_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "pending"
