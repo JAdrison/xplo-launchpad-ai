@@ -28,7 +28,7 @@ export async function syncDealTasksFromPlan(
   const rows = toInsert.map((t) => ({
     deal_id: dealId,
     client_id: clientId,
-    type: "task" as const,
+    type: "lembrete" as const,
     subject: t.subject,
     description: t.description,
     status: "pending" as const,
@@ -40,7 +40,7 @@ export async function syncDealTasksFromPlan(
     required_bonus: t.requiredBonus ?? null,
   }));
 
-  const { error } = await supabase.from("activities").insert(rows);
+  const { error } = await supabase.from("activities").insert(rows as any);
   if (error) {
     // O unique index pode rejeitar inserts em corrida — ignorar silenciosamente
     if (!String(error.message).includes("duplicate")) throw error;
