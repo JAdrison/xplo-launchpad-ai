@@ -93,6 +93,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         experiencia: pd.experiencia || "",
         extras: pd.extras || "",
         promotions: data.promotions || "",
+        passeios: Array.isArray(pd.passeios) ? pd.passeios : [],
       });
     }
     setIsLoading(false);
