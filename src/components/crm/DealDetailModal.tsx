@@ -69,7 +69,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
 
     const [cRes, colRes, aRes, nRes, hRes] = await Promise.all([
       supabase.from("clients").select("id, name, phone, email, xplo_plan, xplo_bonuses").eq("id", d.client_id).maybeSingle(),
-      supabase.from("pipeline_columns").select("id, name, color, sort_order, column_type").eq("pipeline_id", d.pipeline_id).order("sort_order"),
+      supabase.from("pipeline_columns").select("id, name, color, sort_order, column_type, checkpoint_code").eq("pipeline_id", d.pipeline_id).order("sort_order"),
       supabase.from("activities").select("*").eq("deal_id", dealId).order("scheduled_at", { ascending: true, nullsFirst: false }),
       supabase.from("notes").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
       supabase.from("deal_history").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
