@@ -398,28 +398,41 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     <h4 className="text-sm font-semibold mb-2">{g.title}</h4>
                     <div className="space-y-2">
                       {g.list.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma.</p>}
-                      {g.list.map((a) => (
-                        <div key={a.id} className="flex items-center gap-2 p-3 rounded-md border border-border">
-                          <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">{a.type}</Badge>
-                              <p className="text-sm font-medium truncate">{a.subject}</p>
+                      {g.list.map((a) => {
+                        const due = getDueState(a.scheduled_at, a.status);
+                        return (
+                          <div
+                            key={a.id}
+                            className={`flex items-center gap-2 p-3 rounded-md border ${
+                              due.overdue ? "border-destructive/40 bg-destructive/5" : "border-border"
+                            }`}
+                          >
+                            <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-xs">{a.type}</Badge>
+                                <p className="text-sm font-medium truncate">{a.subject}</p>
+                                {due.overdue && (
+                                  <Badge variant="destructive" className="text-[10px] py-0 h-4">
+                                    Atrasada {due.daysLate}d
+                                  </Badge>
+                                )}
+                              </div>
+                              {a.scheduled_at && (
+                                <p className={`text-xs mt-1 ${due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                  Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                </p>
+                              )}
                             </div>
-                            {a.scheduled_at && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                              </p>
-                            )}
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
