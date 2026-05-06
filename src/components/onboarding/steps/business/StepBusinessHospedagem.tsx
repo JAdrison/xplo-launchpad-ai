@@ -115,6 +115,9 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     }
     setIsSaving(true);
     try {
+      const cleanPasseios = form.passeios
+        .map((p) => ({ nome: (p.nome || "").trim(), descricao: (p.descricao || "").trim() }))
+        .filter((p) => p.nome.length > 0);
       const profile_data = {
         type: form.type,
         location: form.location.trim(),
@@ -123,6 +126,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         comodidades: form.comodidades,
         experiencia: form.experiencia,
         extras: form.extras,
+        passeios: cleanPasseios,
       };
       const payload = {
         profile_data,
