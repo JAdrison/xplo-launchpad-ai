@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { JOB_FUNCTION_LABELS, type JobFunction } from "@/lib/jobFunctions";
+import { JOB_FUNCTIONS, JOB_FUNCTION_LABELS, type JobFunction } from "@/lib/jobFunctions";
 
 type ActivityType = "lembrete" | "mensagem" | "ligacao" | "email";
 
@@ -33,9 +33,7 @@ interface Props {
   activity?: ActivityEditable | null;
 }
 
-const FUNCTIONS: (JobFunction | "none")[] = [
-  "none", "social_media", "video_editor", "designer", "ads_manager", "ai_specialist", "salesperson", "fulfillment", "manager"
-];
+const FUNCTIONS: (JobFunction | "none")[] = ["none", ...JOB_FUNCTIONS];
 
 export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCreated, activity }: Props) {
   const { user } = useAuth();
