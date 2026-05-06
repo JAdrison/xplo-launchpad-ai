@@ -299,12 +299,26 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                               <span className="text-xs text-muted-foreground">{done}/{g.items.length}</span>
                             </div>
                             <div className="divide-y divide-border">
-                              {g.items.map((a) => (
-                                <div key={a.id} className="flex items-start gap-2 p-2">
+                              {[...g.items].sort((a, b) => {
+                                const da = getDueState(a.scheduled_at, a.status);
+                                const db = getDueState(b.scheduled_at, b.status);
+                                if (da.overdue !== db.overdue) return da.overdue ? -1 : 1;
+                                const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Infinity;
+                                const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
+                                return ta - tb;
+                              }).map((a) => {
+                                const due = getDueState(a.scheduled_at, a.status);
+                                return (
+                                <div key={a.id} className={`flex items-start gap-2 p-2 ${due.overdue ? "bg-destructive/5" : ""}`}>
                                   <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <p className={`text-sm ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
+                                      {due.overdue && (
+                                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-destructive text-destructive-foreground">
+                                          Atrasada {due.daysLate}d
+                                        </span>
+                                      )}
                                       {a.required_plan === "pro" && (
                                         <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-primary/70 text-primary-foreground">Pro</span>
                                       )}
@@ -322,6 +336,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                         </span>
                                       )}
                                     </div>
+                                    {a.scheduled_at && (
+                                      <p className={`text-[11px] mt-0.5 ${due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                        Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
+                                      </p>
+                                    )}
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
@@ -333,7 +352,8 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                     </Button>
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );
