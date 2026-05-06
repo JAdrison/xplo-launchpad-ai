@@ -15,6 +15,8 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, initialsOf } from "@/lib/crmFormat";
 import { ActivityFormDialog } from "./ActivityFormDialog";
+import { PlanBadge } from "@/components/client/PlanBadge";
+import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -29,11 +31,13 @@ interface DealFull {
   status: "active" | "won" | "lost"; column_id: string; pipeline_id: string;
   responsible_id: string | null; entered_current_column_at: string;
 }
-interface ClientLite { id: string; name: string; phone: string | null; email: string | null; }
+interface ClientLite { id: string; name: string; phone: string | null; email: string | null; xplo_plan?: XploPlan | null; xplo_bonuses?: XploBonus[] | null; }
 interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; }
 interface Activity {
   id: string; type: string; subject: string; description: string | null;
   scheduled_at: string | null; status: string; completed_at: string | null;
+  checkpoint_code?: string | null; checkpoint_label?: string | null;
+  required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
 }
 interface Note { id: string; author_id: string; content: string; created_at: string; }
 interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; }
@@ -59,7 +63,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     setDeal(d as DealFull);
 
     const [cRes, colRes, aRes, nRes, hRes] = await Promise.all([
-      supabase.from("clients").select("id, name, phone, email").eq("id", d.client_id).maybeSingle(),
+      supabase.from("clients").select("id, name, phone, email, xplo_plan, xplo_bonuses").eq("id", d.client_id).maybeSingle(),
       supabase.from("pipeline_columns").select("id, name, color, sort_order, column_type").eq("pipeline_id", d.pipeline_id).order("sort_order"),
       supabase.from("activities").select("*").eq("deal_id", dealId).order("scheduled_at", { ascending: true, nullsFirst: false }),
       supabase.from("notes").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
