@@ -2,7 +2,7 @@
 
 > Plataforma de estratégia de marketing potencializada por IA — onboarding estratégico, geração de ofertas, landing pages e anúncios, CRM Kanban e gestão completa de clientes em um único workspace.
 
-![XPLO STARTER](docs/images/hero.jpg)
+![XPLO STARTER — Dashboard Command Center](docs/images/dashboard.png)
 
 🌐 **Produção:** [starter.xplo.com.br](https://starter.xplo.com.br)
 🚀 **Stack:** React 18 · Vite · TypeScript · Tailwind · shadcn/ui · Lovable Cloud (Supabase)
@@ -34,7 +34,7 @@ Tudo isso conectado a um **CRM Kanban** com pipelines de aquisição e entrega, 
 
 ### 1. Workspace unificado
 
-![Workspace](docs/images/workspace.jpg)
+![Workspace](docs/images/workspace.png)
 
 Tela única (`/workspace`) que substituiu Clientes, Onboarding, Gerador de IA e Ativos. Mostra:
 
@@ -45,7 +45,7 @@ Tela única (`/workspace`) que substituiu Clientes, Onboarding, Gerador de IA e 
 
 ### 2. Onboarding X1 (7 etapas estratégicas)
 
-![Onboarding](docs/images/onboarding.jpg)
+![Atividades CRM](docs/images/atividades.png)
 
 Wizard que constrói a base estratégica do cliente:
 
@@ -61,7 +61,7 @@ Suporta **onboarding externo** via token (link de 7 dias) para o próprio client
 
 ### 3. CRM Kanban + Atividades
 
-![CRM](docs/images/crm.jpg)
+![CRM Kanban](docs/images/crm.png)
 
 - **Kanban** (`/crm`) com pipelines de **Aquisição** e **Entrega** (5 checkpoints com auto-advance + coluna "Manutenção" com badges dinâmicos).
 - **Atividades** (`/crm/atividades`) — visão global de tarefas com filtros por função, responsável e status (a fazer · próximas do vencimento · vencidas · feitas), com cores verde/amarelo/vermelho por prazo.
