@@ -17,6 +17,7 @@ import { formatBRL, initialsOf } from "@/lib/crmFormat";
 import { ActivityFormDialog } from "./ActivityFormDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
+import { JOB_FUNCTION_LABELS, JOB_FUNCTION_COLORS, type JobFunction } from "@/lib/jobFunctions";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
