@@ -15,6 +15,20 @@ export const timeInColumn = (date?: string | null) => {
   return formatDistanceToNow(new Date(date), { locale: ptBR, addSuffix: false });
 };
 
+export interface DueState {
+  overdue: boolean;
+  daysLate: number;
+}
+
+/** Calcula se uma tarefa está atrasada e há quantos dias. */
+export const getDueState = (scheduledAt: string | null | undefined, status: string | null | undefined): DueState => {
+  if (!scheduledAt || status === "completed") return { overdue: false, daysLate: 0 };
+  const due = new Date(scheduledAt).getTime();
+  const now = Date.now();
+  if (due >= now) return { overdue: false, daysLate: 0 };
+  return { overdue: true, daysLate: Math.max(1, Math.floor((now - due) / 86400000)) };
+};
+
 export const initialsOf = (name?: string | null) =>
   (name || "?")
     .split(" ")

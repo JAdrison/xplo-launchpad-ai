@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DealDetailModal } from "@/components/crm/DealDetailModal";
 import { cn } from "@/lib/utils";
+import { getDueState } from "@/lib/crmFormat";
 
 interface ActivityRow {
   id: string;
@@ -99,7 +100,7 @@ export function CrmActivitiesView() {
   };
 
   const filtered = useMemo(() => {
-    return activities.filter((a) => {
+    const list = activities.filter((a) => {
       if (scope === "mine" && a.responsible_id !== user?.id) return false;
       if (pipelineFilter !== "all" && a.deals?.pipeline_id !== pipelineFilter) return false;
 
@@ -118,6 +119,16 @@ export function CrmActivitiesView() {
         case "completed":
           return isCompleted;
       }
+    });
+
+    // Ordena: atrasadas primeiro (mais antigas no topo), depois por data ascendente
+    return list.sort((a, b) => {
+      const da = getDueState(a.scheduled_at, a.status);
+      const db = getDueState(b.scheduled_at, b.status);
+      if (da.overdue !== db.overdue) return da.overdue ? -1 : 1;
+      const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Infinity;
+      const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
+      return ta - tb;
     });
   }, [activities, scope, bucket, pipelineFilter, user]);
 
@@ -202,10 +213,14 @@ export function CrmActivitiesView() {
                 const colorClass = TYPE_COLORS[a.type];
                 const scheduled = a.scheduled_at ? new Date(a.scheduled_at) : null;
                 const isCompleted = a.status === "completed";
+                const due = getDueState(a.scheduled_at, a.status);
                 return (
                   <li
                     key={a.id}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      "flex items-start gap-3 p-3 rounded-lg border bg-background hover:bg-muted/30 transition-colors",
+                      due.overdue ? "border-destructive/40 bg-destructive/5" : "border-border"
+                    )}
                   >
                     <button onClick={() => toggleStatus(a)} className="mt-0.5 shrink-0" aria-label="Concluir">
                       {isCompleted ? (
@@ -219,11 +234,23 @@ export function CrmActivitiesView() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={cn("text-sm font-medium", isCompleted && "line-through text-muted-foreground")}>
-                          {a.subject}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <p className={cn("text-sm font-medium", isCompleted && "line-through text-muted-foreground")}>
+                            {a.subject}
+                          </p>
+                          {due.overdue && (
+                            <Badge variant="destructive" className="text-[10px] py-0 h-4">
+                              Atrasada {due.daysLate}d
+                            </Badge>
+                          )}
+                        </div>
                         {scheduled && (
-                          <span className="text-xs text-muted-foreground shrink-0">
+                          <span
+                            className={cn(
+                              "text-xs shrink-0",
+                              due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"
+                            )}
+                          >
                             {format(scheduled, "dd MMM, HH:mm", { locale: ptBR })}
                           </span>
                         )}

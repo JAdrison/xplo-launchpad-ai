@@ -58,3 +58,4 @@
 - [XPLO LAB credenciais](mem://features/xplo-lab-credenciais) — Login/senha XPLO LAB por cliente, só admin, nunca no onboarding
 - [Pipeline Entrega + Manutenção](mem://crm/pipeline-entrega-manutencao) — 5 colunas auto-advance + 2 colunas manutenção com tarefas recorrentes via triggers
 - [Funções operacionais](mem://crm/funcoes-operacionais) — Enum job_function, user_job_functions, required_function em activities + trigger de atribuição automática
+- [CRM prazos tarefas](mem://crm/prazos-tarefas) — Prazos fixos por checkpoint (01:3d, 02:5d, 03:10d, 04:10d, 05:7d) + badge vermelho "Atrasada Xd"

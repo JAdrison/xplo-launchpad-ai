@@ -13,7 +13,7 @@ import { Phone, Mail, ExternalLink, Plus, Send, CheckCircle2, XCircle, Pencil, T
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { formatBRL, initialsOf } from "@/lib/crmFormat";
+import { formatBRL, initialsOf, getDueState } from "@/lib/crmFormat";
 import { ActivityFormDialog, type ActivityEditable } from "./ActivityFormDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
@@ -299,12 +299,26 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                               <span className="text-xs text-muted-foreground">{done}/{g.items.length}</span>
                             </div>
                             <div className="divide-y divide-border">
-                              {g.items.map((a) => (
-                                <div key={a.id} className="flex items-start gap-2 p-2">
+                              {[...g.items].sort((a, b) => {
+                                const da = getDueState(a.scheduled_at, a.status);
+                                const db = getDueState(b.scheduled_at, b.status);
+                                if (da.overdue !== db.overdue) return da.overdue ? -1 : 1;
+                                const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Infinity;
+                                const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
+                                return ta - tb;
+                              }).map((a) => {
+                                const due = getDueState(a.scheduled_at, a.status);
+                                return (
+                                <div key={a.id} className={`flex items-start gap-2 p-2 ${due.overdue ? "bg-destructive/5" : ""}`}>
                                   <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <p className={`text-sm ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
+                                      {due.overdue && (
+                                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-destructive text-destructive-foreground">
+                                          Atrasada {due.daysLate}d
+                                        </span>
+                                      )}
                                       {a.required_plan === "pro" && (
                                         <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-primary/70 text-primary-foreground">Pro</span>
                                       )}
@@ -322,6 +336,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                         </span>
                                       )}
                                     </div>
+                                    {a.scheduled_at && (
+                                      <p className={`text-[11px] mt-0.5 ${due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                        Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
+                                      </p>
+                                    )}
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
@@ -333,7 +352,8 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                     </Button>
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -378,28 +398,41 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     <h4 className="text-sm font-semibold mb-2">{g.title}</h4>
                     <div className="space-y-2">
                       {g.list.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma.</p>}
-                      {g.list.map((a) => (
-                        <div key={a.id} className="flex items-center gap-2 p-3 rounded-md border border-border">
-                          <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">{a.type}</Badge>
-                              <p className="text-sm font-medium truncate">{a.subject}</p>
+                      {g.list.map((a) => {
+                        const due = getDueState(a.scheduled_at, a.status);
+                        return (
+                          <div
+                            key={a.id}
+                            className={`flex items-center gap-2 p-3 rounded-md border ${
+                              due.overdue ? "border-destructive/40 bg-destructive/5" : "border-border"
+                            }`}
+                          >
+                            <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-xs">{a.type}</Badge>
+                                <p className="text-sm font-medium truncate">{a.subject}</p>
+                                {due.overdue && (
+                                  <Badge variant="destructive" className="text-[10px] py-0 h-4">
+                                    Atrasada {due.daysLate}d
+                                  </Badge>
+                                )}
+                              </div>
+                              {a.scheduled_at && (
+                                <p className={`text-xs mt-1 ${due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                  Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                </p>
+                              )}
                             </div>
-                            {a.scheduled_at && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                              </p>
-                            )}
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
