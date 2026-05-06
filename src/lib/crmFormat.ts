@@ -18,15 +18,31 @@ export const timeInColumn = (date?: string | null) => {
 export interface DueState {
   overdue: boolean;
   daysLate: number;
+  /** "completed" | "ok" (verde) | "soon" (amarelo, ≤3d) | "overdue" (vermelho) | "none" */
+  level: "completed" | "ok" | "soon" | "overdue" | "none";
+  /** Classes Tailwind prontas para aplicar no texto da data. */
+  textClass: string;
 }
 
-/** Calcula se uma tarefa está atrasada e há quantos dias. */
+/** Calcula se uma tarefa está atrasada/próxima do vencimento. */
 export const getDueState = (scheduledAt: string | null | undefined, status: string | null | undefined): DueState => {
-  if (!scheduledAt || status === "completed") return { overdue: false, daysLate: 0 };
+  if (status === "completed") {
+    return { overdue: false, daysLate: 0, level: "completed", textClass: "text-muted-foreground line-through" };
+  }
+  if (!scheduledAt) {
+    return { overdue: false, daysLate: 0, level: "none", textClass: "text-muted-foreground" };
+  }
   const due = new Date(scheduledAt).getTime();
   const now = Date.now();
-  if (due >= now) return { overdue: false, daysLate: 0 };
-  return { overdue: true, daysLate: Math.max(1, Math.floor((now - due) / 86400000)) };
+  if (due < now) {
+    const daysLate = Math.max(1, Math.floor((now - due) / 86400000));
+    return { overdue: true, daysLate, level: "overdue", textClass: "text-red-600 font-semibold" };
+  }
+  const daysLeft = Math.ceil((due - now) / 86400000);
+  if (daysLeft <= 3) {
+    return { overdue: false, daysLate: 0, level: "soon", textClass: "text-amber-600 font-medium" };
+  }
+  return { overdue: false, daysLate: 0, level: "ok", textClass: "text-emerald-600 font-medium" };
 };
 
 export type MaintenanceStatus = "none" | "waiting" | "ontrack" | "today" | "overdue";
