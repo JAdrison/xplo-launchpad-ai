@@ -213,10 +213,14 @@ export function CrmActivitiesView() {
                 const colorClass = TYPE_COLORS[a.type];
                 const scheduled = a.scheduled_at ? new Date(a.scheduled_at) : null;
                 const isCompleted = a.status === "completed";
+                const due = getDueState(a.scheduled_at, a.status);
                 return (
                   <li
                     key={a.id}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      "flex items-start gap-3 p-3 rounded-lg border bg-background hover:bg-muted/30 transition-colors",
+                      due.overdue ? "border-destructive/40 bg-destructive/5" : "border-border"
+                    )}
                   >
                     <button onClick={() => toggleStatus(a)} className="mt-0.5 shrink-0" aria-label="Concluir">
                       {isCompleted ? (
@@ -230,11 +234,23 @@ export function CrmActivitiesView() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={cn("text-sm font-medium", isCompleted && "line-through text-muted-foreground")}>
-                          {a.subject}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <p className={cn("text-sm font-medium", isCompleted && "line-through text-muted-foreground")}>
+                            {a.subject}
+                          </p>
+                          {due.overdue && (
+                            <Badge variant="destructive" className="text-[10px] py-0 h-4">
+                              Atrasada {due.daysLate}d
+                            </Badge>
+                          )}
+                        </div>
                         {scheduled && (
-                          <span className="text-xs text-muted-foreground shrink-0">
+                          <span
+                            className={cn(
+                              "text-xs shrink-0",
+                              due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"
+                            )}
+                          >
                             {format(scheduled, "dd MMM, HH:mm", { locale: ptBR })}
                           </span>
                         )}
