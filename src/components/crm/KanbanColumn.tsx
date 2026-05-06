@@ -99,7 +99,7 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal, onColumnCha
         )}
       >
         {deals.map((d) => (
-          <DealCard key={d.id} deal={d} onClick={() => onOpenDeal(d.id)} />
+          <DealCard key={d.id} deal={d} columnCheckpoint={column.checkpoint_code} onClick={() => onOpenDeal(d.id)} />
         ))}
       </div>
 
