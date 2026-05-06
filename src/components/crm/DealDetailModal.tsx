@@ -324,6 +324,14 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                     </div>
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditActivity(a)} title="Editar">
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -338,6 +346,12 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                               <div key={a.id} className="flex items-start gap-2 p-2">
                                 <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
                                 <p className={`text-sm flex-1 ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditActivity(a)} title="Editar">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                             ))}
                           </div>
