@@ -708,14 +708,24 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
               <FullField label="Ticket médio" value={data.profile?.average_ticket} />
               <FullField label="Modelo de venda" value={data.profile?.sales_model} />
               <FullField label="Região(ões)" value={data.profile?.region} />
-              {Object.keys(profileData).length > 0 && (
+              {Object.keys(profileData).filter((k) => k !== "passeios").length > 0 && (
                 <>
                   <Separator className="my-2" />
                   <p className="text-xs text-muted-foreground mb-1">Campos específicos do nicho:</p>
-                  {Object.entries(profileData).map(([k, v]) => (
-                    <FullField key={k} label={humanizeKey(k)} value={v} />
-                  ))}
+                  {Object.entries(profileData)
+                    .filter(([k]) => k !== "passeios")
+                    .map(([k, v]) => (
+                      <FullField key={k} label={humanizeKey(k)} value={v} />
+                    ))}
                 </>
+              )}
+              {(client.niche_type === "hospedagem" || Array.isArray(profileData.passeios)) && (
+                <PasseiosEditor
+                  profileId={data.profile?.id ?? null}
+                  profileData={profileData}
+                  initialPasseios={Array.isArray(profileData.passeios) ? (profileData.passeios as Passeio[]) : []}
+                  onSaved={() => setRefreshKey((k) => k + 1)}
+                />
               )}
             </FullSection>
 
