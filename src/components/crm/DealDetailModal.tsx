@@ -40,6 +40,7 @@ interface Activity {
   checkpoint_code?: string | null; checkpoint_label?: string | null;
   required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
   recurrence_days?: number | null;
+  required_function?: JobFunction | null; responsible_id?: string | null;
 }
 interface Note { id: string; author_id: string; content: string; created_at: string; }
 interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; }
