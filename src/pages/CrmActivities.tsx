@@ -245,12 +245,7 @@ export function CrmActivitiesView() {
                           )}
                         </div>
                         {scheduled && (
-                          <span
-                            className={cn(
-                              "text-xs shrink-0",
-                              due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"
-                            )}
-                          >
+                          <span className={cn("text-xs shrink-0", due.textClass)}>
                             {format(scheduled, "dd MMM, HH:mm", { locale: ptBR })}
                           </span>
                         )}
