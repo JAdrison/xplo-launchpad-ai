@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, ExternalLink, Plus, Send, CheckCircle2, XCircle } from "lucide-react";
+import { Phone, Mail, ExternalLink, Plus, Send, CheckCircle2, XCircle, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, initialsOf } from "@/lib/crmFormat";
-import { ActivityFormDialog } from "./ActivityFormDialog";
+import { ActivityFormDialog, type ActivityEditable } from "./ActivityFormDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 import { JOB_FUNCTION_LABELS, JOB_FUNCTION_COLORS, type JobFunction } from "@/lib/jobFunctions";
@@ -35,8 +35,9 @@ interface DealFull {
 interface ClientLite { id: string; name: string; phone: string | null; email: string | null; xplo_plan?: XploPlan | null; xplo_bonuses?: XploBonus[] | null; }
 interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; }
 interface Activity {
-  id: string; type: string; subject: string; description: string | null;
+  id: string; type: "lembrete" | "mensagem" | "ligacao" | "email"; subject: string; description: string | null;
   scheduled_at: string | null; status: string; completed_at: string | null;
+  duration_minutes?: number | null;
   checkpoint_code?: string | null; checkpoint_label?: string | null;
   required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
   recurrence_days?: number | null;
@@ -56,6 +57,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [history, setHistory] = useState<HistoryEvt[]>([]);
   const [newNote, setNewNote] = useState("");
   const [actDialog, setActDialog] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
 
   const open = !!dealId;
 
@@ -102,6 +104,27 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
       });
       refetch();
     }
+  };
+
+  const openEditActivity = (a: Activity) => {
+    setEditingActivity({
+      id: a.id,
+      type: a.type,
+      subject: a.subject,
+      description: a.description,
+      scheduled_at: a.scheduled_at,
+      duration_minutes: a.duration_minutes ?? null,
+      required_function: a.required_function ?? null,
+      recurrence_days: a.recurrence_days ?? null,
+    });
+    setActDialog(true);
+  };
+
+  const deleteActivity = async (a: Activity) => {
+    if (!confirm(`Excluir tarefa "${a.subject}"?`)) return;
+    const { error } = await supabase.from("activities").delete().eq("id", a.id);
+    if (error) toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    else { toast({ title: "Tarefa excluída" }); refetch(); onChanged(); }
   };
 
   const addNote = async () => {
@@ -301,6 +324,14 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                     </div>
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditActivity(a)} title="Editar">
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -315,6 +346,12 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                               <div key={a.id} className="flex items-start gap-2 p-2">
                                 <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
                                 <p className={`text-sm flex-1 ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditActivity(a)} title="Editar">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                             ))}
                           </div>
@@ -328,7 +365,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               {/* Atividades */}
               <TabsContent value="atividades" className="flex-1 overflow-y-auto p-6 mt-0">
                 <div className="flex justify-end mb-4">
-                  <Button size="sm" onClick={() => setActDialog(true)}>
+                  <Button size="sm" onClick={() => { setEditingActivity(null); setActDialog(true); }}>
                     <Plus className="h-4 w-4 mr-1" /> Criar atividade
                   </Button>
                 </div>
@@ -355,6 +392,12 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                               </p>
                             )}
                           </div>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -407,9 +450,10 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
 
         <ActivityFormDialog
           open={actDialog}
-          onOpenChange={setActDialog}
+          onOpenChange={(v) => { setActDialog(v); if (!v) setEditingActivity(null); }}
           dealId={deal.id}
           clientId={deal.client_id}
+          activity={editingActivity}
           onCreated={() => { refetch(); onChanged(); }}
         />
       </DialogContent>
