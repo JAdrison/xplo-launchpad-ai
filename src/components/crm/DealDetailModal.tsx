@@ -17,6 +17,7 @@ import { formatBRL, initialsOf } from "@/lib/crmFormat";
 import { ActivityFormDialog } from "./ActivityFormDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
+import { JOB_FUNCTION_LABELS, JOB_FUNCTION_COLORS, type JobFunction } from "@/lib/jobFunctions";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -39,6 +40,7 @@ interface Activity {
   checkpoint_code?: string | null; checkpoint_label?: string | null;
   required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
   recurrence_days?: number | null;
+  required_function?: JobFunction | null; responsible_id?: string | null;
 }
 interface Note { id: string; author_id: string; content: string; created_at: string; }
 interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; }
@@ -289,6 +291,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                       {a.recurrence_days && (
                                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
                                           🔁 a cada {a.recurrence_days}d
+                                        </span>
+                                      )}
+                                      {a.required_function && (
+                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${JOB_FUNCTION_COLORS[a.required_function]}`}>
+                                          {JOB_FUNCTION_LABELS[a.required_function]}
                                         </span>
                                       )}
                                     </div>

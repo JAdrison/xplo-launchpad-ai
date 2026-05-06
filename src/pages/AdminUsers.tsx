@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { UserJobFunctionsManager } from "@/components/admin/UserJobFunctionsManager";
 
 const MASTER_EMAIL = "xplolabcreator@gmail.com";
 
@@ -369,6 +370,11 @@ export default function AdminUsers() {
                         Desde:{" "}
                         {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </p>
+                      {user.role !== "pending" && (
+                        <div className="pt-2">
+                          <UserJobFunctionsManager userId={user.user_id} disabled={isMaster} />
+                        </div>
+                      )}
                     </div>
                     {!isMaster && (
                       <div className="flex items-center gap-2 flex-wrap">
