@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { UserJobFunctionsManager } from "@/components/admin/UserJobFunctionsManager";
 
 const MASTER_EMAIL = "xplolabcreator@gmail.com";
 
