@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import type { PipelineColumn, DealWithMeta } from "@/hooks/useCrm";
 
 interface Props {
-  column: PipelineColumn;
+  column: PipelineColumn & { checkpoint_code?: string | null };
   deals: DealWithMeta[];
   onAddDeal: (columnId: string) => void;
   onOpenDeal: (dealId: string) => void;
@@ -38,6 +38,11 @@ export function KanbanColumn({ column, deals, onAddDeal, onOpenDeal, onColumnCha
             <h3 className="text-sm font-semibold truncate">{column.name}</h3>
             {column.automation_enabled && (
               <Zap className="h-3 w-3 text-primary shrink-0" aria-label="Automação ativa" />
+            )}
+            {column.checkpoint_code && /^0[1-5]$/.test(column.checkpoint_code) && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                AUTO
+              </span>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
