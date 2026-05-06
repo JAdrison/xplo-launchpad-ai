@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, ExternalLink, Plus, Send, CheckCircle2, XCircle } from "lucide-react";
+import { Phone, Mail, ExternalLink, Plus, Send, CheckCircle2, XCircle, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, initialsOf } from "@/lib/crmFormat";
-import { ActivityFormDialog } from "./ActivityFormDialog";
+import { ActivityFormDialog, type ActivityEditable } from "./ActivityFormDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 import { JOB_FUNCTION_LABELS, JOB_FUNCTION_COLORS, type JobFunction } from "@/lib/jobFunctions";
@@ -35,8 +35,9 @@ interface DealFull {
 interface ClientLite { id: string; name: string; phone: string | null; email: string | null; xplo_plan?: XploPlan | null; xplo_bonuses?: XploBonus[] | null; }
 interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; }
 interface Activity {
-  id: string; type: string; subject: string; description: string | null;
+  id: string; type: "lembrete" | "mensagem" | "ligacao" | "email"; subject: string; description: string | null;
   scheduled_at: string | null; status: string; completed_at: string | null;
+  duration_minutes?: number | null;
   checkpoint_code?: string | null; checkpoint_label?: string | null;
   required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
   recurrence_days?: number | null;
@@ -56,6 +57,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [history, setHistory] = useState<HistoryEvt[]>([]);
   const [newNote, setNewNote] = useState("");
   const [actDialog, setActDialog] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
 
   const open = !!dealId;
 
