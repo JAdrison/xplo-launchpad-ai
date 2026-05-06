@@ -1,101 +1,110 @@
 ## Objetivo
 
-Permitir que cada usuário do sistema tenha **uma ou mais funções operacionais** (Gestor de Tráfego, Designer, Copywriter, SDR, Vendedor, Contato com o Cliente, Gestor de Projetos, IA Specialist) e que **cada tarefa do CRM seja atribuída automaticamente** ao usuário responsável pela função correspondente no momento em que é criada (tanto pelo template do plano quanto pelas recorrências da Manutenção).
+Toda tarefa do CRM passa a ter uma **data de vencimento** (`scheduled_at`). Tarefas criadas automaticamente recebem prazo conforme o checkpoint ou recorrência. Tarefas vencidas não concluídas aparecem em destaque vermelho e ordenadas no topo.
 
----
+## Prazos definidos
 
-## 1. Banco de dados
+**Checkpoints (a partir de quando o deal entra na coluna):**
 
-### 1.1 Novo enum `job_function`
+| Checkpoint | Prazo |
+|---|---|
+| 01 Cadastro | 3 dias |
+| 02 Início | 5 dias |
+| 03 Estratégia | 10 dias |
+| 04 Tráfego | 10 dias |
+| 05 Entrega | 7 dias |
+
+**Manutenção:** já tem `recurrence_days` — usar como prazo (Instagram 30d → vence em 30 dias, Tráfego 7d → vence em 7 dias, etc.). Hoje a função `seed_maintenance_tasks` já preenche `scheduled_at = now() + days`. Falta apenas exibir corretamente.
+
+## Mudanças
+
+### 1. Banco — preencher `scheduled_at` automaticamente
+
+- Atualizar `seed_xplo_template_tasks(_deal_id, _client_id, _checkpoint)` para calcular `scheduled_at = entered_current_column_at + prazo_do_checkpoint` ao inserir cada tarefa-template.
+- Manter `seed_maintenance_tasks` como está (já agenda corretamente).
+- Nas tarefas criadas via `apply_column_automations` o `scheduled_at` já é preenchido (`now() + days_after_entry`). Sem alteração.
+
+### 2. Backfill (rodar uma vez)
+
+Para cada tarefa pendente sem `scheduled_at`:
+- Se for de checkpoint 01–05 → `scheduled_at = deals.entered_current_column_at + prazo do checkpoint`.
+- Se tiver `recurrence_days` → `scheduled_at = activities.created_at + recurrence_days`.
+- Tarefas manuais sem data permanecem sem data (não força).
+
+### 3. UI — destaque visual de atraso
+
+**`src/pages/CrmActivities.tsx`** (lista global) e **`src/components/crm/DealDetailModal.tsx`** (dentro do deal):
+- Data exibida em **vermelho (`text-destructive`)** quando vencida e pendente.
+- Badge **"Atrasada Xd"** (vermelha) ao lado do assunto.
+- Dentro de cada agrupamento, ordenar atrasadas no topo e em seguida por `scheduled_at` ascendente.
+- Manter o filtro "🔴 Em atraso" que já existe na CrmActivitiesView.
+
+**`src/components/crm/ActivityFormDialog.tsx`**: nenhum ajuste obrigatório (campo "Agendar para" já existe). Renomear o label para **"Vencimento"** para deixar claro que é prazo final.
+
+### 4. Sem alterações em
+
+- Auto-advance entre checkpoints (continua quando todas tarefas concluídas).
+- RLS, schema de `activities`.
+- Triggers de manutenção e completion.
+
+## Detalhes técnicos
+
+**Migração SQL** (1 migration, sem afetar dados existentes além do backfill):
+
+```sql
+-- 1. Helper interno: prazo por checkpoint
+CREATE OR REPLACE FUNCTION public.checkpoint_due_days(_chk text)
+RETURNS int LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE _chk
+    WHEN '01' THEN 3
+    WHEN '02' THEN 5
+    WHEN '03' THEN 10
+    WHEN '04' THEN 10
+    WHEN '05' THEN 7
+    ELSE NULL
+  END
+$$;
+
+-- 2. Atualizar seed_xplo_template_tasks: incluir scheduled_at no INSERT
+--    scheduled_at := COALESCE(d.entered_current_column_at, now()) + checkpoint_due_days(_checkpoint) * interval '1 day'
+
+-- 3. Backfill
+UPDATE public.activities a
+SET scheduled_at = d.entered_current_column_at + (public.checkpoint_due_days(a.checkpoint_code) || ' days')::interval
+FROM public.deals d
+WHERE a.deal_id = d.id
+  AND a.scheduled_at IS NULL
+  AND a.status = 'pending'
+  AND a.checkpoint_code IN ('01','02','03','04','05');
+
+UPDATE public.activities
+SET scheduled_at = created_at + (recurrence_days || ' days')::interval
+WHERE scheduled_at IS NULL
+  AND status = 'pending'
+  AND recurrence_days IS NOT NULL;
 ```
-gestor_trafego | designer | copywriter | sdr | vendedor 
-| contato_cliente | gestor_projetos | ia_specialist
+
+**Frontend — helper compartilhado** em `src/lib/crmFormat.ts`:
+```ts
+export function getDueState(scheduledAt: string | null, status: string) {
+  if (!scheduledAt || status === "completed") return { overdue: false, daysLate: 0 };
+  const due = new Date(scheduledAt);
+  const now = new Date();
+  if (due >= now) return { overdue: false, daysLate: 0 };
+  const daysLate = Math.floor((now.getTime() - due.getTime()) / 86400000);
+  return { overdue: true, daysLate };
+}
 ```
+Usar nesse helper em CrmActivities e DealDetailModal para badge "Atrasada Xd" e classe `text-destructive`.
 
-### 1.2 Nova tabela `user_job_functions`
-Relação N:N entre `auth.users` e `job_function` (um usuário pode ter várias funções).
-- `user_id uuid` + `function job_function` (PK composta)
-- RLS: admin gerencia; usuário vê as próprias.
+## Arquivos afetados
 
-### 1.3 Coluna nova em `activities`
-- `required_function job_function NULL` — qual função deve executar a tarefa.
+- **Nova migração SQL** (funções + backfill).
+- `src/lib/crmFormat.ts` — adicionar `getDueState`.
+- `src/pages/CrmActivities.tsx` — badge vermelho + ordenação.
+- `src/components/crm/DealDetailModal.tsx` — badge vermelho + ordenação nas listas de tarefas.
+- `src/components/crm/ActivityFormDialog.tsx` — renomear label "Agendar para" → "Vencimento".
 
-### 1.4 Função SQL `assign_activity_responsible()`
-Trigger **BEFORE INSERT** em `activities`:
-- Se `responsible_id` já vier preenchido → mantém.
-- Senão, se `required_function` estiver setado → busca o **primeiro usuário ativo** com aquela função (ordem alfabética determinística, ignorando `pending`/`suspended`) e atribui em `responsible_id`.
-- Senão → deixa NULL (sem responsável).
+## Memória
 
-### 1.5 Atualizar `seed_maintenance_tasks` e o template do plano (Fase 1)
-Cada tarefa do template e cada tarefa de Manutenção passa a declarar sua `required_function` (ex.: Instagram 30d → `designer`; Verificação tráfego → `gestor_trafego`; IA 15d → `ia_specialist`).
-
----
-
-## 2. Mapeamento tarefa → função (default)
-
-| Checkpoint | Tarefa | Função |
-|---|---|---|
-| 01 Cadastro | Validar contrato/pagamento | contato_cliente |
-| 01 Cadastro | Coletar acessos (FB/IG/GMB) | contato_cliente |
-| 02 Início | Onboarding com cliente | contato_cliente |
-| 02 Início | Configurar BM/conta de anúncio | gestor_trafego |
-| 03 Estratégia | ICP + Promessa + SWOT | gestor_projetos |
-| 03 Estratégia | Roteiros e copies de anúncios | copywriter |
-| 03 Estratégia | Criativos estáticos + vídeos | designer |
-| 04 Tráfego | Subir campanhas | gestor_trafego |
-| 04 Tráfego | Configurar pixel/eventos | gestor_trafego |
-| 05 Entrega | Configurar XPLO Lab (Pro) | ia_specialist |
-| 05 Entrega | Treinar IA com base do cliente (Pro) | ia_specialist |
-| Bônus GMB | Otimizar Google Meu Negócio | gestor_trafego |
-| Bônus Vitrine IG | Vitrine de Instagram | designer |
-| 06 Manutenção | Instagram 30d | designer |
-| 06 Manutenção | Verificação tráfego 7d | gestor_trafego |
-| 06 Manutenção | Relatório quinzenal | gestor_trafego |
-| 06 Manutenção | Trocar campanhas 30d | gestor_trafego |
-| 06 Manutenção | Verificação IA 15d (Pro) | ia_specialist |
-
----
-
-## 3. Interface
-
-### 3.1 Tela `/admin/users` — gestão de funções
-- Nova coluna **Funções** com chips coloridos por função.
-- Botão **"Editar funções"** abre modal com checkboxes das 8 funções.
-- Salvar → upsert em `user_job_functions`.
-
-### 3.2 Modal do Deal (`DealDetailModal.tsx`)
-- Cada tarefa já mostra responsável; adicionar **badge da função requerida** (`required_function`) ao lado do título quando presente.
-- Avatar/nome do responsável continua clicável; permite reatribuir manualmente via dropdown filtrando por função.
-
-### 3.3 `/crm/atividades`
-- Filtro novo **"Função"** no topo.
-- Exibe coluna "Responsável" + chip da função.
-
----
-
-## 4. Lógica de fallback
-
-- Se nenhum usuário tiver a função necessária no momento da criação → tarefa fica **sem responsável** + badge **"Sem responsável (função X)"** em destaque vermelho no modal do deal, para o admin atribuir manualmente.
-- Quando admin atribuir um usuário àquela função depois, **não retroage** automaticamente (decisão consciente para evitar surpresas — admin pode usar o filtro "Sem responsável" para varrer).
-
----
-
-## 5. Detalhes técnicos
-
-**Migrations:**
-1. `CREATE TYPE job_function AS ENUM (...)`
-2. `CREATE TABLE user_job_functions (user_id uuid, function job_function, PRIMARY KEY (user_id, function))` + RLS
-3. `ALTER TABLE activities ADD COLUMN required_function job_function`
-4. `CREATE FUNCTION assign_activity_responsible()` + `CREATE TRIGGER BEFORE INSERT ON activities`
-5. Atualizar `seed_maintenance_tasks` para incluir `required_function` na inserção.
-
-**Frontend:**
-- `src/lib/xploProcessTemplate.ts` — adicionar campo `requiredFunction` em cada tarefa template.
-- `src/lib/syncDealTasks.ts` — propagar `required_function` no insert.
-- `src/lib/jobFunctions.ts` (novo) — labels, cores e ícones das 8 funções.
-- `src/components/admin/UserFunctionsModal.tsx` (novo).
-- `src/pages/admin/Users.tsx` — coluna + botão.
-- `src/components/crm/DealDetailModal.tsx` — badge da função + dropdown de reatribuição.
-- `src/pages/crm/Atividades.tsx` — filtro por função.
-
-**Memória:** salvar regra em `mem://crm/funcoes-responsaveis-tarefas`.
+Atualizar `mem://crm/pipeline-entrega-manutencao.md` com a tabela de prazos por checkpoint e a regra "toda tarefa tem `scheduled_at`; vencida = atraso".

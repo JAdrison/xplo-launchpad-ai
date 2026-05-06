@@ -1446,6 +1446,7 @@ export type Database = {
         Args: { _column_id: string; _deal_id: string }
         Returns: undefined
       }
+      checkpoint_due_days: { Args: { _chk: string }; Returns: number }
       client_id_from_request_token: { Args: never; Returns: string }
       current_request_client_token: { Args: never; Returns: string }
       get_user_role: {
