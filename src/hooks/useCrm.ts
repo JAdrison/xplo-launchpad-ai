@@ -106,19 +106,49 @@ export function usePipelineData(pipelineId: string | null) {
       const ids = baseDeals.map((d) => d.id);
       const { data: acts } = await supabase
         .from("activities")
-        .select("deal_id, status")
+        .select("deal_id, status, scheduled_at, checkpoint_code")
         .in("deal_id", ids);
       const counts = new Map<string, { total: number; done: number }>();
+      const maint = new Map<string, MaintenanceState>();
+      const now = Date.now();
+      const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
       (acts ?? []).forEach((a: any) => {
         const c = counts.get(a.deal_id) ?? { total: 0, done: 0 };
         c.total++;
         if (a.status === "completed") c.done++;
         counts.set(a.deal_id, c);
+
+        if (a.checkpoint_code === "06") {
+          const m = maint.get(a.deal_id) ?? {
+            total: 0, pending: 0, overdueCount: 0, dueTodayCount: 0,
+            nextDueAt: null as string | null, maxDaysLate: 0,
+          };
+          m.total++;
+          if (a.status !== "completed") {
+            m.pending++;
+            if (a.scheduled_at) {
+              const due = new Date(a.scheduled_at).getTime();
+              if (due < startOfToday.getTime()) {
+                m.overdueCount++;
+                const daysLate = Math.floor((now - due) / 86400000);
+                if (daysLate > m.maxDaysLate) m.maxDaysLate = daysLate;
+              } else if (due <= endOfToday.getTime()) {
+                m.dueTodayCount++;
+              }
+              if (!m.nextDueAt || due < new Date(m.nextDueAt).getTime()) {
+                m.nextDueAt = a.scheduled_at;
+              }
+            }
+          }
+          maint.set(a.deal_id, m);
+        }
       });
       baseDeals.forEach((d) => {
         const c = counts.get(d.id);
         d.activities_total = c?.total ?? 0;
         d.activities_done = c?.done ?? 0;
+        d.maintenance = maint.get(d.id);
       });
     }
 
