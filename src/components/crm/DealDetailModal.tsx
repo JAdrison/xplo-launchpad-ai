@@ -13,7 +13,7 @@ import { Phone, Mail, ExternalLink, Plus, Send, CheckCircle2, XCircle, Pencil, T
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { formatBRL, initialsOf } from "@/lib/crmFormat";
+import { formatBRL, initialsOf, getDueState } from "@/lib/crmFormat";
 import { ActivityFormDialog, type ActivityEditable } from "./ActivityFormDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
