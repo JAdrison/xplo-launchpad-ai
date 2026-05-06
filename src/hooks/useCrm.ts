@@ -52,6 +52,7 @@ export interface DealWithMeta extends Deal {
   activities_total?: number;
   activities_done?: number;
   maintenance?: MaintenanceState;
+  next_pending_at?: string | null;
 }
 
 export function usePipelines() {
