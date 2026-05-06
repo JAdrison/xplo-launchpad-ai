@@ -56,6 +56,6 @@
 - [Dominio Subdomain](mem://infra/dominio-starter-subdomain) — Subdomain constraints and cross-system coexistence
 - [Dual AI](mem://ia/arquitetura-dual-xplo) — Specifications on GPT vs Gemini usage contexts
 - [XPLO LAB credenciais](mem://features/xplo-lab-credenciais) — Login/senha XPLO LAB por cliente, só admin, nunca no onboarding
-- [Pipeline Entrega + Manutenção](mem://crm/pipeline-entrega-manutencao) — 5 colunas auto-advance + 2 colunas manutenção com tarefas recorrentes via triggers
+- [Pipeline Entrega + Manutenção](mem://crm/pipeline-entrega-manutencao) — 5 checkpoints auto-advance + coluna única "Manutenção" com badges dinâmicos (aguardando/em dia/hoje/atrasado) e RPC start_maintenance_for_deal
 - [Funções operacionais](mem://crm/funcoes-operacionais) — Enum job_function, user_job_functions, required_function em activities + trigger de atribuição automática
 - [CRM prazos tarefas](mem://crm/prazos-tarefas) — Prazos fixos por checkpoint (01:3d, 02:5d, 03:10d, 04:10d, 05:7d) + badge vermelho "Atrasada Xd"
