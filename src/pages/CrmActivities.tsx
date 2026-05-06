@@ -13,6 +13,21 @@ import { DealDetailModal } from "@/components/crm/DealDetailModal";
 import { cn } from "@/lib/utils";
 import { getDueState } from "@/lib/crmFormat";
 
+type JobFunction =
+  | "gestor_trafego" | "designer" | "copywriter" | "sdr"
+  | "vendedor" | "contato_cliente" | "gestor_projetos" | "ia_specialist";
+
+const JOB_FUNCTION_LABEL: Record<JobFunction, string> = {
+  gestor_trafego: "Gestor de Tráfego",
+  designer: "Designer",
+  copywriter: "Copywriter",
+  sdr: "SDR",
+  vendedor: "Vendedor",
+  contato_cliente: "Contato com Cliente",
+  gestor_projetos: "Gestor de Projetos",
+  ia_specialist: "Especialista em IA",
+};
+
 interface ActivityRow {
   id: string;
   deal_id: string;
@@ -21,6 +36,7 @@ interface ActivityRow {
   subject: string;
   scheduled_at: string | null;
   responsible_id: string | null;
+  required_function: JobFunction | null;
   status: "pending" | "completed";
   auto_generated: boolean;
   deals?: {
