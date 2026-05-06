@@ -18,6 +18,7 @@ export interface PipelineColumn {
   sort_order: number;
   column_type: "normal" | "won" | "lost";
   automation_enabled: boolean;
+  checkpoint_code?: string | null;
 }
 
 export interface Deal {

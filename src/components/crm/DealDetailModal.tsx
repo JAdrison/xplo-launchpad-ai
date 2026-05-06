@@ -38,6 +38,7 @@ interface Activity {
   scheduled_at: string | null; status: string; completed_at: string | null;
   checkpoint_code?: string | null; checkpoint_label?: string | null;
   required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
+  recurrence_days?: number | null;
 }
 interface Note { id: string; author_id: string; content: string; created_at: string; }
 interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; }
@@ -284,6 +285,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                       )}
                                       {a.required_bonus && (
                                         <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-primary/30 text-primary">Bônus</span>
+                                      )}
+                                      {a.recurrence_days && (
+                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                                          🔁 a cada {a.recurrence_days}d
+                                        </span>
                                       )}
                                     </div>
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
