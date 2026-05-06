@@ -364,7 +364,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                       )}
                                     </div>
                                     {a.scheduled_at && (
-                                      <p className={`text-[11px] mt-0.5 ${due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                      <p className={`text-[11px] mt-0.5 ${due.textClass}`}>
                                         Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
                                       </p>
                                     )}
@@ -446,7 +446,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                 )}
                               </div>
                               {a.scheduled_at && (
-                                <p className={`text-xs mt-1 ${due.overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                                <p className={`text-xs mt-1 ${due.textClass}`}>
                                   Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                 </p>
                               )}
