@@ -167,6 +167,15 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               >
                 {deal.status === "won" ? "Ganho" : deal.status === "lost" ? "Perdido" : "Em andamento"}
               </Badge>
+              <div className="mt-3">
+                <PlanBadge
+                  clientId={client.id}
+                  plan={(client.xplo_plan as XploPlan) ?? "basic"}
+                  bonuses={(client.xplo_bonuses as XploBonus[]) ?? []}
+                  size="sm"
+                  onChanged={() => { refetch(); onChanged(); }}
+                />
+              </div>
             </div>
 
             <Separator className="my-3" />
