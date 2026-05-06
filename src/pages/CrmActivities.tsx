@@ -70,22 +70,26 @@ export function CrmActivitiesView() {
   const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityRow[]>([]);
   const [pipelines, setPipelines] = useState<{ id: string; name: string }[]>([]);
+  const [userFunctions, setUserFunctions] = useState<{ user_id: string; job_function: JobFunction }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [scope, setScope] = useState<Scope>("all");
   const [bucket, setBucket] = useState<Bucket>("late");
   const [pipelineFilter, setPipelineFilter] = useState<string>("all");
+  const [functionFilter, setFunctionFilter] = useState<string>("all");
+  const [responsibleFilter, setResponsibleFilter] = useState<string>("all");
 
   const [openDealId, setOpenDealId] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
-    const [actsRes, pipesRes] = await Promise.all([
+    const [actsRes, pipesRes, ujfRes] = await Promise.all([
       supabase
         .from("activities")
         .select("*, deals(name, pipeline_id, column_id, pipelines(name), pipeline_columns(name, color)), clients(name)")
         .order("scheduled_at", { ascending: true, nullsFirst: false }),
       supabase.from("pipelines").select("id, name").order("sort_order"),
+      supabase.from("user_job_functions").select("user_id, job_function"),
     ]);
 
     if (actsRes.error) {
@@ -94,6 +98,7 @@ export function CrmActivitiesView() {
       setActivities((actsRes.data ?? []) as unknown as ActivityRow[]);
     }
     if (pipesRes.data) setPipelines(pipesRes.data);
+    if (ujfRes.data) setUserFunctions(ujfRes.data as { user_id: string; job_function: JobFunction }[]);
     setLoading(false);
   };
 
@@ -115,10 +120,54 @@ export function CrmActivitiesView() {
     }
   };
 
+  // user_id -> Set<JobFunction>
+  const userToFunctions = useMemo(() => {
+    const m = new Map<string, Set<JobFunction>>();
+    userFunctions.forEach((u) => {
+      if (!m.has(u.user_id)) m.set(u.user_id, new Set());
+      m.get(u.user_id)!.add(u.job_function);
+    });
+    return m;
+  }, [userFunctions]);
+
+  // Lista única de responsáveis presentes nas atividades + os com função
+  const responsibleOptions = useMemo(() => {
+    const ids = new Set<string>();
+    activities.forEach((a) => { if (a.responsible_id) ids.add(a.responsible_id); });
+    userFunctions.forEach((u) => ids.add(u.user_id));
+    return Array.from(ids).map((id) => {
+      const fns = Array.from(userToFunctions.get(id) ?? []);
+      const label = fns.length
+        ? fns.map((f) => JOB_FUNCTION_LABEL[f]).join(", ")
+        : `Usuário ${id.slice(0, 6)}`;
+      return { id, label: id === user?.id ? `Eu (${label})` : label };
+    }).sort((a, b) => a.label.localeCompare(b.label));
+  }, [activities, userFunctions, userToFunctions, user]);
+
+  const matchesPersonFilters = (a: ActivityRow): boolean => {
+    if (responsibleFilter !== "all") {
+      if (responsibleFilter === "me") {
+        if (a.responsible_id !== user?.id) return false;
+      } else if (a.responsible_id !== responsibleFilter) {
+        return false;
+      }
+    }
+    if (functionFilter !== "all") {
+      const fn = functionFilter as JobFunction;
+      const matchByRequired = a.required_function === fn;
+      const matchByResponsible = a.responsible_id
+        ? userToFunctions.get(a.responsible_id)?.has(fn) ?? false
+        : false;
+      if (!matchByRequired && !matchByResponsible) return false;
+    }
+    return true;
+  };
+
   const filtered = useMemo(() => {
     const list = activities.filter((a) => {
       if (scope === "mine" && a.responsible_id !== user?.id) return false;
       if (pipelineFilter !== "all" && a.deals?.pipeline_id !== pipelineFilter) return false;
+      if (!matchesPersonFilters(a)) return false;
 
       const scheduled = a.scheduled_at ? new Date(a.scheduled_at) : null;
       const isCompleted = a.status === "completed";
@@ -137,7 +186,6 @@ export function CrmActivitiesView() {
       }
     });
 
-    // Ordena: atrasadas primeiro (mais antigas no topo), depois por data ascendente
     return list.sort((a, b) => {
       const da = getDueState(a.scheduled_at, a.status);
       const db = getDueState(b.scheduled_at, b.status);
@@ -146,12 +194,13 @@ export function CrmActivitiesView() {
       const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
       return ta - tb;
     });
-  }, [activities, scope, bucket, pipelineFilter, user]);
+  }, [activities, scope, bucket, pipelineFilter, functionFilter, responsibleFilter, user, userToFunctions]);
 
   const counts = useMemo(() => {
     const base = activities.filter((a) => {
       if (scope === "mine" && a.responsible_id !== user?.id) return false;
       if (pipelineFilter !== "all" && a.deals?.pipeline_id !== pipelineFilter) return false;
+      if (!matchesPersonFilters(a)) return false;
       return true;
     });
     const c = { late: 0, today: 0, week: 0, upcoming: 0, completed: 0 };
@@ -165,7 +214,7 @@ export function CrmActivitiesView() {
       if (!isPast(s)) c.upcoming++;
     }
     return c;
-  }, [activities, scope, pipelineFilter, user]);
+  }, [activities, scope, pipelineFilter, functionFilter, responsibleFilter, user, userToFunctions]);
 
   return (
     <div className="flex flex-col h-full">
@@ -192,6 +241,33 @@ export function CrmActivitiesView() {
             {pipelines.map((p) => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={functionFilter} onValueChange={setFunctionFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Função" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as funções</SelectItem>
+            {(Object.keys(JOB_FUNCTION_LABEL) as JobFunction[]).map((k) => (
+              <SelectItem key={k} value={k}>{JOB_FUNCTION_LABEL[k]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Responsável" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os responsáveis</SelectItem>
+            <SelectItem value="me">Eu</SelectItem>
+            {responsibleOptions
+              .filter((o) => o.id !== user?.id)
+              .map((o) => (
+                <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
