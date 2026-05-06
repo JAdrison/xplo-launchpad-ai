@@ -131,7 +131,7 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Agendar para</Label>
+              <Label>Vencimento</Label>
               <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
             </div>
             <div>
