@@ -211,7 +211,7 @@ export function StepSWOT({ clientId, niche, onNext, onPrevious }: Props) {
                   </Button>
                 </div>
                 {isEdit ? (
-                  <TagInput value={s.tags} onChange={(v) => updateQuadrant(q.key, { tags: v })} placeholder={PLACEHOLDERS[niche][q.key]} max={5} />
+                  <TagInput value={s.tags} onChange={(v) => updateQuadrant(q.key, { tags: v })} placeholder={PLACEHOLDERS[niche][q.key]} max={10} />
                 ) : (
                   <div className="flex flex-wrap gap-2 min-h-[40px]">
                     {s.tags.length === 0 ? <span className="text-xs text-muted-foreground">Nenhum item</span> : s.tags.map((t) => (

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Hotel, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin } from "lucide-react";
 import { TagInput } from "../../shared/TagInput";
 import { SuggestedTagInput } from "../../shared/SuggestedTagInput";
 
@@ -73,6 +73,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     experiencia: "",
     extras: "",
     promotions: "",
+    passeios: [] as { nome: string; descricao: string }[],
   });
 
   useEffect(() => { void load(); }, [clientId]);
@@ -92,6 +93,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         experiencia: pd.experiencia || "",
         extras: pd.extras || "",
         promotions: data.promotions || "",
+        passeios: Array.isArray(pd.passeios) ? pd.passeios : [],
       });
     }
     setIsLoading(false);
@@ -113,6 +115,9 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     }
     setIsSaving(true);
     try {
+      const cleanPasseios = form.passeios
+        .map((p) => ({ nome: (p.nome || "").trim(), descricao: (p.descricao || "").trim() }))
+        .filter((p) => p.nome.length > 0);
       const profile_data = {
         type: form.type,
         location: form.location.trim(),
@@ -121,6 +126,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         comodidades: form.comodidades,
         experiencia: form.experiencia,
         extras: form.extras,
+        passeios: cleanPasseios,
       };
       const payload = {
         profile_data,
@@ -218,6 +224,79 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         <div className="space-y-2">
           <Label>O que você entrega além da acomodação?</Label>
           <Textarea rows={2} value={form.extras} onChange={(e) => setForm((p) => ({ ...p, extras: e.target.value }))} placeholder="💡 Ex: café da manhã, passeios, transfers, kits especiais" />
+        </div>
+
+        <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <MapPin className="h-4 w-4" /> Passeios disponíveis na região
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() =>
+                setForm((p) => ({ ...p, passeios: [...p.passeios, { nome: "", descricao: "" }] }))
+              }
+            >
+              <Plus className="h-4 w-4" /> Adicionar passeio
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            💡 Ex: trilhas, praias, cachoeiras, mirantes, restaurantes típicos, atrações turísticas próximas
+          </p>
+          {form.passeios.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              Nenhum passeio adicionado ainda. Clique em "Adicionar passeio" para começar.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {form.passeios.map((passeio, idx) => (
+                <div key={idx} className="rounded-md border bg-background p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Input
+                      value={passeio.nome}
+                      onChange={(e) =>
+                        setForm((p) => {
+                          const next = [...p.passeios];
+                          next[idx] = { ...next[idx], nome: e.target.value };
+                          return { ...p, passeios: next };
+                        })
+                      }
+                      placeholder="Nome do passeio (ex: Trilha do Mirante)"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setForm((p) => ({
+                          ...p,
+                          passeios: p.passeios.filter((_, i) => i !== idx),
+                        }))
+                      }
+                      title="Remover passeio"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                  <Textarea
+                    rows={2}
+                    value={passeio.descricao}
+                    onChange={(e) =>
+                      setForm((p) => {
+                        const next = [...p.passeios];
+                        next[idx] = { ...next[idx], descricao: e.target.value };
+                        return { ...p, passeios: next };
+                      })
+                    }
+                    placeholder="Descrição: distância, duração, o que oferece, indicação para quem..."
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
