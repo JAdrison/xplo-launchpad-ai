@@ -1,16 +1,12 @@
-import { useSearchParams } from "react-router-dom";
-import { OnboardingDashboard } from "@/components/onboarding/OnboardingDashboard";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 export default function Onboarding() {
   const [searchParams] = useSearchParams();
   const clientId = searchParams.get("client");
 
-  // Sem cliente selecionado: mostrar dashboard
-  if (!clientId) {
-    return <OnboardingDashboard />;
-  }
+  // Sem cliente selecionado: mandar para o Workspace
+  if (!clientId) return <Navigate to="/workspace" replace />;
 
-  // Com cliente: usar wizard com 7 etapas
   return <OnboardingWizard clientId={clientId} />;
 }
