@@ -265,7 +265,7 @@ function PasseiosEditor({
   );
 }
 
-
+export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1SectionProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
