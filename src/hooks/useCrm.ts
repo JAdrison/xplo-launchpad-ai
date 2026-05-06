@@ -111,6 +111,7 @@ export function usePipelineData(pipelineId: string | null) {
         .in("deal_id", ids);
       const counts = new Map<string, { total: number; done: number }>();
       const maint = new Map<string, MaintenanceState>();
+      const nextPending = new Map<string, string>();
       const now = Date.now();
       const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
       const endOfToday = new Date(); endOfToday.setHours(23, 59, 59, 999);
@@ -119,6 +120,13 @@ export function usePipelineData(pipelineId: string | null) {
         c.total++;
         if (a.status === "completed") c.done++;
         counts.set(a.deal_id, c);
+
+        if (a.status !== "completed" && a.scheduled_at) {
+          const cur = nextPending.get(a.deal_id);
+          if (!cur || new Date(a.scheduled_at).getTime() < new Date(cur).getTime()) {
+            nextPending.set(a.deal_id, a.scheduled_at);
+          }
+        }
 
         if (a.checkpoint_code === "06") {
           const m = maint.get(a.deal_id) ?? {
@@ -150,6 +158,7 @@ export function usePipelineData(pipelineId: string | null) {
         d.activities_total = c?.total ?? 0;
         d.activities_done = c?.done ?? 0;
         d.maintenance = maint.get(d.id);
+        d.next_pending_at = nextPending.get(d.id) ?? null;
       });
     }
 
