@@ -1,44 +1,88 @@
-# Cores de vencimento + filtros de Tarefas
+# Unificar Clientes + Onboarding X1 + Gerador IA + Ativos em uma única tela "Workspace"
 
-Dois ajustes pequenos no CRM, sem mexer em banco de dados.
+## Objetivo
 
-## 1. Cores de vencimento nos cards do Kanban (`DealCard`)
+Substituir os 4 itens da sidebar por **um único item "Workspace"** (`/workspace`), reaproveitando o layout limpo da página Ativos. Cada cliente vira um card único com indicador discreto de status, contagem de ativos e botões contextuais.
 
-Hoje o card só mostra cor na coluna "Manutenção" (badge). Vamos aplicar a mesma lógica verde/amarelo/vermelho do `getDueState` em **todos** os cards, sempre que houver tarefa pendente.
+## Sidebar
 
-- Buscar a próxima tarefa pendente de cada deal em `useCrm.ts` (estendendo o agregado já feito) e expor `next_pending_at` em `DealWithMeta`.
-- No `DealCard`, abaixo do bloco de tarefas (ou ao lado do "Tempo na coluna"), exibir uma linha:
-  - `📅 Vence 12/05` colorida com `getDueState(...).textClass` (verde se >3 dias, amarelo ≤3 dias, vermelho atrasada).
-  - Se não houver tarefa pendente com data, não exibe nada.
-- Na coluna **Manutenção**, manter o badge atual + colorir o texto `Próx. em Xd` com a mesma escala (verde/amarelo) usando `getDueState`. O estado "overdue" continua representado pelo badge vermelho de manutenção.
+Remover de `AppSidebar.tsx`:
+- Clientes (`/clients`)
+- Onboarding X1 (`/onboarding`)
+- Gerador IA (`/generator`)
+- Ativos (`/assets`)
 
-## 2. Filtros por pessoa/função na tela `/crm/atividades`
+Adicionar:
+- **Workspace** (`/workspace`) — ícone `LayoutGrid` ou `Briefcase`.
 
-A tela já tem as 5 abas que o usuário queria (Em atraso, Hoje, Semana, Próximas, Concluídas). Falta apenas:
+(CRM, Configurações, Admin Usuários permanecem.)
 
-- Adicionar um seletor **"Função"** ao lado do filtro de pipeline, populado a partir do enum `job_function` (8 opções: gestor_trafego, designer, copywriter, sdr, vendedor, contato_cliente, gestor_projetos, ia_specialist) com labels amigáveis em português.
-- Adicionar um seletor **"Responsável"** ao lado, com:
-  - "Todos"
-  - "Eu"
-  - lista de usuários que possuem alguma função em `user_job_functions` (mostrando a função; o nome do usuário não fica visível para não-admin pois não há `profiles` — exibimos a função como rótulo principal).
-- Lógica de filtro:
-  - Função: a tarefa entra se `activities.required_function = filtro` **OU** se o `responsible_id` da tarefa estiver entre os usuários com aquela função (consulta única em `user_job_functions`).
-  - Responsável: filtra por `activities.responsible_id`.
-- Os contadores das abas (counts) passam a respeitar todos os filtros ativos (escopo + pipeline + função + responsável), igual à lógica atual.
-- A aba "Minhas/Todas" existente continua, agora redundante com "Responsável = Eu" — mantemos para acesso rápido.
+## Rotas
+
+Em `src/App.tsx`:
+- Nova rota `/workspace` → `Workspace` (página nova).
+- `/clients`, `/onboarding`, `/assets`, `/generator` viram `<Navigate to="/workspace" replace />`.
+- Mantidas intactas: `/clients/new`, `/clients/:id`, `/onboarding/:clientId/wizard` (a tela do wizard de onboarding continua acessível pelos botões), `/onboarding-external/...`.
+
+## Página `src/pages/Workspace.tsx` (substitui Assets)
+
+Estrutura herda diretamente do layout de `Assets.tsx`:
+
+1. **Header**
+   - Título: "Workspace" · subtítulo: "Seus clientes, onboarding e ativos em um só lugar".
+   - Botões à direita: **Copiar link de registro** (de Clientes) + **Novo Cliente** (de Clientes).
+
+2. **Cards de resumo (3 colunas, igual Ativos)**
+   - Total de Ofertas / Landing Pages / Anúncios — mantidos.
+   - Adicionar um 4º card opcional: "Clientes ativos" (count de não arquivados).
+
+3. **Filtros**
+   - Select "Cliente" (já existe).
+   - Tabs/segmento simples adicional: **Todos · Em onboarding · Concluídos · Com ativos** (apenas filtra a grade abaixo, sem mudar o layout).
+
+4. **Grade de cards de cliente (estilo Ativos, limpo)**
+   Cada card contém:
+   - Header: ícone `Building2` + **nome** + **bolinha de status** colorida ao lado:
+     - 🔴 cinza: Pendente (`draft` sem etapas)
+     - 🟡 amarelo: Em onboarding (`ppp_in_progress` ou draft com etapas)
+     - 🟢 verde: X1 concluído (`ppp_completed+`)
+   - Tooltip na bolinha com o label e "X/7 etapas".
+   - Linha sutil com niche/produto se houver.
+   - Bloco de contagens (Ofertas / LPs / Anúncios) — exatamente como hoje no Assets.
+   - Footer com botões contextuais (1 ou 2, sem poluir):
+     - Status pendente → **Iniciar onboarding** (primário) + **Ver detalhes** (ghost).
+     - Em onboarding → **Continuar** (primário) + **Ver detalhes** (ghost).
+     - Concluído → **Gerar com IA** (primário, abre modal) + **Ver detalhes** (ghost).
+
+## Modal "Gerar com IA"
+
+Novo componente `src/components/workspace/GenerateAIDialog.tsx`. Encapsula a lógica essencial do `Generator.tsx` atual:
+- Input: `clientId` (passado do card).
+- Carrega ICPs do cliente + ofertas do banco.
+- Permite escolher: tipos a gerar (`offer`, `ads`), ICP (se gerar oferta), oferta do banco (se gerar ads).
+- Botão **Gerar** dispara as mesmas funções já existentes (chama edge functions `generate-offer` e `generate-ads` ou as funções equivalentes que `Generator.tsx` usa hoje).
+- Após gerar, fecha modal, mostra toast de sucesso e navega para `/clients/:id?tab=ofertas` (ou `?tab=anuncios`) para o usuário ver o resultado.
+
+A página `Generator.tsx` é **excluída** (a lógica útil é reaproveitada no modal).
+
+## Excluir / arquivar
+
+- `src/pages/Clients.tsx` — deletar (substituído pelo Workspace).
+- `src/pages/Onboarding.tsx` + `src/components/onboarding/OnboardingDashboard.tsx` — Onboarding.tsx fica só para o wizard externo via clientId param? **Solução**: manter `Onboarding.tsx` apenas se ainda for usado pela rota `/onboarding?client=...` (botão "Continuar" navega para essa rota). Sim, é usado — então `Onboarding.tsx` permanece, mas o `OnboardingDashboard` (caso sem `clientId`) passa a redirecionar para `/workspace` em vez de listar.
+- `src/pages/Generator.tsx` — deletar; `GeneratedContentViewer` continua sendo usado em `ClientDetails.tsx`.
+- `src/pages/Assets.tsx` — deletar (virou `Workspace.tsx`).
 
 ## Detalhes técnicos
 
-- **`src/lib/crmFormat.ts`**: nada muda; reaproveita `getDueState`.
-- **`src/hooks/useCrm.ts`**: no loop que monta `counts`/`maint`, capturar também `nextPendingAt` (menor `scheduled_at` das atividades não-concluídas com data); adicionar `next_pending_at: string | null` em `DealWithMeta`.
-- **`src/components/crm/DealCard.tsx`**: nova linha condicional usando `getDueState(deal.next_pending_at, "pending")` para colorir; aplicar `textClass` no `Próx. em Xd` da Manuten­ção.
-- **`src/pages/CrmActivities.tsx`**:
-  - Carregar `user_job_functions` no `fetchAll` (`select user_id, job_function`).
-  - Adicionar dois `<Select>` no header (após o pipeline): Função e Responsável.
-  - Estender `filtered`/`counts` com checagens de `required_function` e `responsible_id`.
+- **Fetch único**: na carga, buscar `clients` + `client_profile (status fields)` + `icps (count)` + `client_promise` + counts de `offers_hormozi`, `landing_pages`, `ads` por cliente — em paralelo, como já faz Onboarding/Assets, montando um único objeto `ClientCard`.
+- **Status helper**: pequena função `getOnboardingState(client, completedSteps)` retornando `"pending" | "in_progress" | "completed"`, alimentando bolinha + filtro.
+- **Progresso (X/7)**: copiar a contagem de `OnboardingDashboard` para preencher o tooltip da bolinha.
+- **Toolbar do generator**: o estado/seleção que hoje vive em `Generator.tsx` (selectedClientId, selectedIcpId, selectedBankKey, selectedTypes, handleGenerate) move para `GenerateAIDialog`, que é montado e desmontado por card.
+- **Imports a remover** após o cleanup: itens da sidebar e suas rotas mortas. Verificar `Sparkles`, `Users`, `ClipboardList`, `FileStack` ainda usados antes de remover do `AppSidebar`.
 
 ## Fora do escopo
 
-- Não cria/altera tabelas.
-- Não mexe em `DealDetailModal` (ele já usa `getDueState` em todas as datas).
-- Não cria nova rota — a tela `/crm/atividades` continua sendo "a aba de tarefas".
+- Não mexer em `/clients/:id` (página de detalhe permanece como hoje).
+- Não mexer no wizard de onboarding em si (apenas no dashboard de listagem).
+- Não tocar no CRM nem no Dashboard.
+- Sem migrações de banco.
