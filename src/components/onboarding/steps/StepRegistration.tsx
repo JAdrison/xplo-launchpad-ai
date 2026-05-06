@@ -346,6 +346,83 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
           </div>
         </div>
 
+        <Separator />
+
+        {/* Plano XPLO */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Sparkles className="h-4 w-4" /> Plano XPLO
+          </div>
+          <RadioGroup
+            value={xploPlan}
+            onValueChange={(v) => setXploPlan(v as XploPlan)}
+            className="grid gap-3 sm:grid-cols-2"
+          >
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                xploPlan === "basic" ? "border-foreground bg-muted/40" : "border-border hover:bg-muted/20"
+              )}
+            >
+              <RadioGroupItem value="basic" id="reg-plan-basic" className="mt-1" />
+              <div className="flex-1">
+                <div className="font-semibold text-foreground">Basic</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Estratégia de geração de demanda, tráfego, website / página de captura,
+                  estratégia e vitrine de Instagram.
+                </p>
+              </div>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                xploPlan === "pro"
+                  ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm"
+                  : "border-border hover:bg-muted/20"
+              )}
+            >
+              <RadioGroupItem value="pro" id="reg-plan-pro" className="mt-1" />
+              <div className="flex-1">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  Pro <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tudo do Basic + <strong>CRM (XPLO Lab)</strong> e{" "}
+                  <strong>Inteligência Artificial</strong> personalizada para a empresa.
+                </p>
+              </div>
+            </label>
+          </RadioGroup>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Gift className="h-3.5 w-3.5" /> Bônus inclusos
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(Object.keys(BONUS_LABELS) as XploBonus[]).map((b) => (
+                <label
+                  key={b}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-border p-3 hover:bg-muted/20"
+                >
+                  <Checkbox
+                    checked={xploBonuses.includes(b)}
+                    onCheckedChange={(checked) =>
+                      setXploBonuses((prev) =>
+                        checked ? [...new Set([...prev, b])] : prev.filter((x) => x !== b)
+                      )
+                    }
+                  />
+                  <span className="text-sm">{BONUS_LABELS[b]}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              As tarefas do processo operacional XPLO serão criadas automaticamente no CRM com base
+              no plano e bônus selecionados.
+            </p>
+          </div>
+        </div>
+
         <div className="flex justify-between pt-4">
           <Button variant="outline" onClick={onPrevious} className="gap-2">
             <ArrowLeft className="h-4 w-4" /> Anterior
