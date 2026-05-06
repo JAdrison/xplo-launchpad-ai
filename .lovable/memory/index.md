@@ -44,6 +44,7 @@
 - [Aprovação master](mem://auth/fluxo-aprovacao-master) — Admin master account flow for approving pending users
 - [Admin emails reais](mem://funcionalidades/admin-emails-usuarios) — Edge function permission logic for viewing true user emails
 - [Infra Auth e IA](mem://arquitetura/infraestrutura-auth-ia) — Routing logic for Lovable standard infra vs custom API keys in LocalStorage
+- [Hardening seguran\u00e7a](mem://seguranca/hardening-rls-edge-keys) — RLS por authenticated, edge functions com JWT, chaves de IA em user_api_keys
 - [Resiliência ads nulos](mem://arquitetura/resiliencia-ads) — Ad FK constraints handling when offers are removed
 - [Integridade ICPs](mem://arquitetura/integridade-referencial-perfis) — Foreign key safeguards when removing client profiles
 - [Admin gestão usuários](mem://funcionalidades/admin-gestao-usuarios) — Revogar/suspender/reset/definir senha em /admin/users com proteção do master
