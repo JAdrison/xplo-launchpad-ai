@@ -35,7 +35,13 @@ import {
   Hotel,
   Stethoscope,
   Building,
+  Plus,
+  Trash2,
+  Save,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
