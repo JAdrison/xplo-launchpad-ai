@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DealDetailModal } from "@/components/crm/DealDetailModal";
 import { cn } from "@/lib/utils";
+import { getDueState } from "@/lib/crmFormat";
 
 interface ActivityRow {
   id: string;
