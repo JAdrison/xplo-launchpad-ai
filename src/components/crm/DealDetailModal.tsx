@@ -106,6 +106,27 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     }
   };
 
+  const openEditActivity = (a: Activity) => {
+    setEditingActivity({
+      id: a.id,
+      type: a.type,
+      subject: a.subject,
+      description: a.description,
+      scheduled_at: a.scheduled_at,
+      duration_minutes: a.duration_minutes ?? null,
+      required_function: a.required_function ?? null,
+      recurrence_days: a.recurrence_days ?? null,
+    });
+    setActDialog(true);
+  };
+
+  const deleteActivity = async (a: Activity) => {
+    if (!confirm(`Excluir tarefa "${a.subject}"?`)) return;
+    const { error } = await supabase.from("activities").delete().eq("id", a.id);
+    if (error) toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    else { toast({ title: "Tarefa excluída" }); refetch(); onChanged(); }
+  };
+
   const addNote = async () => {
     if (!newNote.trim() || !deal || !user) return;
     const { error } = await supabase.from("notes").insert({
