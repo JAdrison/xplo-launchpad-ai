@@ -271,6 +271,33 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     </button>
                   ))}
                 </div>
+                {(() => {
+                  const inMaint = currentCol?.checkpoint_code === "maint_active";
+                  const hasMaintTasks = activities.some((a) => a.checkpoint_code === "06");
+                  if (!inMaint || hasMaintTasks) return null;
+                  return (
+                    <div className="mb-4 p-3 rounded-md border border-dashed border-primary/40 bg-primary/5">
+                      <p className="text-sm font-semibold mb-1">Manutenção ainda não iniciada</p>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Gere as 5 tarefas recorrentes (Instagram, tráfego e I.A) para começar a operar a manutenção desse cliente.
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const { error } = await supabase.rpc("start_maintenance_for_deal", { _deal_id: deal.id });
+                          if (error) {
+                            toast({ title: "Erro ao iniciar manutenção", description: error.message, variant: "destructive" });
+                          } else {
+                            toast({ title: "Manutenção iniciada", description: "Tarefas recorrentes geradas." });
+                            refetch();
+                          }
+                        }}
+                      >
+                        Iniciar manutenção
+                      </Button>
+                    </div>
+                  );
+                })()}
                 <h4 className="font-semibold mb-2 text-sm">Checkpoints do processo XPLO</h4>
                 {(() => {
                   const groups = new Map<string, { code: string; label: string; items: Activity[] }>();
