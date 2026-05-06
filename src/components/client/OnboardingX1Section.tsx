@@ -121,7 +121,151 @@ function FullField({ label, value }: { label: string; value: any }) {
   );
 }
 
-export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1SectionProps) {
+type Passeio = { nome: string; descricao: string };
+
+function PasseiosEditor({
+  profileId,
+  profileData,
+  initialPasseios,
+  onSaved,
+}: {
+  profileId: string | null;
+  profileData: Record<string, any>;
+  initialPasseios: Passeio[];
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [items, setItems] = useState<Passeio[]>(initialPasseios);
+
+  useEffect(() => {
+    setItems(initialPasseios);
+  }, [initialPasseios]);
+
+  const update = (idx: number, patch: Partial<Passeio>) =>
+    setItems((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
+  const remove = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const add = () => setItems((prev) => [...prev, { nome: "", descricao: "" }]);
+
+  const handleSave = async () => {
+    if (!profileId) {
+      toast.error("Perfil ainda não criado.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const clean = items
+        .map((p) => ({ nome: (p.nome || "").trim(), descricao: (p.descricao || "").trim() }))
+        .filter((p) => p.nome.length > 0);
+      const next = { ...profileData, passeios: clean };
+      const { error } = await supabase
+        .from("client_profile")
+        .update({ profile_data: next })
+        .eq("id", profileId);
+      if (error) throw error;
+      toast.success("Passeios atualizados");
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao salvar passeios");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setItems(initialPasseios);
+    setEditing(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <Separator className="my-2" />
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium flex items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5" /> Passeios disponíveis na região
+          {items.length > 0 && (
+            <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
+              {items.length}
+            </Badge>
+          )}
+        </p>
+        {!editing ? (
+          <Button type="button" variant="ghost" size="sm" className="h-7 gap-1" onClick={() => setEditing(true)}>
+            <Pencil className="h-3.5 w-3.5" /> Editar
+          </Button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1" onClick={handleCancel} disabled={saving}>
+              <X className="h-3.5 w-3.5" /> Cancelar
+            </Button>
+            <Button type="button" size="sm" className="h-7 gap-1" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Salvar
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {!editing ? (
+        items.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">Nenhum passeio adicionado.</p>
+        ) : (
+          <div className="space-y-2">
+            {items.map((p, idx) => (
+              <div key={idx} className="rounded-md border bg-muted/30 p-2">
+                <p className="text-xs font-medium">{p.nome}</p>
+                {p.descricao && <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{p.descricao}</p>}
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="space-y-2">
+          {items.length === 0 && (
+            <p className="text-xs text-muted-foreground italic">
+              Nenhum passeio. Clique em "Adicionar passeio" para começar.
+            </p>
+          )}
+          {items.map((p, idx) => (
+            <div key={idx} className="rounded-md border bg-background p-2 space-y-1.5">
+              <div className="flex items-start gap-2">
+                <Input
+                  className="h-8 text-xs"
+                  value={p.nome}
+                  onChange={(e) => update(idx, { nome: e.target.value })}
+                  placeholder="Nome do passeio"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => remove(idx)}
+                  title="Remover"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+              <Textarea
+                rows={2}
+                className="text-xs"
+                value={p.descricao}
+                onChange={(e) => update(idx, { descricao: e.target.value })}
+                placeholder="Descrição: distância, duração, indicação..."
+              />
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" className="h-7 w-full gap-1" onClick={add}>
+            <Plus className="h-3.5 w-3.5" /> Adicionar passeio
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
