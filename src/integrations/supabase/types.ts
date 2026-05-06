@@ -1460,6 +1460,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      seed_xplo_template_tasks: {
+        Args: { _checkpoint: string; _client_id: string; _deal_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "pending"
