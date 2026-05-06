@@ -226,6 +226,79 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
           <Textarea rows={2} value={form.extras} onChange={(e) => setForm((p) => ({ ...p, extras: e.target.value }))} placeholder="💡 Ex: café da manhã, passeios, transfers, kits especiais" />
         </div>
 
+        <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <MapPin className="h-4 w-4" /> Passeios disponíveis na região
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() =>
+                setForm((p) => ({ ...p, passeios: [...p.passeios, { nome: "", descricao: "" }] }))
+              }
+            >
+              <Plus className="h-4 w-4" /> Adicionar passeio
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            💡 Ex: trilhas, praias, cachoeiras, mirantes, restaurantes típicos, atrações turísticas próximas
+          </p>
+          {form.passeios.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              Nenhum passeio adicionado ainda. Clique em "Adicionar passeio" para começar.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {form.passeios.map((passeio, idx) => (
+                <div key={idx} className="rounded-md border bg-background p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Input
+                      value={passeio.nome}
+                      onChange={(e) =>
+                        setForm((p) => {
+                          const next = [...p.passeios];
+                          next[idx] = { ...next[idx], nome: e.target.value };
+                          return { ...p, passeios: next };
+                        })
+                      }
+                      placeholder="Nome do passeio (ex: Trilha do Mirante)"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setForm((p) => ({
+                          ...p,
+                          passeios: p.passeios.filter((_, i) => i !== idx),
+                        }))
+                      }
+                      title="Remover passeio"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                  <Textarea
+                    rows={2}
+                    value={passeio.descricao}
+                    onChange={(e) =>
+                      setForm((p) => {
+                        const next = [...p.passeios];
+                        next[idx] = { ...next[idx], descricao: e.target.value };
+                        return { ...p, passeios: next };
+                      })
+                    }
+                    placeholder="Descrição: distância, duração, o que oferece, indicação para quem..."
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label>Promoções ou pacotes ativos</Label>
           <Textarea rows={2} value={form.promotions} onChange={(e) => setForm((p) => ({ ...p, promotions: e.target.value }))} placeholder="💡 Ex: pacote casal, desconto semana inteira" />
