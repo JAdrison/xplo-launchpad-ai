@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           attachments: Json
           auto_generated: boolean
+          checkpoint_code: string | null
+          checkpoint_label: string | null
           client_id: string
           completed_at: string | null
           created_at: string
@@ -25,17 +27,22 @@ export type Database = {
           description: string | null
           duration_minutes: number | null
           id: string
+          required_bonus: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_plan: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id: string | null
           scheduled_at: string | null
           source_automation_id: string | null
           status: Database["public"]["Enums"]["crm_activity_status"]
           subject: string
+          template_key: string | null
           type: Database["public"]["Enums"]["crm_activity_type"]
           updated_at: string
         }
         Insert: {
           attachments?: Json
           auto_generated?: boolean
+          checkpoint_code?: string | null
+          checkpoint_label?: string | null
           client_id: string
           completed_at?: string | null
           created_at?: string
@@ -43,17 +50,22 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id?: string | null
           scheduled_at?: string | null
           source_automation_id?: string | null
           status?: Database["public"]["Enums"]["crm_activity_status"]
           subject: string
+          template_key?: string | null
           type: Database["public"]["Enums"]["crm_activity_type"]
           updated_at?: string
         }
         Update: {
           attachments?: Json
           auto_generated?: boolean
+          checkpoint_code?: string | null
+          checkpoint_label?: string | null
           client_id?: string
           completed_at?: string | null
           created_at?: string
@@ -61,11 +73,14 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id?: string | null
           scheduled_at?: string | null
           source_automation_id?: string | null
           status?: Database["public"]["Enums"]["crm_activity_status"]
           subject?: string
+          template_key?: string | null
           type?: Database["public"]["Enums"]["crm_activity_type"]
           updated_at?: string
         }
@@ -641,8 +656,10 @@ export type Database = {
           responsible_name: string | null
           status: Database["public"]["Enums"]["client_status"]
           updated_at: string
+          xplo_bonuses: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login: string | null
           xplo_lab_password: string | null
+          xplo_plan: Database["public"]["Enums"]["xplo_plan"]
         }
         Insert: {
           cnpj?: string | null
@@ -660,8 +677,10 @@ export type Database = {
           responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
+          xplo_bonuses?: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login?: string | null
           xplo_lab_password?: string | null
+          xplo_plan?: Database["public"]["Enums"]["xplo_plan"]
         }
         Update: {
           cnpj?: string | null
@@ -679,8 +698,10 @@ export type Database = {
           responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           updated_at?: string
+          xplo_bonuses?: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login?: string | null
           xplo_lab_password?: string | null
+          xplo_plan?: Database["public"]["Enums"]["xplo_plan"]
         }
         Relationships: []
       }
@@ -1449,6 +1470,8 @@ export type Database = {
       niche_type: "hospedagem" | "saude" | "generico"
       sales_model: "b2b" | "b2c" | "recurring" | "project" | "hybrid"
       token_type: "onboarding"
+      xplo_bonus: "google_my_business" | "instagram_showcase"
+      xplo_plan: "basic" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1617,6 +1640,8 @@ export const Constants = {
       niche_type: ["hospedagem", "saude", "generico"],
       sales_model: ["b2b", "b2c", "recurring", "project", "hybrid"],
       token_type: ["onboarding"],
+      xplo_bonus: ["google_my_business", "instagram_showcase"],
+      xplo_plan: ["basic", "pro"],
     },
   },
 } as const

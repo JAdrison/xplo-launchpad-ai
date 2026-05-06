@@ -1,86 +1,163 @@
+
+# Plano e bônus do cliente → checkpoints + tarefas automáticas
+
 ## Objetivo
 
-Adicionar uma **barra de pipeline** no topo da página `/clients/:id` (acima do nome do cliente — entre o header com "← TESTE / Hospedagem" e o card "Informações do Cliente") que mostra **em qual coluna o lead está** no CRM e permite **movê-lo** clicando em qualquer etapa. O visual deve combinar com a identidade da plataforma (light, primário `#8B5CF6`, cantos arredondados, bordas suaves).
+Permitir escolher **Plano (Basic/Pro)** e **Bônus (Google Meu Negócio, Vitrine Instagram)** de cada cliente, e gerar automaticamente as tarefas do processo operacional XPLO, organizadas em **checkpoints (01 Cadastro → 05 Entrega)**, dentro do card do CRM.
 
-## Componente novo: `ClientPipelineBar`
+## 1. Onde a escolha aparece
 
-Arquivo: `src/components/client/ClientPipelineBar.tsx`
+### a) Onboarding (passo de cadastro)
+- Adicionar bloco "Plano XPLO" no `StepRegistration.tsx` com:
+  - Radio: **Basic** / **Pro**
+  - Tooltip/descrição:
+    - Basic: Estratégia de demanda, tráfego, site, Instagram
+    - Pro: Tudo do Basic + CRM + Inteligência Artificial
+  - Checkboxes de bônus: **Google Meu Negócio**, **Vitrine Instagram**
+- Ao salvar o cliente, persiste a escolha.
 
-Props: `clientId: string`
+### b) Card do cliente (`/clients/:id`) — selo
+- Selo no topo, em formato de pill/botão (sem ação), ao lado do nome:
+  - **Pro** → preenchido com gradient roxo (primary)
+  - **Basic** → outline preto-e-branco
+- Ao lado, badges menores dos bônus ativos.
+- Clicando no selo abre um popover para **trocar plano/bônus** (admin/equipe).
 
-Comportamento:
+### c) Modal do deal no CRM (informativo)
+- Mesmo selo aparece na sidebar do `DealDetailModal`, abaixo do nome do cliente.
 
-1. Busca o **deal ativo** do cliente:
-   ```
-   supabase.from("deals")
-     .select("id, pipeline_id, column_id, status")
-     .eq("client_id", clientId)
-     .order("created_at", { ascending: false })
-     .limit(1)
-   ```
-   (Existe trigger `auto_create_deal_for_client` — todo cliente já tem um deal.)
+## 2. Checkpoints visuais nas tarefas
 
-2. Busca pipeline + colunas:
-   - `pipelines` (nome do pipeline para exibir como rótulo discreto à esquerda)
-   - `pipeline_columns` filtrando por `pipeline_id`, ordenado por `sort_order`
+Na aba **Negócios** do `DealDetailModal` (e em `/crm/atividades`), as tarefas auto-geradas ficam agrupadas por checkpoint:
 
-3. Renderiza um **stepper horizontal**:
-
-```text
-Pipeline Principal:  [Novo] ─ [Qualificação] ─ ●Proposta ─ [Negociação] ─ [Ganho]
+```
+▸ 01 Cadastro do cliente            (3/8 concluídas)
+   ☐ Criar grupo no WhatsApp
+   ☐ Enviar mensagem inicial
+   …
+▸ 02 Início do projeto              (0/5)
+▸ 03 Estratégia de posicionamento   (0/14)
+▸ 04 Configuração de tráfego        (0/12)
+▸ 05 Entrega de resultado           (0/7)
 ```
 
-   - Cada etapa é um "chip" clicável.
-   - Etapa atual: fundo na cor da coluna (`column.color`, fallback `#8B5CF6`), texto branco, `ring-2 ring-primary/20`, com `CheckCircle2` se for tipo `won` ou check.
-   - Etapas anteriores (sort_order < atual): fundo `bg-primary/10`, texto `text-primary`, conector preenchido com `bg-primary`.
-   - Etapas posteriores: fundo `bg-muted`, texto `text-muted-foreground`, conector `bg-border`.
-   - Conectores: linha fina (`h-0.5`) entre os chips.
-   - Mobile (`< sm`): scroll horizontal (`overflow-x-auto`) preservando os chips lado a lado.
+- Cada grupo é colapsável, mostra contador e barra de progresso.
+- Tarefas Pro recebem badge `PRO` roxo.
+- Tarefas de bônus recebem badge `Bônus`.
 
-4. Ao clicar em uma etapa:
-   - Otimista: atualiza UI imediatamente.
-   - `supabase.from("deals").update({ column_id: newColumnId }).eq("id", deal.id)` — os triggers `handle_deal_column_change_*` cuidam de status (won/lost), `entered_current_column_at`, `deal_history` e automações.
-   - Toast de sucesso/erro (já segue padrão do projeto).
+## 3. Geração automática
 
-5. Estado vazio:
-   - Se não houver deal: card discreto com link "Configurar pipeline" → `/crm`.
-   - Loading: skeleton fino do mesmo height da barra.
+Ao definir/atualizar plano + bônus do cliente, o sistema:
+1. Carrega o catálogo de tarefas do template universal (Basic + extras Pro + extras de bônus).
+2. Calcula quais devem existir para a combinação escolhida.
+3. **Insere apenas as que faltam** (compara por `checkpoint + subject`). Nunca remove nem duplica. Concluídas são preservadas.
+4. Trocar Basic → Pro adiciona as tarefas Pro faltantes; desmarcar bônus mantém o que já existe.
 
-6. **Realtime** (opcional, leve): assina `postgres_changes` em `deals` filtrando pelo `id` do deal para refletir mudanças feitas em outros lugares (ex.: Kanban).
+Botão manual **"Sincronizar tarefas do plano"** no popover do selo, para regerar sob demanda.
 
-## Integração em `src/pages/ClientDetails.tsx`
+## 4. Catálogo (template universal — Hospedagens por enquanto)
 
-- Importar `ClientPipelineBar`.
-- Renderizar **logo após** o bloco do header (linha onde fecha o `<div>` com nome + nicho), **antes** do `Card` "Informações do Cliente":
+Baseado nos PDFs:
+- **01 Cadastro** (8 tarefas Basic)
+- **02 Início** (4 Basic + 1 Pro: Onboarding I.A)
+- **03 Estratégia** (14 Basic)
+- **04 Tráfego** (10 Basic + 2 Pro: Configurar CRM, Conectar WhatsApp ao CRM)
+- **05 Entrega** (4 Basic + 2 bônus: Google Meu Negócio, Vitrine Instagram + 1 Pro: Configurar I.A SDR)
 
-```tsx
-<ClientPipelineBar clientId={client.id} />
+Total: ~41 tarefas (varia conforme plano/bônus).
+
+---
+
+## Detalhes técnicos
+
+### Banco
+
+Migration:
+```sql
+-- enums
+CREATE TYPE xplo_plan AS ENUM ('basic','pro');
+CREATE TYPE xplo_bonus AS ENUM ('google_my_business','instagram_showcase');
+
+-- clients: novos campos
+ALTER TABLE clients
+  ADD COLUMN xplo_plan xplo_plan DEFAULT 'basic',
+  ADD COLUMN xplo_bonuses xplo_bonus[] DEFAULT ARRAY[]::xplo_bonus[];
+
+-- activities: campos para checkpoint e origem
+ALTER TABLE activities
+  ADD COLUMN checkpoint_code text,    -- '01'..'05'
+  ADD COLUMN checkpoint_label text,   -- 'Cadastro do cliente'
+  ADD COLUMN required_plan xplo_plan, -- nulo = Basic (vale para todos)
+  ADD COLUMN required_bonus xplo_bonus, -- nulo = não é bônus
+  ADD COLUMN template_key text;       -- chave única p/ idempotência
+
+CREATE UNIQUE INDEX activities_deal_template_unique
+  ON activities(deal_id, template_key) WHERE template_key IS NOT NULL;
 ```
 
-Não modifica nenhum outro card existente.
+Sem alterar tabelas Supabase reservadas. RLS já existente em `activities` e `clients` cobre os novos campos.
 
-## Detalhes visuais (design system)
+### Catálogo em código
 
-- Container: `Card` shadcn com `p-4 sm:p-5`, `rounded-xl`, `border-border/60`.
-- Título pequeno acima: `Pipeline · {pipeline.name}` em `text-xs uppercase tracking-wide text-muted-foreground`.
-- Chips: `px-3 py-1.5 rounded-full text-xs font-medium transition-all` com hover sutil (`hover:scale-[1.02]`).
-- Acessibilidade: cada chip é `<button>` com `aria-current="step"` na atual e `aria-label="Mover para {nome}"`.
-
-## Resumo visual
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ PIPELINE · Pipeline Principal                                │
-│                                                              │
-│  ✓Novo ─── ✓Qualif. ─── ●Proposta ─── Negoc. ─── Ganho      │
-│                          (atual)                             │
-└─────────────────────────────────────────────────────────────┘
-
-[Card "Informações do Cliente"]
-[Card "Acesso XPLO LAB"]
-...
+`src/lib/xploProcessTemplate.ts`:
+```ts
+export const XPLO_TEMPLATE = [
+  { code: '01', label: 'Cadastro do cliente', tasks: [
+    { key: 'cad_grupo_wa', subject: 'Criar grupo no WhatsApp', description: '...', type: 'task' },
+    // ...
+  ]},
+  { code: '02', label: 'Início do projeto', tasks: [
+    // ...
+    { key: 'ini_onboarding_ia', subject: 'Onboarding I.A', requiredPlan: 'pro' },
+  ]},
+  // 03, 04 (com Pro: configurar CRM, conectar WhatsApp CRM), 05 (com bônus + Pro)
+];
 ```
 
-## Memória do projeto
+### Sync helper
 
-Criar `mem://crm/pipeline-bar-cliente` documentando: barra de pipeline em `/clients/:id`, lê deal ativo do cliente, click move via update direto em `deals.column_id` (triggers cuidam do resto), sincroniza com Kanban via realtime.
+`src/lib/syncDealTasks.ts`:
+- `syncDealTasksFromPlan(dealId, clientId, plan, bonuses)`:
+  1. Busca `activities` existentes do deal com `template_key`.
+  2. Filtra catálogo: inclui se `requiredPlan` é nulo OU igual ao plano do cliente; se `requiredBonus` é nulo OU está nos bônus selecionados.
+  3. Faz `INSERT` apenas das que não existem (ON CONFLICT DO NOTHING via unique index).
+  4. Nunca DELETE.
+
+### Pontos de chamada
+
+- Após criar cliente no onboarding (com plano definido).
+- Após `auto_create_deal_for_client` (trigger): chamar `syncDealTasksFromPlan` no front quando o usuário abrir o deal pela primeira vez (ou via edge function se preferir 100% server-side — fase 2).
+- Ao mudar plano/bônus no popover do selo.
+- Botão "Sincronizar tarefas".
+
+### UI — componentes novos/alterados
+
+| Arquivo | Mudança |
+|---|---|
+| `src/components/onboarding/steps/StepRegistration.tsx` | Bloco Plano + Bônus |
+| `src/components/client/PlanBadge.tsx` (novo) | Selo Pro/Basic + bônus, com popover de troca |
+| `src/components/client/PlanPickerPopover.tsx` (novo) | Radio plano + checkboxes bônus + botão sincronizar |
+| `src/pages/ClientDetails.tsx` | Renderiza `<PlanBadge>` no header |
+| `src/components/crm/DealDetailModal.tsx` | `<PlanBadge size="sm">` na sidebar; aba Negócios agrupa tarefas por `checkpoint_code` |
+| `src/lib/xploProcessTemplate.ts` (novo) | Catálogo das ~41 tarefas |
+| `src/lib/syncDealTasks.ts` (novo) | Lógica de sincronização idempotente |
+| `src/integrations/supabase/types.ts` | Auto-gerado após migration |
+
+### Estilo do selo
+
+- Pro: `bg-gradient-to-r from-primary to-primary/70 text-primary-foreground` + ícone Sparkles
+- Basic: `border border-foreground text-foreground bg-background`
+- Forma de pill (rounded-full px-3 py-1), tipografia bold sm.
+- Bônus: badges menores (`variant="outline"`) ao lado.
+
+### Não escopo (fica para depois)
+
+- Templates por nicho (todos usam o mesmo template "Hospedagens" agora).
+- Datas/prazos automáticos por tarefa (criadas sem `scheduled_at`; usuário agenda manualmente).
+- Remover tarefas quando desmarca bônus (decidido: nunca remover).
+- Refletir Plano/Bônus em cobrança/contrato.
+
+### Memória a salvar (após build)
+
+- `mem://crm/plano-bonus-tarefas-automaticas` — modelo de dados, regras de sync idempotente, catálogo Hospedagens.
+- Atualizar índice.
