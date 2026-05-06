@@ -27,6 +27,7 @@ export type Database = {
           description: string | null
           duration_minutes: number | null
           id: string
+          recurrence_days: number | null
           required_bonus: Database["public"]["Enums"]["xplo_bonus"] | null
           required_plan: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id: string | null
@@ -50,6 +51,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          recurrence_days?: number | null
           required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
           required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id?: string | null
@@ -73,6 +75,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number | null
           id?: string
+          recurrence_days?: number | null
           required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
           required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
           responsible_id?: string | null
@@ -1206,6 +1209,7 @@ export type Database = {
       pipeline_columns: {
         Row: {
           automation_enabled: boolean
+          checkpoint_code: string | null
           color: string
           column_type: Database["public"]["Enums"]["crm_column_type"]
           created_at: string
@@ -1217,6 +1221,7 @@ export type Database = {
         }
         Insert: {
           automation_enabled?: boolean
+          checkpoint_code?: string | null
           color?: string
           column_type?: Database["public"]["Enums"]["crm_column_type"]
           created_at?: string
@@ -1228,6 +1233,7 @@ export type Database = {
         }
         Update: {
           automation_enabled?: boolean
+          checkpoint_code?: string | null
           color?: string
           column_type?: Database["public"]["Enums"]["crm_column_type"]
           created_at?: string
