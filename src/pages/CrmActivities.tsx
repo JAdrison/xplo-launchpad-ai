@@ -100,7 +100,7 @@ export function CrmActivitiesView() {
   };
 
   const filtered = useMemo(() => {
-    return activities.filter((a) => {
+    const list = activities.filter((a) => {
       if (scope === "mine" && a.responsible_id !== user?.id) return false;
       if (pipelineFilter !== "all" && a.deals?.pipeline_id !== pipelineFilter) return false;
 
@@ -119,6 +119,16 @@ export function CrmActivitiesView() {
         case "completed":
           return isCompleted;
       }
+    });
+
+    // Ordena: atrasadas primeiro (mais antigas no topo), depois por data ascendente
+    return list.sort((a, b) => {
+      const da = getDueState(a.scheduled_at, a.status);
+      const db = getDueState(b.scheduled_at, b.status);
+      if (da.overdue !== db.overdue) return da.overdue ? -1 : 1;
+      const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Infinity;
+      const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
+      return ta - tb;
     });
   }, [activities, scope, bucket, pipelineFilter, user]);
 
