@@ -2,10 +2,13 @@ import { useDraggable } from "@dnd-kit/core";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Clock } from "lucide-react";
+import { Clock, CalendarClock } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   formatBRL, initialsOf, timeInColumn,
   getMaintenanceStatus, MAINTENANCE_LABEL, MAINTENANCE_CLASSES,
+  getDueState,
 } from "@/lib/crmFormat";
 import { cn } from "@/lib/utils";
 import type { DealWithMeta } from "@/hooks/useCrm";
