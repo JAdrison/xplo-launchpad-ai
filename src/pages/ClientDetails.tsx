@@ -38,6 +38,8 @@ import { OnboardingX1Section } from "@/components/client/OnboardingX1Section";
 import { OnboardingLinkSection } from "@/components/client/OnboardingLinkSection";
 import { AIGenerationSection } from "@/components/client/AIGenerationSection";
 import { GeneratedAssetsSection } from "@/components/client/GeneratedAssetsSection";
+import { PlanBadge } from "@/components/client/PlanBadge";
+import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 type Client = Tables<"clients">;
 
 const STATUS_LABELS: Record<Client["status"], string> = {
@@ -321,10 +323,20 @@ export default function ClientDetails() {
             </Link>
           </Button>
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground md:text-3xl">
                 {client.name}
               </h1>
+              <PlanBadge
+                clientId={client.id}
+                plan={(((client as any).xplo_plan as XploPlan) ?? "basic")}
+                bonuses={(((client as any).xplo_bonuses as XploBonus[]) ?? [])}
+                onChanged={(plan, bonuses) =>
+                  setClient((prev) =>
+                    prev ? ({ ...prev, xplo_plan: plan, xplo_bonuses: bonuses } as any) : prev
+                  )
+                }
+              />
               <Badge variant={STATUS_VARIANTS[client.status]}>
                 {STATUS_LABELS[client.status]}
               </Badge>
