@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { hydrateAIConfig, purgeLegacyAIConfigFromLocalStorage } from "@/lib/aiConfig";
 
 type Role = "admin" | "user" | "pending" | null;
 
@@ -33,7 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (session?.user) {
           // Defer role fetch to avoid deadlock
-          setTimeout(() => fetchUserRole(session.user.id), 0);
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+            // Carrega config de IA do servidor (substitui localStorage)
+            hydrateAIConfig().catch(() => {});
+            purgeLegacyAIConfigFromLocalStorage();
+          }, 0);
         } else {
           setRole(null);
           setIsLoading(false);
@@ -47,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRole(session.user.id);
+        hydrateAIConfig().catch(() => {});
+        purgeLegacyAIConfigFromLocalStorage();
       } else {
         setIsLoading(false);
       }

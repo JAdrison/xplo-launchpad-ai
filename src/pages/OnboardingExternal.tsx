@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,32 @@ export default function OnboardingExternal() {
   const [pageState, setPageState] = useState<PageState>("loading");
   const [client, setClient] = useState<Client | null>(null);
   const [tokenData, setTokenData] = useState<TokenData | null>(null);
+  const fetchPatchedRef = useRef(false);
+
+  // Injeta header `x-client-token` em todas as chamadas para o Supabase enquanto
+  // a página de onboarding externo estiver montada. Isso permite que as RLS
+  // `anon_token_*` validem o acesso anônimo via token de convite.
+  useEffect(() => {
+    if (!token || fetchPatchedRef.current) return;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      try {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        if (url.startsWith(supabaseUrl)) {
+          const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+          headers.set("x-client-token", token);
+          return originalFetch(input, { ...init, headers });
+        }
+      } catch {}
+      return originalFetch(input, init);
+    };
+    fetchPatchedRef.current = true;
+    return () => {
+      window.fetch = originalFetch;
+      fetchPatchedRef.current = false;
+    };
+  }, [token]);
 
   useEffect(() => {
     validateToken();

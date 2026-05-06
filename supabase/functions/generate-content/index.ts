@@ -1369,6 +1369,40 @@ async function ai(config: AIConfig, sys: string, usr: string, t = 0.7) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Authentication: aceita usuário autenticado OU header x-client-token válido
+  const authHeader = req.headers.get('Authorization');
+  const clientToken = req.headers.get('x-client-token');
+  let isAuthorized = false;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data, error } = await supabaseAuth.auth.getClaims(authHeader.replace('Bearer ', ''));
+      if (!error && data?.claims?.sub) isAuthorized = true;
+    } catch (_) {}
+  }
+  if (!isAuthorized && clientToken) {
+    const supaSrv = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const { data: tok } = await supaSrv
+      .from('client_tokens')
+      .select('id, expires_at, used_at')
+      .eq('token', clientToken)
+      .maybeSingle();
+    if (tok && new Date(tok.expires_at) > new Date() && !tok.used_at) {
+      isAuthorized = true;
+    }
+  }
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const b = await req.json() as ReqBody;
     const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig, bankOfferText, bankOfferDocumentId, bankOfferId } = b;
