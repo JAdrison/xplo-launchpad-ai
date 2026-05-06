@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -10,14 +10,12 @@ import Auth from "./pages/Auth";
 import PendingApproval from "./pages/PendingApproval";
 import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
-import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import ClientNew from "./pages/ClientNew";
 import ClientRegister from "./pages/ClientRegister";
 import Onboarding from "./pages/Onboarding";
 import OnboardingExternal from "./pages/OnboardingExternal";
-import Generator from "./pages/Generator";
-import Assets from "./pages/Assets";
+import Workspace from "./pages/Workspace";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import CrmKanban from "./pages/CrmKanban";
@@ -35,13 +33,13 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public routes (no auth required) */}
+            {/* Public routes */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/pending" element={<PendingApproval />} />
             <Route path="/register" element={<ClientRegister />} />
             <Route path="/onboarding/external/:token" element={<OnboardingExternal />} />
 
-            {/* Protected routes (with layout) */}
+            {/* Protected routes */}
             <Route
               element={
                 <ProtectedRoute>
@@ -50,19 +48,25 @@ const App = () => (
               }
             >
               <Route path="/" element={<Dashboard />} />
-              <Route path="/clients" element={<Clients />} />
+
+              {/* Workspace unifica Clientes + Onboarding + Gerador + Ativos */}
+              <Route path="/workspace" element={<Workspace />} />
+              <Route path="/clients" element={<Navigate to="/workspace" replace />} />
+              <Route path="/assets" element={<Navigate to="/workspace" replace />} />
+              <Route path="/generator" element={<Navigate to="/workspace" replace />} />
+
               <Route path="/clients/new" element={<ClientNew />} />
               <Route path="/clients/:id" element={<ClientDetails />} />
+
+              {/* Onboarding wizard (com ?client=...) */}
               <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/generator" element={<Generator />} />
-              <Route path="/assets" element={<Assets />} />
+
               <Route path="/crm" element={<CrmKanban />} />
               <Route path="/crm/atividades" element={<CrmActivities />} />
               <Route path="/crm/contatos" element={<CrmContacts />} />
               <Route path="/crm/config" element={<CrmConfig />} />
               <Route path="/settings" element={<Settings />} />
-              
-              {/* Admin only route */}
+
               <Route
                 path="/admin/users"
                 element={
@@ -73,7 +77,6 @@ const App = () => (
               />
             </Route>
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
