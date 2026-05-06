@@ -5,10 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Building2, Loader2, User, DollarSign, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Loader2, User, DollarSign, Users, Sparkles, Gift } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone, maskCurrency } from "@/lib/utils";
+import { BONUS_LABELS, type XploBonus, type XploPlan } from "@/lib/xploProcessTemplate";
+import { updateClientPlanAndSync } from "@/lib/syncDealTasks";
+import { cn } from "@/lib/utils";
 
 interface StepRegistrationProps {
   clientId: string;
@@ -60,6 +65,8 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
     monthly_investment: "",
     initial_traffic_investment: "",
   });
+  const [xploPlan, setXploPlan] = useState<XploPlan>("basic");
+  const [xploBonuses, setXploBonuses] = useState<XploBonus[]>([]);
   const [showCustomTraffic, setShowCustomTraffic] = useState(false);
   const [customTraffic, setCustomTraffic] = useState("");
 
@@ -76,6 +83,8 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
     if (c.data) {
       const cd: any = c.data;
       setNicheLabel(cd.niche_label || cd.niche || "");
+      setXploPlan((cd.xplo_plan as XploPlan) || "basic");
+      setXploBonuses((cd.xplo_bonuses as XploBonus[]) || []);
       setForm((f) => ({
         ...f,
         name: cd.name || "",
