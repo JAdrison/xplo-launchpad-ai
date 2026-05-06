@@ -2,10 +2,13 @@ import { useDraggable } from "@dnd-kit/core";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Clock } from "lucide-react";
+import { Clock, CalendarClock } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   formatBRL, initialsOf, timeInColumn,
   getMaintenanceStatus, MAINTENANCE_LABEL, MAINTENANCE_CLASSES,
+  getDueState,
 } from "@/lib/crmFormat";
 import { cn } from "@/lib/utils";
 import type { DealWithMeta } from "@/hooks/useCrm";
@@ -79,8 +82,10 @@ export function DealCard({ deal, onClick, columnCheckpoint }: Props) {
           {maintStatus === "waiting" && (
             <p className="text-[10px] text-muted-foreground">Sem tarefas geradas. Abra para iniciar.</p>
           )}
-          {maintStatus === "ontrack" && nextDueLabel && (
-            <p className="text-[10px] text-muted-foreground">{nextDueLabel}</p>
+          {maintStatus === "ontrack" && nextDueLabel && maintMeta?.nextDueAt && (
+            <p className={cn("text-[10px]", getDueState(maintMeta.nextDueAt, "pending").textClass)}>
+              {nextDueLabel}
+            </p>
           )}
         </div>
       )}
@@ -94,6 +99,20 @@ export function DealCard({ deal, onClick, columnCheckpoint }: Props) {
           <Progress value={pct} className="h-1" />
         </div>
       )}
+
+      {!isMaintenance && deal.next_pending_at && (() => {
+        const due = getDueState(deal.next_pending_at, "pending");
+        return (
+          <div className={cn("flex items-center gap-1 mt-2 text-xs", due.textClass)}>
+            <CalendarClock className="h-3 w-3" />
+            <span>
+              {due.overdue
+                ? `Atrasada ${due.daysLate}d`
+                : `Vence ${format(new Date(deal.next_pending_at), "dd/MM", { locale: ptBR })}`}
+            </span>
+          </div>
+        );
+      })()}
 
       <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
         <Clock className="h-3 w-3" />
