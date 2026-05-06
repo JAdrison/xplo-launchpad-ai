@@ -73,6 +73,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     experiencia: "",
     extras: "",
     promotions: "",
+    passeios: [] as { nome: string; descricao: string }[],
   });
 
   useEffect(() => { void load(); }, [clientId]);
