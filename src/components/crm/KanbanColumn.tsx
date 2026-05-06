@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DealCard } from "./DealCard";
 import { ColumnAutomationDialog } from "./ColumnAutomationDialog";
-import { formatBRL } from "@/lib/crmFormat";
+import { formatBRL, getMaintenanceStatus } from "@/lib/crmFormat";
 import { cn } from "@/lib/utils";
 import type { PipelineColumn, DealWithMeta } from "@/hooks/useCrm";
 
