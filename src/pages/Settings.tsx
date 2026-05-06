@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Save, Sparkles, Key, Brain, Zap, Webhook } from "lucide-react";
+import { getAIConfig, hydrateAIConfig, saveAIConfig } from "@/lib/aiConfig";
 
 type AISource = "lovable" | "xplo" | "custom";
 type AIProvider = "gemini" | "openai";
@@ -54,19 +55,18 @@ export default function Settings() {
   const [showKey, setShowKey] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
 
-  // Load saved settings
+  // Load saved settings (server + webhook ainda em localStorage)
   useEffect(() => {
-    const savedSource = localStorage.getItem("xplo_ai_source") as AISource | null;
-    const savedProvider = localStorage.getItem("xplo_ai_provider") as AIProvider | null;
-    const savedModel = localStorage.getItem("xplo_ai_model");
-    const savedKey = localStorage.getItem("xplo_api_key");
-    const savedWebhook = localStorage.getItem("webhook_url");
-
-    if (savedSource) setSource(savedSource);
-    if (savedProvider) setProvider(savedProvider);
-    if (savedModel) setModel(savedModel);
-    if (savedKey) setApiKey(savedKey);
-    if (savedWebhook) setWebhookUrl(savedWebhook);
+    (async () => {
+      await hydrateAIConfig();
+      const cfg = getAIConfig();
+      setSource(cfg.source);
+      setProvider(cfg.provider);
+      setModel(cfg.model);
+      if (cfg.apiKey) setApiKey(cfg.apiKey);
+      const savedWebhook = localStorage.getItem("webhook_url");
+      if (savedWebhook) setWebhookUrl(savedWebhook);
+    })();
   }, []);
 
   // Reset model when source or provider changes (only for non-xplo sources)
@@ -77,19 +77,25 @@ export default function Settings() {
     setModel(defaultModel);
   }, [source, provider]);
 
-  const handleSave = () => {
-    localStorage.setItem("xplo_ai_source", source);
-    localStorage.setItem("xplo_ai_provider", provider);
-    localStorage.setItem("xplo_ai_model", model);
-    
-    if (source === "custom") {
-      localStorage.setItem("xplo_api_key", apiKey);
+  const handleSave = async () => {
+    try {
+      await saveAIConfig({
+        source,
+        provider,
+        model,
+        apiKey: source === "custom" ? apiKey : undefined,
+      });
+      toast({
+        title: "Configurações salvas",
+        description: "Suas preferências de IA foram salvas com segurança no servidor.",
+      });
+    } catch (e) {
+      toast({
+        title: "Erro ao salvar",
+        description: (e as Error).message,
+        variant: "destructive",
+      });
     }
-
-    toast({
-      title: "Configurações salvas",
-      description: "Suas preferências de IA foram salvas com sucesso.",
-    });
   };
 
   const currentModels = source === "lovable" ? LOVABLE_MODELS : CUSTOM_MODELS;
