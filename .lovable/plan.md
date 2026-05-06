@@ -1,163 +1,179 @@
 
-# Plano e bônus do cliente → checkpoints + tarefas automáticas
+# Pipelines XPLO + Manutenção recorrente
 
 ## Objetivo
 
-Permitir escolher **Plano (Basic/Pro)** e **Bônus (Google Meu Negócio, Vitrine Instagram)** de cada cliente, e gerar automaticamente as tarefas do processo operacional XPLO, organizadas em **checkpoints (01 Cadastro → 05 Entrega)**, dentro do card do CRM.
+Reorganizar o CRM em **um único pipeline "Entrega de Serviços"** com colunas que espelham o processo operacional, e adicionar duas colunas de manutenção pós-entrega com tarefas recorrentes que se reagendam automaticamente ao serem concluídas.
 
-## 1. Onde a escolha aparece
+## 1. Estrutura final do pipeline
 
-### a) Onboarding (passo de cadastro)
-- Adicionar bloco "Plano XPLO" no `StepRegistration.tsx` com:
-  - Radio: **Basic** / **Pro**
-  - Tooltip/descrição:
-    - Basic: Estratégia de demanda, tráfego, site, Instagram
-    - Pro: Tudo do Basic + CRM + Inteligência Artificial
-  - Checkboxes de bônus: **Google Meu Negócio**, **Vitrine Instagram**
-- Ao salvar o cliente, persiste a escolha.
-
-### b) Card do cliente (`/clients/:id`) — selo
-- Selo no topo, em formato de pill/botão (sem ação), ao lado do nome:
-  - **Pro** → preenchido com gradient roxo (primary)
-  - **Basic** → outline preto-e-branco
-- Ao lado, badges menores dos bônus ativos.
-- Clicando no selo abre um popover para **trocar plano/bônus** (admin/equipe).
-
-### c) Modal do deal no CRM (informativo)
-- Mesmo selo aparece na sidebar do `DealDetailModal`, abaixo do nome do cliente.
-
-## 2. Checkpoints visuais nas tarefas
-
-Na aba **Negócios** do `DealDetailModal` (e em `/crm/atividades`), as tarefas auto-geradas ficam agrupadas por checkpoint:
+Pipeline único: **Entrega de Serviços** (renomeia o atual). Colunas (em ordem):
 
 ```
-▸ 01 Cadastro do cliente            (3/8 concluídas)
-   ☐ Criar grupo no WhatsApp
-   ☐ Enviar mensagem inicial
-   …
-▸ 02 Início do projeto              (0/5)
-▸ 03 Estratégia de posicionamento   (0/14)
-▸ 04 Configuração de tráfego        (0/12)
-▸ 05 Entrega de resultado           (0/7)
+01 Cadastro → 02 Início → 03 Estratégia → 04 Tráfego → 05 Entrega
+  → Manutenção pendente → Manutenção ativa
+  → Ganho   → Perdido
 ```
 
-- Cada grupo é colapsável, mostra contador e barra de progresso.
-- Tarefas Pro recebem badge `PRO` roxo.
-- Tarefas de bônus recebem badge `Bônus`.
+- Colunas 01–05: cada uma representa um checkpoint do processo. O deal **avança automaticamente** para a próxima coluna quando todas as tarefas daquele checkpoint (que se aplicam ao plano/bônus do cliente) estão concluídas.
+- **Manutenção pendente**: deal cai aqui logo após sair de "05 Entrega" (entrega concluída). Significa "cliente entregue, aguardando início do ciclo de manutenção". Equipe move manualmente para "ativa" quando inicia.
+- **Manutenção ativa**: ao entrar nesta coluna pela primeira vez, gera as **tarefas recorrentes iniciais** (Instagram, Tráfego, IA-pro). A partir daí, sempre que uma tarefa recorrente é marcada como concluída, a próxima é criada automaticamente com `scheduled_at = now() + intervalo`.
+- **Ganho / Perdido**: encerram o deal (mantêm comportamento atual via `column_type`).
 
-## 3. Geração automática
+## 2. Catálogo de tarefas recorrentes (Manutenção)
 
-Ao definir/atualizar plano + bônus do cliente, o sistema:
-1. Carrega o catálogo de tarefas do template universal (Basic + extras Pro + extras de bônus).
-2. Calcula quais devem existir para a combinação escolhida.
-3. **Insere apenas as que faltam** (compara por `checkpoint + subject`). Nunca remove nem duplica. Concluídas são preservadas.
-4. Trocar Basic → Pro adiciona as tarefas Pro faltantes; desmarcar bônus mantém o que já existe.
+Adicionar ao `xploProcessTemplate.ts` um novo bloco `06 Manutenção`, marcado como `recurring: true`:
 
-Botão manual **"Sincronizar tarefas do plano"** no popover do selo, para regerar sob demanda.
+| Tarefa | Intervalo | Plano |
+|---|---|---|
+| Programar 30 dias de Instagram (2 vídeos feed + 6 estáticos + 8 stories) | 30 dias | Basic |
+| Verificação de resultado de tráfego | 7 dias | Basic |
+| Entrega de relatório de resultado (quinzenal) | 15 dias | Basic |
+| Trocar campanhas de tráfego | 30 dias | Basic |
+| Verificar fechamento, atendimento e Follow Up (IA) | 15 dias | Pro |
 
-## 4. Catálogo (template universal — Hospedagens por enquanto)
+A descrição da tarefa de Instagram detalha o conteúdo (Feed: 2 vídeos curtos + 6 estáticos; Stories: 8).
 
-Baseado nos PDFs:
-- **01 Cadastro** (8 tarefas Basic)
-- **02 Início** (4 Basic + 1 Pro: Onboarding I.A)
-- **03 Estratégia** (14 Basic)
-- **04 Tráfego** (10 Basic + 2 Pro: Configurar CRM, Conectar WhatsApp ao CRM)
-- **05 Entrega** (4 Basic + 2 bônus: Google Meu Negócio, Vitrine Instagram + 1 Pro: Configurar I.A SDR)
+## 3. Recorrência automática
 
-Total: ~41 tarefas (varia conforme plano/bônus).
+Mecanismo: **trigger no Postgres em `activities`**.
+
+- Novo campo em `activities`: `recurrence_days int` (nullable). Preenchido pelas tarefas recorrentes ao serem criadas.
+- Trigger `AFTER UPDATE ON activities`: quando `status` muda para `completed` E `recurrence_days IS NOT NULL` E não existe ainda uma "próxima ocorrência" pendente com mesmo `template_key` e `deal_id`, **insere uma nova activity** clonando subject/description/checkpoint/template_key/recurrence_days, com `scheduled_at = now() + recurrence_days` e `status = 'pending'`.
+- Idempotência: a verificação "não existe próxima pendente" evita loop quando o usuário marca/desmarca.
+
+## 4. Avanço automático de coluna 01→05
+
+Trigger `AFTER UPDATE ON activities` (mesma função ou complementar):
+
+- Quando uma activity vai para `completed`, recalcula para o `deal_id` quantas tarefas estão pendentes em cada `checkpoint_code` aplicável ao plano.
+- Se o checkpoint da coluna atual do deal está 100% concluído E existe uma coluna seguinte na ordem 01→05, **atualiza `deals.column_id`** para a próxima.
+- Não move automaticamente para "Manutenção pendente" → ao concluir "05 Entrega", move para "Manutenção pendente" (essa transição é automática, marca o fim da entrega).
+- Não toca em deals que estão em Ganho/Perdido.
+
+Mapeamento coluna ↔ checkpoint: nova coluna `pipeline_columns.checkpoint_code` (text, nullable).
+
+## 5. Migração de dados
+
+Seed/migration que, no pipeline padrão existente:
+1. Renomeia para "Entrega de Serviços".
+2. Cria as colunas faltantes (01–05, Manutenção pendente, Manutenção ativa) com `checkpoint_code` correto, preservando colunas Ganho/Perdido existentes.
+3. Move deals existentes que estão em colunas antigas para "01 Cadastro" (default seguro).
+4. Remove colunas antigas órfãs **somente se não tiverem deals** (senão mantém para o usuário decidir).
+
+## 6. Geração inicial das tarefas de Manutenção
+
+No trigger de mudança de coluna (`handle_deal_column_change_after`): quando o deal entra em **Manutenção ativa** pela primeira vez (verifica via `deal_history` se já entrou antes), executa um INSERT do bloco `06 Manutenção` filtrado por plano/bônus do cliente. Datas iniciais escalonadas: cada tarefa começa com `scheduled_at = now() + recurrence_days`.
+
+## 7. UI
+
+- `KanbanColumn`: badge pequeno `01..05` no header da coluna quando tem `checkpoint_code`.
+- `DealDetailModal` (aba Negócios): tarefas com `recurrence_days` recebem badge `🔁 a cada Nd` ao lado do título.
+- `ClientPipelineBar`: já mostra colunas; passa a mostrar todas as novas (01..05, Manutenção, Ganho, Perdido).
+
+## 8. Não-escopo (fica para depois)
+
+- Pipeline 02 separado (decidido: tudo num pipeline só).
+- Notificações/lembretes nas datas das recorrências.
+- Dashboard de manutenção.
 
 ---
 
 ## Detalhes técnicos
 
-### Banco
+### Migration (schema)
 
-Migration:
 ```sql
--- enums
-CREATE TYPE xplo_plan AS ENUM ('basic','pro');
-CREATE TYPE xplo_bonus AS ENUM ('google_my_business','instagram_showcase');
+ALTER TABLE pipeline_columns ADD COLUMN checkpoint_code text;
+ALTER TABLE activities ADD COLUMN recurrence_days int;
 
--- clients: novos campos
-ALTER TABLE clients
-  ADD COLUMN xplo_plan xplo_plan DEFAULT 'basic',
-  ADD COLUMN xplo_bonuses xplo_bonus[] DEFAULT ARRAY[]::xplo_bonus[];
+-- trigger de recorrência + auto-advance
+CREATE OR REPLACE FUNCTION handle_activity_completion()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE
+  v_next_col uuid;
+  v_curr_chk text;
+  v_pending int;
+  v_plan xplo_plan;
+  v_bonuses xplo_bonus[];
+BEGIN
+  IF TG_OP='UPDATE' AND NEW.status='completed' AND OLD.status<>'completed' THEN
+    -- 1) recorrência
+    IF NEW.recurrence_days IS NOT NULL THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM activities
+        WHERE deal_id=NEW.deal_id AND template_key=NEW.template_key
+          AND status='pending' AND id<>NEW.id
+      ) THEN
+        INSERT INTO activities(
+          deal_id, client_id, type, subject, description,
+          checkpoint_code, checkpoint_label, template_key,
+          required_plan, required_bonus, recurrence_days,
+          scheduled_at, status, auto_generated
+        ) VALUES (
+          NEW.deal_id, NEW.client_id, NEW.type, NEW.subject, NEW.description,
+          NEW.checkpoint_code, NEW.checkpoint_label, NEW.template_key,
+          NEW.required_plan, NEW.required_bonus, NEW.recurrence_days,
+          now() + (NEW.recurrence_days || ' days')::interval, 'pending', true
+        );
+      END IF;
+    END IF;
 
--- activities: campos para checkpoint e origem
-ALTER TABLE activities
-  ADD COLUMN checkpoint_code text,    -- '01'..'05'
-  ADD COLUMN checkpoint_label text,   -- 'Cadastro do cliente'
-  ADD COLUMN required_plan xplo_plan, -- nulo = Basic (vale para todos)
-  ADD COLUMN required_bonus xplo_bonus, -- nulo = não é bônus
-  ADD COLUMN template_key text;       -- chave única p/ idempotência
+    -- 2) auto-advance coluna 01..05
+    SELECT pc.checkpoint_code INTO v_curr_chk
+    FROM deals d JOIN pipeline_columns pc ON pc.id=d.column_id
+    WHERE d.id=NEW.deal_id;
 
-CREATE UNIQUE INDEX activities_deal_template_unique
-  ON activities(deal_id, template_key) WHERE template_key IS NOT NULL;
+    IF v_curr_chk IS NOT NULL AND v_curr_chk BETWEEN '01' AND '05' THEN
+      SELECT c.xplo_plan, c.xplo_bonuses INTO v_plan, v_bonuses
+      FROM clients c JOIN deals d ON d.client_id=c.id WHERE d.id=NEW.deal_id;
+
+      SELECT count(*) INTO v_pending FROM activities
+      WHERE deal_id=NEW.deal_id AND checkpoint_code=v_curr_chk
+        AND status<>'completed'
+        AND (required_plan IS NULL OR required_plan=v_plan OR (required_plan='basic' AND v_plan='pro'))
+        AND (required_bonus IS NULL OR required_bonus = ANY(v_bonuses));
+
+      IF v_pending=0 THEN
+        SELECT pc.id INTO v_next_col
+        FROM pipeline_columns pc
+        WHERE pc.pipeline_id=(SELECT pipeline_id FROM deals WHERE id=NEW.deal_id)
+          AND pc.checkpoint_code = (
+            CASE v_curr_chk
+              WHEN '01' THEN '02' WHEN '02' THEN '03'
+              WHEN '03' THEN '04' WHEN '04' THEN '05'
+              WHEN '05' THEN 'maint_pending' END
+          )
+        LIMIT 1;
+        IF v_next_col IS NOT NULL THEN
+          UPDATE deals SET column_id=v_next_col WHERE id=NEW.deal_id;
+        END IF;
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;$$;
+
+CREATE TRIGGER trg_activity_completion
+AFTER UPDATE ON activities
+FOR EACH ROW EXECUTE FUNCTION handle_activity_completion();
 ```
 
-Sem alterar tabelas Supabase reservadas. RLS já existente em `activities` e `clients` cobre os novos campos.
+Adicionalmente, estender `handle_deal_column_change_after` para detectar entrada em coluna `checkpoint_code='maint_active'` e seedar as tarefas de manutenção (somente se ainda não existem para aquele deal+template_key).
 
-### Catálogo em código
+### Seed de colunas
 
-`src/lib/xploProcessTemplate.ts`:
-```ts
-export const XPLO_TEMPLATE = [
-  { code: '01', label: 'Cadastro do cliente', tasks: [
-    { key: 'cad_grupo_wa', subject: 'Criar grupo no WhatsApp', description: '...', type: 'task' },
-    // ...
-  ]},
-  { code: '02', label: 'Início do projeto', tasks: [
-    // ...
-    { key: 'ini_onboarding_ia', subject: 'Onboarding I.A', requiredPlan: 'pro' },
-  ]},
-  // 03, 04 (com Pro: configurar CRM, conectar WhatsApp CRM), 05 (com bônus + Pro)
-];
-```
+Migration cria/garante via `INSERT ... ON CONFLICT DO NOTHING` (usando uma `UNIQUE (pipeline_id, checkpoint_code) WHERE checkpoint_code IS NOT NULL`) as 7 colunas no pipeline default.
 
-### Sync helper
+### Código TS
 
-`src/lib/syncDealTasks.ts`:
-- `syncDealTasksFromPlan(dealId, clientId, plan, bonuses)`:
-  1. Busca `activities` existentes do deal com `template_key`.
-  2. Filtra catálogo: inclui se `requiredPlan` é nulo OU igual ao plano do cliente; se `requiredBonus` é nulo OU está nos bônus selecionados.
-  3. Faz `INSERT` apenas das que não existem (ON CONFLICT DO NOTHING via unique index).
-  4. Nunca DELETE.
+- `xploProcessTemplate.ts`: adiciona array `MAINTENANCE_TEMPLATE` com `recurrenceDays`.
+- `syncDealTasks.ts`: ignora tarefas com `recurrenceDays` (são geradas só ao entrar em manutenção ativa, via trigger).
+- `KanbanColumn.tsx`, `DealDetailModal.tsx`: badges visuais (mudança pequena).
+- `xplo_bonus` enum / lookup: nada muda.
 
-### Pontos de chamada
+### Memória a salvar
 
-- Após criar cliente no onboarding (com plano definido).
-- Após `auto_create_deal_for_client` (trigger): chamar `syncDealTasksFromPlan` no front quando o usuário abrir o deal pela primeira vez (ou via edge function se preferir 100% server-side — fase 2).
-- Ao mudar plano/bônus no popover do selo.
-- Botão "Sincronizar tarefas".
-
-### UI — componentes novos/alterados
-
-| Arquivo | Mudança |
-|---|---|
-| `src/components/onboarding/steps/StepRegistration.tsx` | Bloco Plano + Bônus |
-| `src/components/client/PlanBadge.tsx` (novo) | Selo Pro/Basic + bônus, com popover de troca |
-| `src/components/client/PlanPickerPopover.tsx` (novo) | Radio plano + checkboxes bônus + botão sincronizar |
-| `src/pages/ClientDetails.tsx` | Renderiza `<PlanBadge>` no header |
-| `src/components/crm/DealDetailModal.tsx` | `<PlanBadge size="sm">` na sidebar; aba Negócios agrupa tarefas por `checkpoint_code` |
-| `src/lib/xploProcessTemplate.ts` (novo) | Catálogo das ~41 tarefas |
-| `src/lib/syncDealTasks.ts` (novo) | Lógica de sincronização idempotente |
-| `src/integrations/supabase/types.ts` | Auto-gerado após migration |
-
-### Estilo do selo
-
-- Pro: `bg-gradient-to-r from-primary to-primary/70 text-primary-foreground` + ícone Sparkles
-- Basic: `border border-foreground text-foreground bg-background`
-- Forma de pill (rounded-full px-3 py-1), tipografia bold sm.
-- Bônus: badges menores (`variant="outline"`) ao lado.
-
-### Não escopo (fica para depois)
-
-- Templates por nicho (todos usam o mesmo template "Hospedagens" agora).
-- Datas/prazos automáticos por tarefa (criadas sem `scheduled_at`; usuário agenda manualmente).
-- Remover tarefas quando desmarca bônus (decidido: nunca remover).
-- Refletir Plano/Bônus em cobrança/contrato.
-
-### Memória a salvar (após build)
-
-- `mem://crm/plano-bonus-tarefas-automaticas` — modelo de dados, regras de sync idempotente, catálogo Hospedagens.
+- `mem://crm/pipeline-entrega-manutencao` — estrutura final, mapeamento checkpoint→coluna, auto-advance e recorrência idempotente.
 - Atualizar índice.
+
