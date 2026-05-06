@@ -3,24 +3,40 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Clock } from "lucide-react";
-import { formatBRL, initialsOf, timeInColumn } from "@/lib/crmFormat";
+import {
+  formatBRL, initialsOf, timeInColumn,
+  getMaintenanceStatus, MAINTENANCE_LABEL, MAINTENANCE_CLASSES,
+} from "@/lib/crmFormat";
+import { cn } from "@/lib/utils";
 import type { DealWithMeta } from "@/hooks/useCrm";
 
 interface Props {
   deal: DealWithMeta;
   onClick: () => void;
+  columnCheckpoint?: string | null;
 }
 
-export function DealCard({ deal, onClick }: Props) {
+export function DealCard({ deal, onClick, columnCheckpoint }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: deal.id });
 
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.4 : 1 }
     : undefined;
 
+  const isMaintenance = columnCheckpoint === "maint_active";
+  const maintStatus = isMaintenance ? getMaintenanceStatus(deal.maintenance) : null;
+  const maintMeta = deal.maintenance;
+
   const total = deal.activities_total ?? 0;
   const done = deal.activities_done ?? 0;
   const pct = total > 0 ? (done / total) * 100 : 0;
+
+  const nextDueLabel = (() => {
+    if (!isMaintenance || !maintMeta?.nextDueAt) return null;
+    const diff = Math.ceil((new Date(maintMeta.nextDueAt).getTime() - Date.now()) / 86400000);
+    if (diff <= 0) return null;
+    return `Próx. em ${diff}d`;
+  })();
 
   return (
     <Card
@@ -28,10 +44,7 @@ export function DealCard({ deal, onClick }: Props) {
       style={style}
       {...listeners}
       {...attributes}
-      onClick={(e) => {
-        // only treat as click if not dragging
-        if (!isDragging) onClick();
-      }}
+      onClick={() => { if (!isDragging) onClick(); }}
       className="cursor-grab active:cursor-grabbing p-3 hover:shadow-md transition-shadow bg-card"
     >
       <div className="flex items-start gap-2">
@@ -50,7 +63,29 @@ export function DealCard({ deal, onClick }: Props) {
         <p className="text-sm font-semibold text-primary mt-2">{formatBRL(deal.value_cents)}</p>
       )}
 
-      {total > 0 && (
+      {isMaintenance && maintStatus && (
+        <div className="mt-2 space-y-1">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded",
+              MAINTENANCE_CLASSES[maintStatus].badge,
+            )}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", MAINTENANCE_CLASSES[maintStatus].dot)} />
+            {MAINTENANCE_LABEL[maintStatus]}
+            {maintStatus === "overdue" && maintMeta && ` · ${maintMeta.overdueCount} há ${maintMeta.maxDaysLate}d`}
+            {maintStatus === "today" && maintMeta && ` · ${maintMeta.dueTodayCount}`}
+          </span>
+          {maintStatus === "waiting" && (
+            <p className="text-[10px] text-muted-foreground">Sem tarefas geradas. Abra para iniciar.</p>
+          )}
+          {maintStatus === "ontrack" && nextDueLabel && (
+            <p className="text-[10px] text-muted-foreground">{nextDueLabel}</p>
+          )}
+        </div>
+      )}
+
+      {!isMaintenance && total > 0 && (
         <div className="mt-2 space-y-1">
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Tarefas</span>
