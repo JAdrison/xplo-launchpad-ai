@@ -37,11 +37,21 @@ export interface Deal {
   created_at: string;
 }
 
+export interface MaintenanceState {
+  total: number;
+  pending: number;
+  overdueCount: number;
+  dueTodayCount: number;
+  nextDueAt: string | null;
+  maxDaysLate: number;
+}
+
 export interface DealWithMeta extends Deal {
   client_name?: string;
   client_phone?: string | null;
   activities_total?: number;
   activities_done?: number;
+  maintenance?: MaintenanceState;
 }
 
 export function usePipelines() {
