@@ -33,7 +33,7 @@ interface DealFull {
   responsible_id: string | null; entered_current_column_at: string;
 }
 interface ClientLite { id: string; name: string; phone: string | null; email: string | null; xplo_plan?: XploPlan | null; xplo_bonuses?: XploBonus[] | null; }
-interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; }
+interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; checkpoint_code?: string | null; }
 interface Activity {
   id: string; type: "lembrete" | "mensagem" | "ligacao" | "email"; subject: string; description: string | null;
   scheduled_at: string | null; status: string; completed_at: string | null;
