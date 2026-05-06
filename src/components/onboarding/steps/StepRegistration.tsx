@@ -5,10 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Building2, Loader2, User, DollarSign, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Loader2, User, DollarSign, Users, Sparkles, Gift } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone, maskCurrency } from "@/lib/utils";
+import { BONUS_LABELS, type XploBonus, type XploPlan } from "@/lib/xploProcessTemplate";
+import { updateClientPlanAndSync } from "@/lib/syncDealTasks";
+import { cn } from "@/lib/utils";
 
 interface StepRegistrationProps {
   clientId: string;
@@ -60,6 +65,8 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
     monthly_investment: "",
     initial_traffic_investment: "",
   });
+  const [xploPlan, setXploPlan] = useState<XploPlan>("basic");
+  const [xploBonuses, setXploBonuses] = useState<XploBonus[]>([]);
   const [showCustomTraffic, setShowCustomTraffic] = useState(false);
   const [customTraffic, setCustomTraffic] = useState("");
 
@@ -76,6 +83,8 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
     if (c.data) {
       const cd: any = c.data;
       setNicheLabel(cd.niche_label || cd.niche || "");
+      setXploPlan((cd.xplo_plan as XploPlan) || "basic");
+      setXploBonuses((cd.xplo_bonuses as XploBonus[]) || []);
       setForm((f) => ({
         ...f,
         name: cd.name || "",
@@ -153,8 +162,17 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
           responsible_cpf: form.responsible_cpf.trim() || null,
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
-        })
+          xplo_plan: xploPlan,
+          xplo_bonuses: xploBonuses,
+        } as any)
         .eq("id", clientId);
+
+      // Cria tarefas do processo no deal automaticamente (se já existir um deal)
+      try {
+        await updateClientPlanAndSync(clientId, xploPlan, xploBonuses);
+      } catch (err) {
+        console.warn("Sync de tarefas falhou (deal pode ainda não existir):", err);
+      }
 
       const traffic = form.initial_traffic_investment === "outro" ? customTraffic : form.initial_traffic_investment;
 
@@ -325,6 +343,83 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
                 <p className="text-xs text-muted-foreground">(CPL estimado: R$ 7 a R$ 15)</p>
               </div>
             )}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Plano XPLO */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Sparkles className="h-4 w-4" /> Plano XPLO
+          </div>
+          <RadioGroup
+            value={xploPlan}
+            onValueChange={(v) => setXploPlan(v as XploPlan)}
+            className="grid gap-3 sm:grid-cols-2"
+          >
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                xploPlan === "basic" ? "border-foreground bg-muted/40" : "border-border hover:bg-muted/20"
+              )}
+            >
+              <RadioGroupItem value="basic" id="reg-plan-basic" className="mt-1" />
+              <div className="flex-1">
+                <div className="font-semibold text-foreground">Basic</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Estratégia de geração de demanda, tráfego, website / página de captura,
+                  estratégia e vitrine de Instagram.
+                </p>
+              </div>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                xploPlan === "pro"
+                  ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm"
+                  : "border-border hover:bg-muted/20"
+              )}
+            >
+              <RadioGroupItem value="pro" id="reg-plan-pro" className="mt-1" />
+              <div className="flex-1">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  Pro <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tudo do Basic + <strong>CRM (XPLO Lab)</strong> e{" "}
+                  <strong>Inteligência Artificial</strong> personalizada para a empresa.
+                </p>
+              </div>
+            </label>
+          </RadioGroup>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Gift className="h-3.5 w-3.5" /> Bônus inclusos
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(Object.keys(BONUS_LABELS) as XploBonus[]).map((b) => (
+                <label
+                  key={b}
+                  className="flex cursor-pointer items-center gap-2 rounded-md border border-border p-3 hover:bg-muted/20"
+                >
+                  <Checkbox
+                    checked={xploBonuses.includes(b)}
+                    onCheckedChange={(checked) =>
+                      setXploBonuses((prev) =>
+                        checked ? [...new Set([...prev, b])] : prev.filter((x) => x !== b)
+                      )
+                    }
+                  />
+                  <span className="text-sm">{BONUS_LABELS[b]}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              As tarefas do processo operacional XPLO serão criadas automaticamente no CRM com base
+              no plano e bônus selecionados.
+            </p>
           </div>
         </div>
 

@@ -15,6 +15,8 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, initialsOf } from "@/lib/crmFormat";
 import { ActivityFormDialog } from "./ActivityFormDialog";
+import { PlanBadge } from "@/components/client/PlanBadge";
+import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -29,11 +31,13 @@ interface DealFull {
   status: "active" | "won" | "lost"; column_id: string; pipeline_id: string;
   responsible_id: string | null; entered_current_column_at: string;
 }
-interface ClientLite { id: string; name: string; phone: string | null; email: string | null; }
+interface ClientLite { id: string; name: string; phone: string | null; email: string | null; xplo_plan?: XploPlan | null; xplo_bonuses?: XploBonus[] | null; }
 interface ColLite { id: string; name: string; color: string; sort_order: number; column_type: string; }
 interface Activity {
   id: string; type: string; subject: string; description: string | null;
   scheduled_at: string | null; status: string; completed_at: string | null;
+  checkpoint_code?: string | null; checkpoint_label?: string | null;
+  required_plan?: string | null; required_bonus?: string | null; template_key?: string | null;
 }
 interface Note { id: string; author_id: string; content: string; created_at: string; }
 interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; }
@@ -59,7 +63,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     setDeal(d as DealFull);
 
     const [cRes, colRes, aRes, nRes, hRes] = await Promise.all([
-      supabase.from("clients").select("id, name, phone, email").eq("id", d.client_id).maybeSingle(),
+      supabase.from("clients").select("id, name, phone, email, xplo_plan, xplo_bonuses").eq("id", d.client_id).maybeSingle(),
       supabase.from("pipeline_columns").select("id, name, color, sort_order, column_type").eq("pipeline_id", d.pipeline_id).order("sort_order"),
       supabase.from("activities").select("*").eq("deal_id", dealId).order("scheduled_at", { ascending: true, nullsFirst: false }),
       supabase.from("notes").select("*").eq("deal_id", dealId).order("created_at", { ascending: false }),
@@ -163,6 +167,15 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               >
                 {deal.status === "won" ? "Ganho" : deal.status === "lost" ? "Perdido" : "Em andamento"}
               </Badge>
+              <div className="mt-3">
+                <PlanBadge
+                  clientId={client.id}
+                  plan={(client.xplo_plan as XploPlan) ?? "basic"}
+                  bonuses={(client.xplo_bonuses as XploBonus[]) ?? []}
+                  size="sm"
+                  onChanged={() => { refetch(); onChanged(); }}
+                />
+              </div>
             </div>
 
             <Separator className="my-3" />
@@ -232,19 +245,71 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     </button>
                   ))}
                 </div>
-                <h4 className="font-semibold mb-2 text-sm">Tarefas desta etapa</h4>
-                <div className="space-y-2">
-                  {activities.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma tarefa.</p>}
-                  {activities.slice(0, 10).map((a) => (
-                    <div key={a.id} className="flex items-start gap-2 p-2 rounded-md bg-muted/30">
-                      <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
-                        {a.scheduled_at && <p className="text-xs text-muted-foreground">{format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>}
-                      </div>
+                <h4 className="font-semibold mb-2 text-sm">Checkpoints do processo XPLO</h4>
+                {(() => {
+                  const groups = new Map<string, { code: string; label: string; items: Activity[] }>();
+                  const others: Activity[] = [];
+                  for (const a of activities) {
+                    if (a.checkpoint_code) {
+                      const key = a.checkpoint_code;
+                      if (!groups.has(key)) groups.set(key, { code: a.checkpoint_code, label: a.checkpoint_label || "", items: [] });
+                      groups.get(key)!.items.push(a);
+                    } else {
+                      others.push(a);
+                    }
+                  }
+                  const sorted = Array.from(groups.values()).sort((x, y) => x.code.localeCompare(y.code));
+                  if (sorted.length === 0 && others.length === 0) {
+                    return <p className="text-sm text-muted-foreground">Nenhuma tarefa. Defina o plano do cliente para gerar o processo automaticamente.</p>;
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {sorted.map((g) => {
+                        const done = g.items.filter((i) => i.status === "completed").length;
+                        return (
+                          <div key={g.code} className="border border-border rounded-md overflow-hidden">
+                            <div className="flex items-center justify-between bg-muted/40 px-3 py-2">
+                              <p className="text-sm font-semibold">{g.code} · {g.label}</p>
+                              <span className="text-xs text-muted-foreground">{done}/{g.items.length}</span>
+                            </div>
+                            <div className="divide-y divide-border">
+                              {g.items.map((a) => (
+                                <div key={a.id} className="flex items-start gap-2 p-2">
+                                  <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className={`text-sm ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
+                                      {a.required_plan === "pro" && (
+                                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-gradient-to-r from-primary to-primary/70 text-primary-foreground">Pro</span>
+                                      )}
+                                      {a.required_bonus && (
+                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-primary/30 text-primary">Bônus</span>
+                                      )}
+                                    </div>
+                                    {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {others.length > 0 && (
+                        <div className="border border-border rounded-md overflow-hidden">
+                          <div className="bg-muted/40 px-3 py-2"><p className="text-sm font-semibold">Outras tarefas</p></div>
+                          <div className="divide-y divide-border">
+                            {others.map((a) => (
+                              <div key={a.id} className="flex items-start gap-2 p-2">
+                                <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
+                                <p className={`text-sm flex-1 ${a.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{a.subject}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </TabsContent>
 
               {/* Atividades */}
