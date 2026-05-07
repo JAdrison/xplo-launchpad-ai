@@ -229,6 +229,10 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               )}
             </div>
 
+            <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => setEditClientOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Editar dados do cliente
+            </Button>
+
             <Separator className="my-3" />
 
             <div className="space-y-2">
