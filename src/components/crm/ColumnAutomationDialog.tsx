@@ -25,9 +25,19 @@ interface Automation {
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  column: PipelineColumn | null;
+  column: (PipelineColumn & { checkpoint_code?: string | null }) | null;
   onSaved?: () => void;
 }
+
+const XPLO_CHECKPOINT_LABELS: Record<string, string> = {
+  "01": "Cadastro do cliente",
+  "02": "Início do projeto",
+  "03": "Estratégia de posicionamento",
+  "04": "Configuração de tráfego",
+  "05": "Entrega de resultado",
+  "06": "Manutenção",
+  maint_active: "Manutenção",
+};
 
 const TYPE_LABELS = {
   lembrete: "Lembrete",
