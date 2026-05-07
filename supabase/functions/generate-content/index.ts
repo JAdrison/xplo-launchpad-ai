@@ -1381,9 +1381,12 @@ Deno.serve(async (req) => {
         Deno.env.get('SUPABASE_ANON_KEY')!,
         { global: { headers: { Authorization: authHeader } } }
       );
-      const { data, error } = await supabaseAuth.auth.getClaims(authHeader.replace('Bearer ', ''));
-      if (!error && data?.claims?.sub) isAuthorized = true;
-    } catch (_) {}
+      const { data, error } = await supabaseAuth.auth.getUser();
+      if (!error && data?.user?.id) isAuthorized = true;
+      else console.log('[generate-content] auth getUser failed:', error?.message);
+    } catch (e) {
+      console.log('[generate-content] auth exception:', (e as Error).message);
+    }
   }
   if (!isAuthorized && clientToken) {
     const supaSrv = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
