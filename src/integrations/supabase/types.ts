@@ -1437,6 +1437,60 @@ export type Database = {
           },
         ]
       }
+      xplo_task_templates: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["crm_activity_type"]
+          checkpoint_code: string
+          checkpoint_label: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          recurrence_days: number | null
+          required_bonus: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_function: Database["public"]["Enums"]["job_function"] | null
+          required_plan: Database["public"]["Enums"]["xplo_plan"] | null
+          sort_order: number
+          subject: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          activity_type?: Database["public"]["Enums"]["crm_activity_type"]
+          checkpoint_code: string
+          checkpoint_label: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          recurrence_days?: number | null
+          required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_function?: Database["public"]["Enums"]["job_function"] | null
+          required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
+          sort_order?: number
+          subject: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["crm_activity_type"]
+          checkpoint_code?: string
+          checkpoint_label?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          recurrence_days?: number | null
+          required_bonus?: Database["public"]["Enums"]["xplo_bonus"] | null
+          required_function?: Database["public"]["Enums"]["job_function"] | null
+          required_plan?: Database["public"]["Enums"]["xplo_plan"] | null
+          sort_order?: number
+          subject?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
