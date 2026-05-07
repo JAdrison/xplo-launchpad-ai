@@ -1375,15 +1375,27 @@ Deno.serve(async (req) => {
   const clientToken = req.headers.get('x-client-token');
   let isAuthorized = false;
   if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice('Bearer '.length).trim();
     try {
       const supabaseAuth = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_ANON_KEY')!,
-        { global: { headers: { Authorization: authHeader } } }
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
       );
-      const { data, error } = await supabaseAuth.auth.getUser();
-      if (!error && data?.user?.id) isAuthorized = true;
-      else console.log('[generate-content] auth getUser failed:', error?.message);
+      // Tenta validar via getClaims (JWKS local — mais rápido e resiliente)
+      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+      if (!claimsError && claimsData?.claims?.sub) {
+        isAuthorized = true;
+      } else {
+        console.log('[generate-content] getClaims failed:', claimsError?.message);
+        // Fallback: getUser via servidor de auth
+        const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+        if (!userError && userData?.user?.id) {
+          isAuthorized = true;
+        } else {
+          console.log('[generate-content] getUser failed:', userError?.message);
+        }
+      }
     } catch (e) {
       console.log('[generate-content] auth exception:', (e as Error).message);
     }
