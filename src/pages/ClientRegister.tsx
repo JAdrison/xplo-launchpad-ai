@@ -19,7 +19,18 @@ import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { z } from "zod";
 import logoXplo from "@/assets/logo-xplo.png";
+
+const registerSchema = z.object({
+  name: z.string().trim().min(2, "Nome da empresa muito curto").max(255),
+  cnpj: z.string().trim().max(20).regex(/^(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})?$/, "CNPJ inválido").optional().or(z.literal("")),
+  responsible_name: z.string().trim().min(2, "Nome do responsável muito curto").max(255),
+  responsible_cpf: z.string().trim().max(20).regex(/^(\d{3}\.\d{3}\.\d{3}-\d{2})?$/, "CPF inválido").optional().or(z.literal("")),
+  email: z.string().trim().email("E-mail inválido").max(255),
+  phone: z.string().trim().max(25).optional().or(z.literal("")),
+  niche: z.string().trim().max(120).optional().or(z.literal("")),
+});
 
 type PageState = "form" | "choice" | "success" | "onboarding";
 
@@ -67,28 +78,13 @@ export default function ClientRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
-      toast({
-        title: "Nome obrigatório",
-        description: "Por favor, informe o nome da empresa.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    if (!formData.responsible_name.trim()) {
-      toast({
-        title: "Responsável obrigatório",
-        description: "Por favor, informe o nome do responsável.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    if (!formData.email.trim()) {
+    const parsed = registerSchema.safeParse(formData);
+    if (!parsed.success) {
       toast({
-        title: "E-mail obrigatório",
-        description: "Por favor, informe o e-mail de contato.",
+        title: "Dados inválidos",
+        description: parsed.error.errors[0]?.message || "Verifique os campos e tente novamente.",
         variant: "destructive",
       });
       return;
@@ -106,16 +102,17 @@ export default function ClientRegister() {
     setIsLoading(true);
 
     try {
+      const v = parsed.data;
       const { data, error } = await supabase
         .from("clients")
         .insert({
-          name: formData.name.trim(),
-          cnpj: formData.cnpj.trim() || null,
-          responsible_name: formData.responsible_name.trim() || null,
-          responsible_cpf: formData.responsible_cpf.trim() || null,
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-          niche: formData.niche.trim() || null,
+          name: v.name,
+          cnpj: v.cnpj || null,
+          responsible_name: v.responsible_name || null,
+          responsible_cpf: v.responsible_cpf || null,
+          email: v.email || null,
+          phone: v.phone || null,
+          niche: v.niche || null,
           status: "draft",
         })
         .select()
@@ -155,8 +152,10 @@ export default function ClientRegister() {
         .update({ status: "ppp_in_progress" })
         .eq("id", createdClient.id);
 
-      // Redirect to external onboarding with a generated token
-      const token = crypto.randomUUID().replace(/-/g, "") + Date.now().toString(36);
+      // Redirect to external onboarding with a cryptographically random token (256 bits)
+      const tokenBytes = new Uint8Array(32);
+      crypto.getRandomValues(tokenBytes);
+      const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
