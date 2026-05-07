@@ -155,8 +155,10 @@ export default function ClientRegister() {
         .update({ status: "ppp_in_progress" })
         .eq("id", createdClient.id);
 
-      // Redirect to external onboarding with a generated token
-      const token = crypto.randomUUID().replace(/-/g, "") + Date.now().toString(36);
+      // Redirect to external onboarding with a cryptographically random token (256 bits)
+      const tokenBytes = new Uint8Array(32);
+      crypto.getRandomValues(tokenBytes);
+      const token = Array.from(tokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
