@@ -1,88 +1,85 @@
-# Unificar Clientes + Onboarding X1 + Gerador IA + Ativos em uma única tela "Workspace"
+## Contexto
 
-## Objetivo
+Hoje existem **dois sistemas de automação** rodando em paralelo no CRM, e isso está causando a confusão:
 
-Substituir os 4 itens da sidebar por **um único item "Workspace"** (`/workspace`), reaproveitando o layout limpo da página Ativos. Cada cliente vira um card único com indicador discreto de status, contagem de ativos e botões contextuais.
+1. **Automações genéricas** (tabela `column_automations`)
+   - Criadas pelo botão de raio (⚡) na coluna do Kanban → abre `ColumnAutomationDialog`.
+   - Funciona, mas só aparece se a coluna tiver tarefas cadastradas ali. As colunas dos checkpoints XPLO **não usam essa tabela**, por isso aparecem vazias.
 
-## Sidebar
+2. **Tarefas do processo XPLO** (checkpoints 01–05 + manutenção)
+   - Hoje estão **hard-coded** em dois lugares:
+     - Frontend: `src/lib/xploProcessTemplate.ts`
+     - Banco: função `seed_xplo_template_tasks` (com `VALUES (...)` enorme dentro do SQL)
+   - Disparadas pelo trigger `seed_tasks_on_checkpoint_change` quando o deal entra numa coluna com `checkpoint_code` 01–05.
+   - **Não há UI** para editá-las. Qualquer mudança hoje exige migração SQL.
 
-Remover de `AppSidebar.tsx`:
-- Clientes (`/clients`)
-- Onboarding X1 (`/onboarding`)
-- Gerador IA (`/generator`)
-- Ativos (`/assets`)
+O pedido é: poder editar essas tarefas automáticas pela interface, e quando elas forem recriadas (novo deal entrando no checkpoint), virem já com as alterações.
 
-Adicionar:
-- **Workspace** (`/workspace`) — ícone `LayoutGrid` ou `Briefcase`.
+## Solução
 
-(CRM, Configurações, Admin Usuários permanecem.)
+### 1. Migrar o template XPLO para uma tabela editável
 
-## Rotas
+Criar nova tabela `xplo_task_templates`:
 
-Em `src/App.tsx`:
-- Nova rota `/workspace` → `Workspace` (página nova).
-- `/clients`, `/onboarding`, `/assets`, `/generator` viram `<Navigate to="/workspace" replace />`.
-- Mantidas intactas: `/clients/new`, `/clients/:id`, `/onboarding/:clientId/wizard` (a tela do wizard de onboarding continua acessível pelos botões), `/onboarding-external/...`.
+```text
+id (uuid)
+checkpoint_code   text   -- '01'..'05', '06' (manutenção)
+checkpoint_label  text
+template_key      text   UNIQUE
+subject           text
+description       text
+required_plan     xplo_plan?    -- null|basic|pro
+required_bonus    xplo_bonus?
+required_function job_function?
+recurrence_days   int?           -- p/ tarefas de manutenção
+sort_order        int
+is_active         boolean default true
+created_at / updated_at
+```
 
-## Página `src/pages/Workspace.tsx` (substitui Assets)
+- RLS: `SELECT` para todo `has_crm_access`; `INSERT/UPDATE/DELETE` só para `admin`.
+- **Migration de seed**: popular a tabela com exatamente as ~46 linhas que hoje estão dentro de `seed_xplo_template_tasks` + as 5 de `start_maintenance_for_deal`/`seed_maintenance_tasks`.
 
-Estrutura herda diretamente do layout de `Assets.tsx`:
+### 2. Reescrever as funções de seed para ler da tabela
 
-1. **Header**
-   - Título: "Workspace" · subtítulo: "Seus clientes, onboarding e ativos em um só lugar".
-   - Botões à direita: **Copiar link de registro** (de Clientes) + **Novo Cliente** (de Clientes).
+- `seed_xplo_template_tasks(_deal_id, _client_id, _checkpoint)`
+  → trocar o `FROM (VALUES ...)` por `FROM public.xplo_task_templates WHERE checkpoint_code = _checkpoint AND is_active`.
+- `seed_maintenance_tasks` / `start_maintenance_for_deal` → idem para `checkpoint_code = '06'`.
+- A regra de filtro por plano/bônus + idempotência (`NOT EXISTS template_key`) continua igual.
 
-2. **Cards de resumo (3 colunas, igual Ativos)**
-   - Total de Ofertas / Landing Pages / Anúncios — mantidos.
-   - Adicionar um 4º card opcional: "Clientes ativos" (count de não arquivados).
+Resultado: editar um template na UI passa a valer **na próxima vez** que um deal entrar no checkpoint (tarefas já criadas continuam intactas — preserva trabalho em andamento, igual à regra atual).
 
-3. **Filtros**
-   - Select "Cliente" (já existe).
-   - Tabs/segmento simples adicional: **Todos · Em onboarding · Concluídos · Com ativos** (apenas filtra a grade abaixo, sem mudar o layout).
+### 3. Nova aba "Tarefas automáticas (XPLO)" em `/crm/config`
 
-4. **Grade de cards de cliente (estilo Ativos, limpo)**
-   Cada card contém:
-   - Header: ícone `Building2` + **nome** + **bolinha de status** colorida ao lado:
-     - 🔴 cinza: Pendente (`draft` sem etapas)
-     - 🟡 amarelo: Em onboarding (`ppp_in_progress` ou draft com etapas)
-     - 🟢 verde: X1 concluído (`ppp_completed+`)
-   - Tooltip na bolinha com o label e "X/7 etapas".
-   - Linha sutil com niche/produto se houver.
-   - Bloco de contagens (Ofertas / LPs / Anúncios) — exatamente como hoje no Assets.
-   - Footer com botões contextuais (1 ou 2, sem poluir):
-     - Status pendente → **Iniciar onboarding** (primário) + **Ver detalhes** (ghost).
-     - Em onboarding → **Continuar** (primário) + **Ver detalhes** (ghost).
-     - Concluído → **Gerar com IA** (primário, abre modal) + **Ver detalhes** (ghost).
+Em `src/pages/CrmConfig.tsx`, adicionar uma 5ª aba: **"Tarefas automáticas"**.
 
-## Modal "Gerar com IA"
+Componente novo `src/components/crm/config/XploTasksConfig.tsx`:
+- Agrupa por `checkpoint_code` (01 Cadastro, 02 Início, …, 06 Manutenção) — accordion.
+- Para cada tarefa: assunto, descrição, função responsável, plano (basic/pro/—), bônus (—/GMN/Vitrine IG), `recurrence_days` (só checkpoint 06), botão ativar/desativar e excluir.
+- Botão "Adicionar tarefa" por checkpoint.
+- Botão "Restaurar padrão XPLO" (re-seed do catálogo original).
 
-Novo componente `src/components/workspace/GenerateAIDialog.tsx`. Encapsula a lógica essencial do `Generator.tsx` atual:
-- Input: `clientId` (passado do card).
-- Carrega ICPs do cliente + ofertas do banco.
-- Permite escolher: tipos a gerar (`offer`, `ads`), ICP (se gerar oferta), oferta do banco (se gerar ads).
-- Botão **Gerar** dispara as mesmas funções já existentes (chama edge functions `generate-offer` e `generate-ads` ou as funções equivalentes que `Generator.tsx` usa hoje).
-- Após gerar, fecha modal, mostra toast de sucesso e navega para `/clients/:id?tab=ofertas` (ou `?tab=anuncios`) para o usuário ver o resultado.
+### 4. Tornar a aba "Configurações de automação" da coluna mais clara
 
-A página `Generator.tsx` é **excluída** (a lógica útil é reaproveitada no modal).
+No `ColumnAutomationDialog`, quando a coluna for um checkpoint XPLO (`checkpoint_code` 01–06), mostrar no topo um aviso:
 
-## Excluir / arquivar
+> "Esta coluna usa o **template XPLO** (checkpoint 03 — Estratégia de posicionamento). Para editar as tarefas que serão criadas automaticamente, vá em **Configurações do CRM → Tarefas automáticas**."
 
-- `src/pages/Clients.tsx` — deletar (substituído pelo Workspace).
-- `src/pages/Onboarding.tsx` + `src/components/onboarding/OnboardingDashboard.tsx` — Onboarding.tsx fica só para o wizard externo via clientId param? **Solução**: manter `Onboarding.tsx` apenas se ainda for usado pela rota `/onboarding?client=...` (botão "Continuar" navega para essa rota). Sim, é usado — então `Onboarding.tsx` permanece, mas o `OnboardingDashboard` (caso sem `clientId`) passa a redirecionar para `/workspace` em vez de listar.
-- `src/pages/Generator.tsx` — deletar; `GeneratedContentViewer` continua sendo usado em `ClientDetails.tsx`.
-- `src/pages/Assets.tsx` — deletar (virou `Workspace.tsx`).
+Continua permitindo cadastrar automações genéricas adicionais (que vão para `column_automations` e somam às do template).
+
+### 5. Frontend cleanup
+
+- `src/lib/xploProcessTemplate.ts` deixa de ser fonte da verdade. Vira só os tipos (`XploPlan`, `XploBonus`, `BONUS_LABELS`). A função `tasksForPlan` e o array hardcoded são removidos (nenhum outro lugar usa para criar tarefas — a criação real é via trigger no banco).
+- `src/lib/syncDealTasks.ts` passa a chamar uma RPC `sync_deal_tasks_from_template(_deal_id, _client_id)` que faz o mesmo seed lendo da tabela (substitui o `tasksForPlan` no client).
 
 ## Detalhes técnicos
 
-- **Fetch único**: na carga, buscar `clients` + `client_profile (status fields)` + `icps (count)` + `client_promise` + counts de `offers_hormozi`, `landing_pages`, `ads` por cliente — em paralelo, como já faz Onboarding/Assets, montando um único objeto `ClientCard`.
-- **Status helper**: pequena função `getOnboardingState(client, completedSteps)` retornando `"pending" | "in_progress" | "completed"`, alimentando bolinha + filtro.
-- **Progresso (X/7)**: copiar a contagem de `OnboardingDashboard` para preencher o tooltip da bolinha.
-- **Toolbar do generator**: o estado/seleção que hoje vive em `Generator.tsx` (selectedClientId, selectedIcpId, selectedBankKey, selectedTypes, handleGenerate) move para `GenerateAIDialog`, que é montado e desmontado por card.
-- **Imports a remover** após o cleanup: itens da sidebar e suas rotas mortas. Verificar `Sparkles`, `Users`, `ClipboardList`, `FileStack` ainda usados antes de remover do `AppSidebar`.
+- Migração faz `INSERT ... ON CONFLICT (template_key) DO NOTHING` para o seed inicial, então é segura para rodar duas vezes.
+- Funções `SECURITY DEFINER` continuam com `SET search_path = public`.
+- `xplo_task_templates` recebe trigger `update_updated_at_column`.
+- A tabela vira fonte única; o catálogo TS é removido para evitar drift.
 
-## Fora do escopo
+## Fora de escopo
 
-- Não mexer em `/clients/:id` (página de detalhe permanece como hoje).
-- Não mexer no wizard de onboarding em si (apenas no dashboard de listagem).
-- Não tocar no CRM nem no Dashboard.
-- Sem migrações de banco.
+- Não mexer no fluxo do `column_automations` (continua existindo para automações genéricas por coluna).
+- Não migrar tarefas já criadas em deals existentes — só novas criações usarão os textos atualizados.
