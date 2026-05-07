@@ -87,19 +87,11 @@ export default function ClientRegister() {
       return;
     }
 
-    if (!formData.responsible_name.trim()) {
+    const parsed = registerSchema.safeParse(formData);
+    if (!parsed.success) {
       toast({
-        title: "Responsável obrigatório",
-        description: "Por favor, informe o nome do responsável.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      toast({
-        title: "E-mail obrigatório",
-        description: "Por favor, informe o e-mail de contato.",
+        title: "Dados inválidos",
+        description: parsed.error.errors[0]?.message || "Verifique os campos e tente novamente.",
         variant: "destructive",
       });
       return;
@@ -117,16 +109,17 @@ export default function ClientRegister() {
     setIsLoading(true);
 
     try {
+      const v = parsed.data;
       const { data, error } = await supabase
         .from("clients")
         .insert({
-          name: formData.name.trim(),
-          cnpj: formData.cnpj.trim() || null,
-          responsible_name: formData.responsible_name.trim() || null,
-          responsible_cpf: formData.responsible_cpf.trim() || null,
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-          niche: formData.niche.trim() || null,
+          name: v.name,
+          cnpj: v.cnpj || null,
+          responsible_name: v.responsible_name || null,
+          responsible_cpf: v.responsible_cpf || null,
+          email: v.email || null,
+          phone: v.phone || null,
+          niche: v.niche || null,
           status: "draft",
         })
         .select()
