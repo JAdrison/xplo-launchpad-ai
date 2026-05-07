@@ -59,6 +59,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [newNote, setNewNote] = useState("");
   const [actDialog, setActDialog] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
+  const [editClientOpen, setEditClientOpen] = useState(false);
 
   const open = !!dealId;
 
