@@ -522,6 +522,13 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
           activity={editingActivity}
           onCreated={() => { refetch(); onChanged(); }}
         />
+
+        <EditClientDialog
+          clientId={client.id}
+          open={editClientOpen}
+          onOpenChange={setEditClientOpen}
+          onSaved={() => { refetch(); onChanged(); }}
+        />
       </DialogContent>
     </Dialog>
   );
