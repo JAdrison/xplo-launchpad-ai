@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, initialsOf, getDueState } from "@/lib/crmFormat";
 import { ActivityFormDialog, type ActivityEditable } from "./ActivityFormDialog";
+import { EditClientDialog } from "./EditClientDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 import { JOB_FUNCTION_LABELS, JOB_FUNCTION_COLORS, type JobFunction } from "@/lib/jobFunctions";
