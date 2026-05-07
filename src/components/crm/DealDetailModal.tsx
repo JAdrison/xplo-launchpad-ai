@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL, initialsOf, getDueState } from "@/lib/crmFormat";
 import { ActivityFormDialog, type ActivityEditable } from "./ActivityFormDialog";
+import { EditClientDialog } from "./EditClientDialog";
 import { PlanBadge } from "@/components/client/PlanBadge";
 import type { XploBonus, XploPlan } from "@/lib/xploProcessTemplate";
 import { JOB_FUNCTION_LABELS, JOB_FUNCTION_COLORS, type JobFunction } from "@/lib/jobFunctions";
@@ -58,6 +59,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [newNote, setNewNote] = useState("");
   const [actDialog, setActDialog] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
+  const [editClientOpen, setEditClientOpen] = useState(false);
 
   const open = !!dealId;
 
@@ -226,6 +228,10 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                 </div>
               )}
             </div>
+
+            <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => setEditClientOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" /> Editar dados do cliente
+            </Button>
 
             <Separator className="my-3" />
 
@@ -515,6 +521,13 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
           clientId={deal.client_id}
           activity={editingActivity}
           onCreated={() => { refetch(); onChanged(); }}
+        />
+
+        <EditClientDialog
+          clientId={client.id}
+          open={editClientOpen}
+          onOpenChange={setEditClientOpen}
+          onSaved={() => { refetch(); onChanged(); }}
         />
       </DialogContent>
     </Dialog>
