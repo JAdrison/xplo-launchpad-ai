@@ -174,6 +174,18 @@ export function ColumnAutomationDialog({ open, onOpenChange, column, onSaved }: 
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
+          {column?.checkpoint_code && XPLO_CHECKPOINT_LABELS[column.checkpoint_code] && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+              <p className="font-medium text-primary">Esta coluna usa o template XPLO</p>
+              <p className="text-muted-foreground mt-1">
+                Checkpoint <strong>{column.checkpoint_code} — {XPLO_CHECKPOINT_LABELS[column.checkpoint_code]}</strong>.
+                Para editar as tarefas que serão criadas automaticamente nessa etapa, vá em{" "}
+                <strong>Configurações do CRM → Tarefas automáticas XPLO</strong>. As automações abaixo são
+                <em> adicionais</em> e somam às do template.
+              </p>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Carregando…</p>
           ) : (
