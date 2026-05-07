@@ -78,14 +78,7 @@ export default function ClientRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
-      toast({
-        title: "Nome obrigatório",
-        description: "Por favor, informe o nome da empresa.",
-        variant: "destructive",
-      });
-      return;
-    }
+
 
     const parsed = registerSchema.safeParse(formData);
     if (!parsed.success) {
