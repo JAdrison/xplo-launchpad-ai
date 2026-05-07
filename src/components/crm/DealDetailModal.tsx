@@ -236,12 +236,6 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
             <Separator className="my-3" />
 
             <div className="space-y-2">
-              <Button size="sm" variant="default" className="w-full" onClick={() => closeAs("won")}>
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Cliente fechado
-              </Button>
-              <Button size="sm" variant="outline" className="w-full" onClick={() => closeAs("lost")}>
-                <XCircle className="h-4 w-4 mr-2" /> Cancelado
-              </Button>
               <Button size="sm" variant="ghost" className="w-full" onClick={() => navigate(`/clients/${client.id}`)}>
                 <ExternalLink className="h-4 w-4 mr-2" /> Ver onboarding completo
               </Button>
