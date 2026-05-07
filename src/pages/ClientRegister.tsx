@@ -19,7 +19,18 @@ import { useToast } from "@/hooks/use-toast";
 import { maskCPF, maskCNPJ, maskPhone } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { z } from "zod";
 import logoXplo from "@/assets/logo-xplo.png";
+
+const registerSchema = z.object({
+  name: z.string().trim().min(2, "Nome da empresa muito curto").max(255),
+  cnpj: z.string().trim().max(20).regex(/^(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})?$/, "CNPJ inválido").optional().or(z.literal("")),
+  responsible_name: z.string().trim().min(2, "Nome do responsável muito curto").max(255),
+  responsible_cpf: z.string().trim().max(20).regex(/^(\d{3}\.\d{3}\.\d{3}-\d{2})?$/, "CPF inválido").optional().or(z.literal("")),
+  email: z.string().trim().email("E-mail inválido").max(255),
+  phone: z.string().trim().max(25).optional().or(z.literal("")),
+  niche: z.string().trim().max(120).optional().or(z.literal("")),
+});
 
 type PageState = "form" | "choice" | "success" | "onboarding";
 
