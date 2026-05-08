@@ -144,6 +144,24 @@ export default function AdminUsers() {
     }
   };
 
+  const changeRole = async (userId: string, newRole: "admin" | "user") => {
+    setActionLoading(userId + "role");
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: newRole })
+        .eq("user_id", userId);
+      if (error) throw error;
+      toast({ title: "Função atualizada", description: `Usuário agora é ${newRole === "admin" ? "Admin" : "Usuário"}.` });
+      fetchUsers();
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível alterar a função." });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const callAdminAction = async (
     userId: string,
     action: "delete" | "ban" | "unban" | "reset_password" | "set_password",
