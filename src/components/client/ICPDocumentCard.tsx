@@ -440,6 +440,14 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
                         >
                           <FileDown className="h-4 w-4" /> PDF
                         </Button>
+                        {doc.generated_icp_text && pdfBuilders[doc.id] && (
+                          <SendToDriveButton
+                            buildPdf={pdfBuilders[doc.id]}
+                            clientId={clientId}
+                            fileName={`ICP - ${doc.name}.pdf`}
+                            variant="outline"
+                          />
+                        )}
                         <Button
                           onClick={() => setDeleteId(doc.id)}
                           variant="ghost"
