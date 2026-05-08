@@ -74,7 +74,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     extras: "",
     promotions: "",
     passeios: [] as { nome: string; descricao: string }[],
-    quartos: [] as { nome: string; valor: string }[],
+    quartos: [] as { nome: string; valor: string; comodidades: string[]; descricao: string }[],
   });
 
   useEffect(() => { void load(); }, [clientId]);
@@ -95,7 +95,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         extras: pd.extras || "",
         promotions: data.promotions || "",
         passeios: Array.isArray(pd.passeios) ? pd.passeios : [],
-        quartos: Array.isArray(pd.quartos) ? pd.quartos : [],
+        quartos: Array.isArray(pd.quartos) ? pd.quartos.map((q: any) => ({ nome: q.nome || "", valor: q.valor || "", comodidades: Array.isArray(q.comodidades) ? q.comodidades : [], descricao: q.descricao || "" })) : [],
       });
     }
     setIsLoading(false);
@@ -121,7 +121,12 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         .map((p) => ({ nome: (p.nome || "").trim(), descricao: (p.descricao || "").trim() }))
         .filter((p) => p.nome.length > 0);
       const cleanQuartos = form.quartos
-        .map((q) => ({ nome: (q.nome || "").trim(), valor: (q.valor || "").trim() }))
+        .map((q) => ({
+          nome: (q.nome || "").trim(),
+          valor: (q.valor || "").trim(),
+          comodidades: Array.isArray(q.comodidades) ? q.comodidades : [],
+          descricao: (q.descricao || "").trim(),
+        }))
         .filter((q) => q.nome.length > 0);
       const profile_data = {
         type: form.type,
@@ -218,7 +223,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
               size="sm"
               className="gap-1"
               onClick={() =>
-                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "" }] }))
+                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "", comodidades: [], descricao: "" }] }))
               }
             >
               <Plus className="h-4 w-4" /> Adicionar quarto
@@ -234,42 +239,104 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
           ) : (
             <div className="space-y-2">
               {form.quartos.map((quarto, idx) => (
-                <div key={idx} className="flex items-start gap-2 rounded-md border bg-background p-2">
-                  <Input
-                    className="flex-1"
-                    value={quarto.nome}
+                <div key={idx} className="rounded-md border bg-background p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Input
+                      className="flex-1"
+                      value={quarto.nome}
+                      onChange={(e) =>
+                        setForm((p) => {
+                          const next = [...p.quartos];
+                          next[idx] = { ...next[idx], nome: e.target.value };
+                          return { ...p, quartos: next };
+                        })
+                      }
+                      placeholder="Nome do quarto (ex: Suíte Master)"
+                    />
+                    <Input
+                      className="w-48"
+                      value={quarto.valor}
+                      onChange={(e) =>
+                        setForm((p) => {
+                          const next = [...p.quartos];
+                          next[idx] = { ...next[idx], valor: e.target.value };
+                          return { ...p, quartos: next };
+                        })
+                      }
+                      placeholder="Valor (ex: R$ 450)"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setForm((p) => ({ ...p, quartos: p.quartos.filter((_, i) => i !== idx) }))
+                      }
+                      title="Remover quarto"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">O que tem nesse quarto</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {[
+                        "Cama de casal",
+                        "Cama de solteiro",
+                        "Ar-condicionado",
+                        "Ventilador",
+                        "Banheiro privativo",
+                        "Banheiro compartilhado",
+                        "Frigobar",
+                        "TV",
+                        "Wi-Fi",
+                        "Varanda",
+                        "Rede na varanda",
+                        "Vista para o mar",
+                        "Café da manhã incluso",
+                        "Café da manhã não incluso",
+                      ].map((opt) => {
+                        const checked = quarto.comodidades.includes(opt);
+                        return (
+                          <label key={opt} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) =>
+                                setForm((p) => {
+                                  const next = [...p.quartos];
+                                  const cur = next[idx].comodidades;
+                                  next[idx] = {
+                                    ...next[idx],
+                                    comodidades: e.target.checked
+                                      ? [...cur, opt]
+                                      : cur.filter((x) => x !== opt),
+                                  };
+                                  return { ...p, quartos: next };
+                                })
+                              }
+                              className="h-3.5 w-3.5 rounded border-input"
+                            />
+                            {opt}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <Textarea
+                    rows={2}
+                    value={quarto.descricao}
                     onChange={(e) =>
                       setForm((p) => {
                         const next = [...p.quartos];
-                        next[idx] = { ...next[idx], nome: e.target.value };
+                        next[idx] = { ...next[idx], descricao: e.target.value };
                         return { ...p, quartos: next };
                       })
                     }
-                    placeholder="Nome do quarto (ex: Suíte Master)"
+                    placeholder="Outras características / observações desse quarto (opcional)"
                   />
-                  <Input
-                    className="w-48"
-                    value={quarto.valor}
-                    onChange={(e) =>
-                      setForm((p) => {
-                        const next = [...p.quartos];
-                        next[idx] = { ...next[idx], valor: e.target.value };
-                        return { ...p, quartos: next };
-                      })
-                    }
-                    placeholder="Valor (ex: R$ 450)"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() =>
-                      setForm((p) => ({ ...p, quartos: p.quartos.filter((_, i) => i !== idx) }))
-                    }
-                    title="Remover quarto"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
                 </div>
               ))}
             </div>
