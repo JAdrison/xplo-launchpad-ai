@@ -344,6 +344,7 @@ export default function ClientDetails() {
     setIsSavingTrafficPay(false);
   };
 
+  const handleSaveSocial = async () => {
     if (!id) return;
     setIsSavingSocial(true);
     const payload = {
