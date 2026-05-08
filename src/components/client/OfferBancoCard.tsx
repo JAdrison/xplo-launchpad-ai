@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAIConfig } from "@/lib/aiConfig";
 import { OfferBancoPDFTemplate } from "@/components/export/OfferBancoPDFTemplate";
+import { SendToDriveButton } from "@/components/drive/SendToDriveButton";
 import {
   parseOfferBank,
   serializeOfferBank,
@@ -78,11 +79,13 @@ function PDFTarget({
   clientName,
   exportText,
   onReady,
+  onBuildReady,
 }: {
   doc: OfferDoc;
   clientName: string;
   exportText: string;
   onReady: (toPDF: () => void) => void;
+  onBuildReady?: (build: () => Promise<any>) => void;
 }) {
   const sanitized = `${clientName}-${doc.name}`
     .toLowerCase()
@@ -97,6 +100,7 @@ function PDFTarget({
 
   useEffect(() => {
     onReady(() => toPDF());
+    onBuildReady?.(() => Promise.resolve(toPDF({ method: "build" } as any)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -136,6 +140,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
   const [regenInstruction, setRegenInstruction] = useState("");
 
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
+  const [pdfBuilders, setPdfBuilders] = useState<Record<string, () => Promise<any>>>({});
 
   useEffect(() => {
     void load();
@@ -492,6 +497,16 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
               }}
               onCopy={() => handleCopyDoc(doc)}
               onPDF={() => pdfTriggers[doc.id]?.()}
+              driveSlot={
+                doc.generated_text && pdfBuilders[doc.id] ? (
+                  <SendToDriveButton
+                    buildPdf={pdfBuilders[doc.id]}
+                    clientId={clientId}
+                    fileName={`Banco de Ofertas - ${doc.name}.pdf`}
+                    variant="outline"
+                  />
+                ) : undefined
+              }
               onDeleteDoc={() => setDeleteId(doc.id)}
               onToggleEnabled={(offerId, enabled) => toggleEnabled(doc, offerId, enabled)}
               onRequestDeleteOffer={(offerId) => setDeleteOfferKey(`${doc.id}:${offerId}`)}
@@ -521,6 +536,11 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
                 onReady={(trigger) =>
                   setPdfTriggers((prev) =>
                     prev[doc.id] === trigger ? prev : { ...prev, [doc.id]: trigger }
+                  )
+                }
+                onBuildReady={(builder) =>
+                  setPdfBuilders((prev) =>
+                    prev[doc.id] === builder ? prev : { ...prev, [doc.id]: builder }
                   )
                 }
               />
@@ -691,6 +711,7 @@ interface OfferDocBlockProps {
   onRegenerateAll: () => void;
   onCopy: () => void;
   onPDF: () => void;
+  driveSlot?: React.ReactNode;
   onDeleteDoc: () => void;
   onToggleEnabled: (offerId: string, enabled: boolean) => void;
   onRequestDeleteOffer: (offerId: string) => void;
@@ -714,6 +735,7 @@ function OfferDocBlock(props: OfferDocBlockProps) {
     onRegenerateAll,
     onCopy,
     onPDF,
+    driveSlot,
     onDeleteDoc,
     onToggleEnabled,
     onRequestDeleteOffer,
@@ -925,6 +947,7 @@ function OfferDocBlock(props: OfferDocBlockProps) {
                 >
                   <FileDown className="h-4 w-4" /> PDF
                 </Button>
+                {driveSlot}
                 <Button
                   onClick={onDeleteDoc}
                   variant="ghost"

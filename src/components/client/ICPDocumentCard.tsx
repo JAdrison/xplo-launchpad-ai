@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAIConfig } from "@/lib/aiConfig";
 import { ICPPDFTemplate } from "@/components/export/ICPPDFTemplate";
+import { SendToDriveButton } from "@/components/drive/SendToDriveButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,10 +61,12 @@ function PDFTarget({
   doc,
   clientName,
   onReady,
+  onBuildReady,
 }: {
   doc: ICPDoc;
   clientName: string;
   onReady: (toPDF: () => void) => void;
+  onBuildReady?: (build: () => Promise<any>) => void;
 }) {
   const sanitized = `${clientName}-${doc.name}`
     .toLowerCase()
@@ -78,6 +81,7 @@ function PDFTarget({
 
   useEffect(() => {
     onReady(() => toPDF());
+    onBuildReady?.(() => Promise.resolve(toPDF({ method: "build" } as any)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,6 +112,7 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
 
   // PDF triggers por doc
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
+  const [pdfBuilders, setPdfBuilders] = useState<Record<string, () => Promise<any>>>({});
 
   useEffect(() => {
     void load();
@@ -435,6 +440,14 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
                         >
                           <FileDown className="h-4 w-4" /> PDF
                         </Button>
+                        {doc.generated_icp_text && pdfBuilders[doc.id] && (
+                          <SendToDriveButton
+                            buildPdf={pdfBuilders[doc.id]}
+                            clientId={clientId}
+                            fileName={`ICP - ${doc.name}.pdf`}
+                            variant="outline"
+                          />
+                        )}
                         <Button
                           onClick={() => setDeleteId(doc.id)}
                           variant="ghost"
@@ -461,6 +474,11 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
                 onReady={(trigger) =>
                   setPdfTriggers((prev) =>
                     prev[doc.id] === trigger ? prev : { ...prev, [doc.id]: trigger }
+                  )
+                }
+                onBuildReady={(builder) =>
+                  setPdfBuilders((prev) =>
+                    prev[doc.id] === builder ? prev : { ...prev, [doc.id]: builder }
                   )
                 }
               />
