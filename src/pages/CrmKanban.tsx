@@ -40,7 +40,7 @@ export default function CrmKanban() {
   const activeId = pipelineId ?? pipelines[0]?.id ?? null;
   const { columns, deals, refetch, moveDeal } = usePipelineData(activeId);
 
-  const [tab, setTab] = useState<"kanban" | "atividades" | "contatos">("kanban");
+  const [tab, setTab] = useState<"kanban" | "contatos">("kanban");
   const [search, setSearch] = useState("");
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [newDealColumn, setNewDealColumn] = useState<string | null>(null);
