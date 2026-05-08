@@ -56,6 +56,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [history, setHistory] = useState<HistoryEvt[]>([]);
+  const [actorMap, setActorMap] = useState<Record<string, string>>({});
   const [newNote, setNewNote] = useState("");
   const [actDialog, setActDialog] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
