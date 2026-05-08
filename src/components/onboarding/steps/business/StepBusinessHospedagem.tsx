@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin, BedDouble } from "lucide-react";
 import { TagInput } from "../../shared/TagInput";
 import { SuggestedTagInput } from "../../shared/SuggestedTagInput";
 
@@ -74,6 +74,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     extras: "",
     promotions: "",
     passeios: [] as { nome: string; descricao: string }[],
+    quartos: [] as { nome: string; valor: string }[],
   });
 
   useEffect(() => { void load(); }, [clientId]);
@@ -94,6 +95,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         extras: pd.extras || "",
         promotions: data.promotions || "",
         passeios: Array.isArray(pd.passeios) ? pd.passeios : [],
+        quartos: Array.isArray(pd.quartos) ? pd.quartos : [],
       });
     }
     setIsLoading(false);
@@ -118,6 +120,9 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
       const cleanPasseios = form.passeios
         .map((p) => ({ nome: (p.nome || "").trim(), descricao: (p.descricao || "").trim() }))
         .filter((p) => p.nome.length > 0);
+      const cleanQuartos = form.quartos
+        .map((q) => ({ nome: (q.nome || "").trim(), valor: (q.valor || "").trim() }))
+        .filter((q) => q.nome.length > 0);
       const profile_data = {
         type: form.type,
         location: form.location.trim(),
@@ -127,6 +132,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         experiencia: form.experiencia,
         extras: form.extras,
         passeios: cleanPasseios,
+        quartos: cleanQuartos,
       };
       const payload = {
         profile_data,
@@ -194,6 +200,80 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         <div className="space-y-2">
           <Label>Valor médio da diária *</Label>
           <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Valor médio da diária *</Label>
+          <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
+        </div>
+
+        <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <BedDouble className="h-4 w-4" /> Quartos / Acomodações e valores
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() =>
+                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "" }] }))
+              }
+            >
+              <Plus className="h-4 w-4" /> Adicionar quarto
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            💡 Ex: "Suíte Master — R$ 550/diária", "Chalé Família — R$ 780/diária"
+          </p>
+          {form.quartos.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              Nenhum quarto adicionado ainda. Clique em "Adicionar quarto" para começar.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {form.quartos.map((quarto, idx) => (
+                <div key={idx} className="flex items-start gap-2 rounded-md border bg-background p-2">
+                  <Input
+                    className="flex-1"
+                    value={quarto.nome}
+                    onChange={(e) =>
+                      setForm((p) => {
+                        const next = [...p.quartos];
+                        next[idx] = { ...next[idx], nome: e.target.value };
+                        return { ...p, quartos: next };
+                      })
+                    }
+                    placeholder="Nome do quarto (ex: Suíte Master)"
+                  />
+                  <Input
+                    className="w-48"
+                    value={quarto.valor}
+                    onChange={(e) =>
+                      setForm((p) => {
+                        const next = [...p.quartos];
+                        next[idx] = { ...next[idx], valor: e.target.value };
+                        return { ...p, quartos: next };
+                      })
+                    }
+                    placeholder="Valor (ex: R$ 450)"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setForm((p) => ({ ...p, quartos: p.quartos.filter((_, i) => i !== idx) }))
+                    }
+                    title="Remover quarto"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
