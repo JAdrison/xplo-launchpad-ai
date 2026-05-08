@@ -497,6 +497,16 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
               }}
               onCopy={() => handleCopyDoc(doc)}
               onPDF={() => pdfTriggers[doc.id]?.()}
+              driveSlot={
+                doc.generated_text && pdfBuilders[doc.id] ? (
+                  <SendToDriveButton
+                    buildPdf={pdfBuilders[doc.id]}
+                    clientId={clientId}
+                    fileName={`Banco de Ofertas - ${doc.name}.pdf`}
+                    variant="outline"
+                  />
+                ) : undefined
+              }
               onDeleteDoc={() => setDeleteId(doc.id)}
               onToggleEnabled={(offerId, enabled) => toggleEnabled(doc, offerId, enabled)}
               onRequestDeleteOffer={(offerId) => setDeleteOfferKey(`${doc.id}:${offerId}`)}
