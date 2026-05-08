@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAIConfig } from "@/lib/aiConfig";
 import { ICPPDFTemplate } from "@/components/export/ICPPDFTemplate";
+import { SendToDriveButton } from "@/components/drive/SendToDriveButton";
 import {
   AlertDialog,
   AlertDialogAction,
