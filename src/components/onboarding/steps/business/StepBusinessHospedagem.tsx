@@ -142,6 +142,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         extras: form.extras,
         passeios: cleanPasseios,
         quartos: cleanQuartos,
+        checkin: form.checkin.trim(),
+        checkout: form.checkout.trim(),
       };
       const payload = {
         profile_data,
