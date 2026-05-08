@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin, BedDouble } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin, BedDouble, Save } from "lucide-react";
 import { TagInput } from "../../shared/TagInput";
 import { SuggestedTagInput } from "../../shared/SuggestedTagInput";
 
@@ -168,6 +168,37 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     }
   };
 
+  const [isSavingQuartos, setIsSavingQuartos] = useState(false);
+  const handleSaveQuartos = async () => {
+    setIsSavingQuartos(true);
+    try {
+      const cleanQuartos = form.quartos
+        .map((q) => ({
+          nome: (q.nome || "").trim(),
+          valor: (q.valor || "").trim(),
+          comodidades: Array.isArray(q.comodidades) ? q.comodidades : [],
+          descricao: (q.descricao || "").trim(),
+        }))
+        .filter((q) => q.nome.length > 0);
+      const { data: existing } = await supabase
+        .from("client_profile")
+        .select("id, profile_data")
+        .eq("client_id", clientId)
+        .maybeSingle();
+      const merged = { ...((existing?.profile_data as any) || {}), quartos: cleanQuartos };
+      if (existing?.id) {
+        await supabase.from("client_profile").update({ profile_data: merged }).eq("id", existing.id);
+      } else {
+        await supabase.from("client_profile").insert({ client_id: clientId, profile_data: merged });
+      }
+      toast({ title: "Quartos salvos" });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erro ao salvar quartos", variant: "destructive" });
+    } finally {
+      setIsSavingQuartos(false);
+    }
+  };
   if (isLoading) return <Card><CardContent className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
 
   return (
@@ -229,17 +260,31 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
             <Label className="flex items-center gap-2 text-sm font-medium">
               <BedDouble className="h-4 w-4" /> Quartos / Acomodações e valores
             </Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              onClick={() =>
-                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "", comodidades: [], descricao: "" }] }))
-              }
-            >
-              <Plus className="h-4 w-4" /> Adicionar quarto
-            </Button>
+            <div className="flex items-center gap-2">
+              {form.quartos.length > 0 && (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="gap-1"
+                  disabled={isSavingQuartos}
+                  onClick={handleSaveQuartos}
+                >
+                  {isSavingQuartos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar quartos
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "", comodidades: [], descricao: "" }] }))
+                }
+              >
+                <Plus className="h-4 w-4" /> Adicionar quarto
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             💡 Ex: "Suíte Master — R$ 550/diária", "Chalé Família — R$ 780/diária"
