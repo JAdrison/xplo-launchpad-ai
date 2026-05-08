@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-client-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface AIConfig {
@@ -1382,19 +1382,19 @@ Deno.serve(async (req) => {
         Deno.env.get('SUPABASE_ANON_KEY')!,
         { global: { headers: { Authorization: `Bearer ${token}` } } }
       );
-      // Tenta validar via getClaims (JWKS local — mais rápido e resiliente)
-      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-      if (!claimsError && claimsData?.claims?.sub) {
-        isAuthorized = true;
-      } else {
-        console.log('[generate-content] getClaims failed:', claimsError?.message);
-        // Fallback: getUser via servidor de auth
-        const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
-        if (!userError && userData?.user?.id) {
+      // Valida o JWT usando a API disponível na versão runtime do SDK.
+      const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+      if (!userError && userData?.user?.id) {
+        const { data: hasAccess, error: accessError } = await supabaseAuth.rpc('has_crm_access', {
+          _user_id: userData.user.id,
+        });
+        if (!accessError && hasAccess === true) {
           isAuthorized = true;
         } else {
-          console.log('[generate-content] getUser failed:', userError?.message);
+          console.log('[generate-content] access denied:', accessError?.message || 'missing crm role');
         }
+      } else {
+        console.log('[generate-content] getUser failed:', userError?.message);
       }
     } catch (e) {
       console.log('[generate-content] auth exception:', (e as Error).message);
