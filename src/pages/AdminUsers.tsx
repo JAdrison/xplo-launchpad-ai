@@ -49,6 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { UserJobFunctionsManager } from "@/components/admin/UserJobFunctionsManager";
@@ -138,6 +139,24 @@ export default function AdminUsers() {
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Erro", description: "Não foi possível aprovar." });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const changeRole = async (userId: string, newRole: "admin" | "user") => {
+    setActionLoading(userId + "role");
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: newRole })
+        .eq("user_id", userId);
+      if (error) throw error;
+      toast({ title: "Função atualizada", description: `Usuário agora é ${newRole === "admin" ? "Admin" : "Usuário"}.` });
+      fetchUsers();
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível alterar a função." });
     } finally {
       setActionLoading(null);
     }
@@ -378,6 +397,19 @@ export default function AdminUsers() {
                     </div>
                     {!isMaster && (
                       <div className="flex items-center gap-2 flex-wrap">
+                        <Select
+                          value={user.role}
+                          onValueChange={(v) => changeRole(user.user_id, v as "admin" | "user")}
+                          disabled={busyKey("role")}
+                        >
+                          <SelectTrigger className="h-9 w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">Usuário</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="outline"
