@@ -207,11 +207,6 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
           <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
         </div>
 
-        <div className="space-y-2">
-          <Label>Valor médio da diária *</Label>
-          <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
-        </div>
-
         <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2 text-sm font-medium">
