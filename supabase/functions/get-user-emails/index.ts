@@ -80,23 +80,30 @@ Deno.serve(async (req) => {
     });
 
     // Fetch users from auth.users using admin API
-    const emailMapping: Record<string, { email: string; banned_until: string | null }> = {};
+    const emailMapping: Record<string, { email: string; banned_until: string | null; name: string | null }> = {};
 
     for (const userId of userIds) {
       try {
         const { data: userData, error: fetchError } = await supabaseAdmin.auth.admin.getUserById(userId);
         if (!fetchError && userData?.user?.email) {
+          const meta = (userData.user.user_metadata ?? {}) as Record<string, unknown>;
+          const name =
+            (meta.full_name as string) ||
+            (meta.name as string) ||
+            (meta.display_name as string) ||
+            null;
           emailMapping[userId] = {
             email: userData.user.email,
             banned_until: (userData.user as { banned_until?: string | null }).banned_until ?? null,
+            name,
           };
         } else {
           console.log(`Could not fetch email for user ${userId}:`, fetchError);
-          emailMapping[userId] = { email: "Email não disponível", banned_until: null };
+          emailMapping[userId] = { email: "Email não disponível", banned_until: null, name: null };
         }
       } catch (e) {
         console.log(`Error fetching user ${userId}:`, e);
-        emailMapping[userId] = { email: "Email não disponível", banned_until: null };
+        emailMapping[userId] = { email: "Email não disponível", banned_until: null, name: null };
       }
     }
 

@@ -45,7 +45,7 @@ interface Activity {
   required_function?: JobFunction | null; responsible_id?: string | null;
 }
 interface Note { id: string; author_id: string; content: string; created_at: string; }
-interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; }
+interface HistoryEvt { id: string; event_type: string; event_data: any; created_at: string; actor_id: string | null; }
 
 export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const navigate = useNavigate();
@@ -56,6 +56,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [history, setHistory] = useState<HistoryEvt[]>([]);
+  const [actorMap, setActorMap] = useState<Record<string, string>>({});
   const [newNote, setNewNote] = useState("");
   const [actDialog, setActDialog] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
@@ -80,7 +81,27 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     setColumns((colRes.data ?? []) as ColLite[]);
     setActivities((aRes.data ?? []) as Activity[]);
     setNotes((nRes.data ?? []) as Note[]);
-    setHistory((hRes.data ?? []) as HistoryEvt[]);
+    const histRows = (hRes.data ?? []) as HistoryEvt[];
+    setHistory(histRows);
+
+    const actorIds = Array.from(new Set(histRows.map((h) => h.actor_id).filter(Boolean))) as string[];
+    const missing = actorIds.filter((id) => !actorMap[id]);
+    if (missing.length > 0) {
+      try {
+        const { data: emailData } = await supabase.functions.invoke("get-user-emails", {
+          body: { userIds: missing },
+        });
+        if (emailData && typeof emailData === "object") {
+          const next: Record<string, string> = { ...actorMap };
+          for (const [uid, info] of Object.entries(emailData as Record<string, { email: string; name: string | null }>)) {
+            next[uid] = info.name || (info.email ? info.email.split("@")[0] : "Usuário");
+          }
+          setActorMap(next);
+        }
+      } catch (e) {
+        console.error("Failed to fetch actor names", e);
+      }
+    }
   };
 
   useEffect(() => { if (dealId) refetch(); /* eslint-disable-next-line */ }, [dealId]);
@@ -546,6 +567,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                           <p className="text-sm font-medium">{HISTORY_LABEL[h.event_type] ?? h.event_type}</p>
                           {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
                           <p className="text-xs text-muted-foreground mt-1">
+                            {h.actor_id ? `por ${actorMap[h.actor_id] ?? "…"} · ` : ""}
                             {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })} · há {formatDistanceToNow(new Date(h.created_at), { locale: ptBR })}
                           </p>
                         </div>
