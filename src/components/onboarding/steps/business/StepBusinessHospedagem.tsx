@@ -73,6 +73,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     experiencia: "",
     extras: "",
     promotions: "",
+    checkin: "",
+    checkout: "",
     passeios: [] as { nome: string; descricao: string }[],
     quartos: [] as { nome: string; valor: string; comodidades: string[]; descricao: string }[],
   });
@@ -94,6 +96,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         experiencia: pd.experiencia || "",
         extras: pd.extras || "",
         promotions: data.promotions || "",
+        checkin: pd.checkin || "",
+        checkout: pd.checkout || "",
         passeios: Array.isArray(pd.passeios) ? pd.passeios : [],
         quartos: Array.isArray(pd.quartos) ? pd.quartos.map((q: any) => ({ nome: q.nome || "", valor: q.valor || "", comodidades: Array.isArray(q.comodidades) ? q.comodidades : [], descricao: q.descricao || "" })) : [],
       });
@@ -138,6 +142,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         extras: form.extras,
         passeios: cleanPasseios,
         quartos: cleanQuartos,
+        checkin: form.checkin.trim(),
+        checkout: form.checkout.trim(),
       };
       const payload = {
         profile_data,
@@ -205,6 +211,17 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         <div className="space-y-2">
           <Label>Valor médio da diária *</Label>
           <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Horário de check-in</Label>
+            <Input type="time" value={form.checkin} onChange={(e) => setForm((p) => ({ ...p, checkin: e.target.value }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>Horário de check-out</Label>
+            <Input type="time" value={form.checkout} onChange={(e) => setForm((p) => ({ ...p, checkout: e.target.value }))} />
+          </div>
         </div>
 
         <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
