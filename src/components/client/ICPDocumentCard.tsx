@@ -476,6 +476,11 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
                     prev[doc.id] === trigger ? prev : { ...prev, [doc.id]: trigger }
                   )
                 }
+                onBuildReady={(builder) =>
+                  setPdfBuilders((prev) =>
+                    prev[doc.id] === builder ? prev : { ...prev, [doc.id]: builder }
+                  )
+                }
               />
             ) : null
           )}
