@@ -736,6 +736,109 @@ export default function ClientDetails() {
         </CardContent>
       </Card>
 
+      {/* Pagamento de verba de tráfego */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              Pagamento da Verba de Tráfego
+              <Badge variant="secondary" className="ml-2 text-xs">Recorrente</Badge>
+            </CardTitle>
+            <Dialog open={isTrafficPayOpen} onOpenChange={setIsTrafficPayOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-3.5 w-3.5" />
+                  {(client as any).traffic_payment_day ? "Editar configuração" : "Configurar"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Pagamento da verba de tráfego</DialogTitle>
+                  <DialogDescription>
+                    Define o dia do vencimento, com quantos dias de antecedência cobrar e o valor.
+                    Uma tarefa será criada automaticamente para o Gestor de Tráfego e se renova a cada mês ao ser concluída.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-day">Dia do vencimento</Label>
+                      <Input
+                        id="tp-day"
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={trafficPayForm.day}
+                        onChange={(e) => setTrafficPayForm((p) => ({ ...p, day: e.target.value }))}
+                        placeholder="Ex: 10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-lead">Cobrar com antecedência (dias)</Label>
+                      <Input
+                        id="tp-lead"
+                        type="number"
+                        min={0}
+                        max={60}
+                        value={trafficPayForm.lead_days}
+                        onChange={(e) => setTrafficPayForm((p) => ({ ...p, lead_days: e.target.value }))}
+                        placeholder="Ex: 3"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tp-value">Valor (R$)</Label>
+                    <Input
+                      id="tp-value"
+                      inputMode="decimal"
+                      value={trafficPayForm.value_brl}
+                      onChange={(e) => setTrafficPayForm((p) => ({ ...p, value_brl: e.target.value }))}
+                      placeholder="Ex: 1500,00"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsTrafficPayOpen(false)} disabled={isSavingTrafficPay}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveTrafficPayment} disabled={isSavingTrafficPay}>
+                    {isSavingTrafficPay ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(client as any).traffic_payment_day ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Dia do vencimento</p>
+                <p className="font-semibold">Todo dia {(client as any).traffic_payment_day}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Antecedência</p>
+                <p className="font-semibold">{(client as any).traffic_payment_lead_days ?? 3} dias antes</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Valor</p>
+                <p className="font-semibold">
+                  {(client as any).traffic_payment_value_cents != null
+                    ? ((client as any).traffic_payment_value_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma configuração ativa. Configure para gerar automaticamente a tarefa de cobrança recorrente.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2 flex-wrap">
