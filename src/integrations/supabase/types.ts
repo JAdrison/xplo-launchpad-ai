@@ -246,6 +246,39 @@ export type Database = {
           },
         ]
       }
+      client_drive_folders: {
+        Row: {
+          client_id: string
+          client_number: number | null
+          created_at: string
+          drive_folder_id: string
+          drive_folder_name: string
+          drive_folder_url: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_number?: number | null
+          created_at?: string
+          drive_folder_id: string
+          drive_folder_name: string
+          drive_folder_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_number?: number | null
+          created_at?: string
+          drive_folder_id?: string
+          drive_folder_name?: string
+          drive_folder_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_icp: {
         Row: {
           bloco1_data: Json | null
