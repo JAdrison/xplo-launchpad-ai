@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAIConfig } from "@/lib/aiConfig";
 import { TrafficPlanPDFTemplate } from "@/components/export/TrafficPlanPDFTemplate";
+import { SendToDriveButton } from "@/components/drive/SendToDriveButton";
 import {
   AlertDialog,
   AlertDialogAction,
