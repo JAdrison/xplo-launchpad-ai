@@ -114,6 +114,26 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, sdr
           <DialogTitle>{cliente ? "Editar cliente" : "Novo cliente vendido"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {!cliente && existingClients.length > 0 && (
+            <>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" /> Puxar de cliente existente
+                </Label>
+                <Select value={selectedExistingId || "none"} onValueChange={(v) => handleSelectExisting(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um cliente já cadastrado" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Cadastro manual —</SelectItem>
+                    {existingClients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Preenche o nome automaticamente. Você ainda precisa informar valores e responsáveis.</p>
+              </div>
+              <Separator />
+            </>
+          )}
           <div className="space-y-1.5">
             <Label>Nome *</Label>
             <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
