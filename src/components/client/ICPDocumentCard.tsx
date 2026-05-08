@@ -81,7 +81,7 @@ function PDFTarget({
 
   useEffect(() => {
     onReady(() => toPDF());
-    onBuildReady?.(() => toPDF({ method: "build" } as any));
+    onBuildReady?.(() => Promise.resolve(toPDF({ method: "build" } as any)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
