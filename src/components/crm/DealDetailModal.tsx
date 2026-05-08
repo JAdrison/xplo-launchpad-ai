@@ -567,6 +567,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                           <p className="text-sm font-medium">{HISTORY_LABEL[h.event_type] ?? h.event_type}</p>
                           {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
                           <p className="text-xs text-muted-foreground mt-1">
+                            {h.actor_id ? `por ${actorMap[h.actor_id] ?? "…"} · ` : ""}
                             {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })} · há {formatDistanceToNow(new Date(h.created_at), { locale: ptBR })}
                           </p>
                         </div>
