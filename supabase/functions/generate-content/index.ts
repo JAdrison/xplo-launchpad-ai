@@ -1374,6 +1374,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   const clientToken = req.headers.get('x-client-token');
   let isAuthorized = false;
+  let authorizedClientId: string | null = null;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice('Bearer '.length).trim();
     try {
@@ -1404,11 +1405,12 @@ Deno.serve(async (req) => {
     const supaSrv = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const { data: tok } = await supaSrv
       .from('client_tokens')
-      .select('id, expires_at, used_at')
+      .select('id, client_id, expires_at, used_at')
       .eq('token', clientToken)
       .maybeSingle();
     if (tok && new Date(tok.expires_at) > new Date() && !tok.used_at) {
       isAuthorized = true;
+      authorizedClientId = tok.client_id;
     }
   }
   if (!isAuthorized) {
@@ -1421,6 +1423,12 @@ Deno.serve(async (req) => {
   try {
     const b = await req.json() as ReqBody;
     const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig, bankOfferText, bankOfferDocumentId, bankOfferId } = b;
+    if (authorizedClientId && clientId !== authorizedClientId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     console.log(`[generate-content] ${type} for ${clientId}`);
     
     // Usar config recebida ou padrão XPLO (arquitetura dual)
