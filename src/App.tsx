@@ -66,7 +66,15 @@ const App = () => (
               <Route path="/crm/atividades" element={<CrmActivities />} />
               <Route path="/crm/contatos" element={<CrmContacts />} />
               <Route path="/crm/config" element={<CrmConfig />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/settings" element={<Navigate to="/admin/settings" replace />} />
 
               <Route
                 path="/admin/users"

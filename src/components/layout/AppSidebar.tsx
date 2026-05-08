@@ -35,12 +35,12 @@ const navigation = [
   { name: "Workspace", href: "/workspace", icon: Briefcase },
   { name: "CRM", href: "/crm", icon: Kanban },
   { name: "Atividades", href: "/crm/atividades", icon: CheckSquare },
-  { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
 const adminNavigation = [
   { name: "Usuários", href: "/admin/users", icon: Shield },
   { name: "Vendas", href: "/admin/vendas", icon: DollarSign },
+  { name: "Configurações", href: "/admin/settings", icon: Settings },
 ];
 
 function SidebarContent({ 
