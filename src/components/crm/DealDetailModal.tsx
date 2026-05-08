@@ -101,8 +101,16 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else {
       await supabase.from("deal_history").insert({
-        deal_id: a.id ? deal!.id : "", event_type: completed ? "activity_completed" : "activity_created",
-        event_data: { activity_id: a.id, subject: a.subject }, actor_id: user?.id ?? null,
+        deal_id: deal!.id,
+        event_type: completed ? "activity_completed" : "activity_created",
+        event_data: {
+          activity_id: a.id,
+          subject: a.subject,
+          checkpoint_code: a.checkpoint_code ?? null,
+          checkpoint_label: a.checkpoint_label ?? null,
+          type: a.type,
+        },
+        actor_id: user?.id ?? null,
       });
       refetch();
     }
@@ -501,18 +509,49 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               <TabsContent value="historico" className="flex-1 overflow-y-auto p-6 mt-0">
                 <div className="space-y-3">
                   {history.length === 0 && <p className="text-sm text-muted-foreground">Sem histórico.</p>}
-                  {history.map((h) => (
-                    <div key={h.id} className="flex gap-3 p-3 rounded-md bg-muted/30">
-                      <div className="h-2 w-2 rounded-full bg-primary mt-2 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{HISTORY_LABEL[h.event_type] ?? h.event_type}</p>
-                        {h.event_data?.preview && <p className="text-xs text-muted-foreground">{h.event_data.preview}</p>}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })} · há {formatDistanceToNow(new Date(h.created_at), { locale: ptBR })}
-                        </p>
+                  {history.map((h) => {
+                    const d = h.event_data || {};
+                    const colName = (id?: string) =>
+                      columns.find((c) => c.id === id)?.name ?? "—";
+                    let detail: string | null = null;
+                    switch (h.event_type) {
+                      case "activity_completed":
+                        detail = `Tarefa concluída: "${d.subject ?? "—"}"${d.checkpoint_label ? ` (${d.checkpoint_label})` : ""}`;
+                        break;
+                      case "activity_created":
+                        detail = `Tarefa: "${d.subject ?? "—"}"${d.checkpoint_label ? ` (${d.checkpoint_label})` : ""}`;
+                        break;
+                      case "moved":
+                        detail = `${colName(d.from_column)} → ${colName(d.to_column)}`;
+                        break;
+                      case "created":
+                        detail = `Criado em: ${colName(d.column_id)}`;
+                        break;
+                      case "note_added":
+                        detail = d.preview ? `“${d.preview}${d.preview.length >= 80 ? "…" : ""}”` : null;
+                        break;
+                      case "value_changed":
+                        if (d.from != null && d.to != null) detail = `${formatBRL(d.from)} → ${formatBRL(d.to)}`;
+                        break;
+                      case "status_changed":
+                        if (d.from && d.to) detail = `${d.from} → ${d.to}`;
+                        break;
+                      default:
+                        if (d.subject) detail = String(d.subject);
+                    }
+                    return (
+                      <div key={h.id} className="flex gap-3 p-3 rounded-md bg-muted/30">
+                        <div className="h-2 w-2 rounded-full bg-primary mt-2 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{HISTORY_LABEL[h.event_type] ?? h.event_type}</p>
+                          {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })} · há {formatDistanceToNow(new Date(h.created_at), { locale: ptBR })}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </TabsContent>
 
