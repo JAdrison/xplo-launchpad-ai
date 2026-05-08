@@ -203,6 +203,80 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         </div>
 
         <div className="space-y-2">
+          <Label>Valor médio da diária *</Label>
+          <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
+        </div>
+
+        <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <BedDouble className="h-4 w-4" /> Quartos / Acomodações e valores
+            </Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() =>
+                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "" }] }))
+              }
+            >
+              <Plus className="h-4 w-4" /> Adicionar quarto
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            💡 Ex: "Suíte Master — R$ 550/diária", "Chalé Família — R$ 780/diária"
+          </p>
+          {form.quartos.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              Nenhum quarto adicionado ainda. Clique em "Adicionar quarto" para começar.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {form.quartos.map((quarto, idx) => (
+                <div key={idx} className="flex items-start gap-2 rounded-md border bg-background p-2">
+                  <Input
+                    className="flex-1"
+                    value={quarto.nome}
+                    onChange={(e) =>
+                      setForm((p) => {
+                        const next = [...p.quartos];
+                        next[idx] = { ...next[idx], nome: e.target.value };
+                        return { ...p, quartos: next };
+                      })
+                    }
+                    placeholder="Nome do quarto (ex: Suíte Master)"
+                  />
+                  <Input
+                    className="w-48"
+                    value={quarto.valor}
+                    onChange={(e) =>
+                      setForm((p) => {
+                        const next = [...p.quartos];
+                        next[idx] = { ...next[idx], valor: e.target.value };
+                        return { ...p, quartos: next };
+                      })
+                    }
+                    placeholder="Valor (ex: R$ 450)"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      setForm((p) => ({ ...p, quartos: p.quartos.filter((_, i) => i !== idx) }))
+                    }
+                    title="Remover quarto"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
           <Label>Diferenciais da hospedagem *</Label>
           <SuggestedTagInput
             value={form.differentiators}
