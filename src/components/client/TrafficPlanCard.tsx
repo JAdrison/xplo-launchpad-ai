@@ -467,6 +467,13 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
                         >
                           <FileDown className="h-3.5 w-3.5" /> PDF
                         </Button>
+                        {doc.generated_text && pdfBuilders[doc.id] && (
+                          <SendToDriveButton
+                            buildPdf={pdfBuilders[doc.id]}
+                            clientId={clientId}
+                            fileName={`Plano ${String(doc.sort_order || 1).padStart(2, "0")} ${(doc.name || "").replace(/^\s*plano(\s*de\s*demanda)?\s*\d*\s*[-–:]?\s*/i, "").trim() || "Principal"} - ${clientName}.pdf`}
+                          />
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
