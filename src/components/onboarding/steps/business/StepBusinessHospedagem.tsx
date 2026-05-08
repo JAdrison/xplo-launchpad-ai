@@ -207,11 +207,6 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
           <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
         </div>
 
-        <div className="space-y-2">
-          <Label>Valor médio da diária *</Label>
-          <Input value={form.diaria} onChange={(e) => setForm((p) => ({ ...p, diaria: e.target.value }))} placeholder="💡 Ex: R$ 450 fds / R$ 300 semana" />
-        </div>
-
         <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2 text-sm font-medium">
@@ -239,7 +234,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
           ) : (
             <div className="space-y-2">
               {form.quartos.map((quarto, idx) => (
-                <div key={idx} className="rounded-md border bg-background p-3 space-y-3">
+                <div key={idx} className="rounded-md border bg-background p-3 space-y-2">
                   <div className="flex items-start gap-2">
                     <Input
                       className="flex-1"
@@ -278,55 +273,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
                     </Button>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">O que tem nesse quarto</Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                      {[
-                        "Cama de casal",
-                        "Cama de solteiro",
-                        "Ar-condicionado",
-                        "Ventilador",
-                        "Banheiro privativo",
-                        "Banheiro compartilhado",
-                        "Frigobar",
-                        "TV",
-                        "Wi-Fi",
-                        "Varanda",
-                        "Rede na varanda",
-                        "Vista para o mar",
-                        "Café da manhã incluso",
-                        "Café da manhã não incluso",
-                      ].map((opt) => {
-                        const checked = quarto.comodidades.includes(opt);
-                        return (
-                          <label key={opt} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) =>
-                                setForm((p) => {
-                                  const next = [...p.quartos];
-                                  const cur = next[idx].comodidades;
-                                  next[idx] = {
-                                    ...next[idx],
-                                    comodidades: e.target.checked
-                                      ? [...cur, opt]
-                                      : cur.filter((x) => x !== opt),
-                                  };
-                                  return { ...p, quartos: next };
-                                })
-                              }
-                              className="h-3.5 w-3.5 rounded border-input"
-                            />
-                            {opt}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
                   <Textarea
-                    rows={2}
+                    rows={3}
                     value={quarto.descricao}
                     onChange={(e) =>
                       setForm((p) => {
@@ -335,7 +283,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
                         return { ...p, quartos: next };
                       })
                     }
-                    placeholder="Outras características / observações desse quarto (opcional)"
+                    placeholder="O que tem nesse quarto? Ex: cama de casal, ar-condicionado, banheiro privativo, frigobar, varanda com rede, café da manhã incluso..."
                   />
                 </div>
               ))}
