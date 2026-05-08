@@ -53,8 +53,8 @@ const STATUS_COLORS: Record<ClientStatus, string> = {
 
 const STATUS_LABELS: Record<ClientStatus, string> = {
   draft: "Rascunho",
-  ppp_in_progress: "Em PPP",
-  ppp_completed: "PPP OK",
+  ppp_in_progress: "Em onboarding",
+  ppp_completed: "Onboarding OK",
   offer_generated: "Oferta",
   assets_generated: "Ativos",
   archived: "Arquivado",
@@ -309,7 +309,7 @@ export default function Dashboard() {
       id: "no-offers",
       icon: Rocket,
       title: `${clientsWithoutOffers.length} pronto${clientsWithoutOffers.length > 1 ? "s" : ""} para gerar ofertas`,
-      description: `Clientes com PPP concluído sem banco de ofertas criado ainda.`,
+      description: `Clientes com onboarding concluído sem banco de ofertas criado ainda.`,
       cta: "Gerar ofertas",
       href: "/generator",
       tone: "info",
@@ -343,7 +343,7 @@ export default function Dashboard() {
           <Button asChild variant="outline" size="sm" className="gap-2">
             <Link to="/onboarding">
               <ClipboardList className="h-4 w-4" />
-              Iniciar PPP
+              Iniciar Onboarding
             </Link>
           </Button>
           <Button asChild size="sm" className="gap-2">

@@ -46,15 +46,15 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     adsCount: 0,
   });
 
-  const isPPPCompleted = ["ppp_completed", "offer_generated", "assets_generated"].includes(client.status);
+  const isOnboardingCompleted = ["ppp_completed", "offer_generated", "assets_generated"].includes(client.status);
 
   useEffect(() => {
-    if (isPPPCompleted) {
+    if (isOnboardingCompleted) {
       fetchGenerationStatus();
     } else {
       setIsLoading(false);
     }
-  }, [client.id, isPPPCompleted]);
+  }, [client.id, isOnboardingCompleted]);
 
   const fetchGenerationStatus = async () => {
     const [offersRes, lpsRes, adsRes] = await Promise.all([
@@ -82,8 +82,8 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
     navigate(`/generator?${params.toString()}`);
   };
 
-  // Don't show if PPP is not completed
-  if (!isPPPCompleted) {
+  // Don't show if onboarding is not completed
+  if (!isOnboardingCompleted) {
     return null;
   }
 
@@ -125,7 +125,7 @@ export function AIGenerationSection({ client, onGenerated }: AIGenerationSection
                 Geração com IA
               </CardTitle>
               <CardDescription>
-                Use os dados do PPP para gerar anúncios
+                Use os dados do onboarding para gerar anúncios
               </CardDescription>
             </div>
             {allGenerated && (

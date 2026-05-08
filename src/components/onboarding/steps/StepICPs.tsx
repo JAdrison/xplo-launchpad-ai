@@ -76,7 +76,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         supabase.from("client_promise").select("*").eq("client_id", clientId).maybeSingle(),
       ]);
 
-      const pppData = {
+      const onboardingData = {
         niche: clientRes.data?.niche || null,
         profile: profileRes.data || null,
         icps: [],
@@ -89,7 +89,7 @@ export function StepICPs({ clientId, onNext, onPrevious }: StepICPsProps) {
         body: {
           type: "generate-icps",
           clientId,
-          pppData,
+          onboardingData,
           aiConfig,
         },
       });

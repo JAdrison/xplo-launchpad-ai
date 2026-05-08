@@ -122,7 +122,7 @@ export function GenerateAIDialog({ clientId, clientName, open, onOpenChange, onG
         ? (painsRes.data || []).filter((p) => p.icp_id === selectedIcpId)
         : painsRes.data || [];
 
-      const pppData = {
+      const onboardingData = {
         profile: profileRes.data,
         icps: filteredIcps,
         pains: filteredPains,
@@ -135,7 +135,7 @@ export function GenerateAIDialog({ clientId, clientName, open, onOpenChange, onG
 
       for (const type of selectedTypes) {
         const aiConfig = getAIConfig();
-        const body: Record<string, unknown> = { type, clientId, pppData, aiConfig };
+        const body: Record<string, unknown> = { type, clientId, onboardingData, aiConfig };
         if (type === "offer") body.icpId = selectedIcpId;
         if (type === "ads" && selectedBank) {
           body.bankOfferText = selectedBank.rawText;

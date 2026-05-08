@@ -65,7 +65,7 @@ interface GeneratedContentViewerProps {
   clientId: string;
   clientName?: string;
   refreshTrigger?: number;
-  pppData?: any;
+  onboardingData?: any;
 }
 
 interface ValueStackItem {
@@ -146,7 +146,7 @@ interface SelectedOptions {
   main_cta?: number[];
 }
 
-export function GeneratedContentViewer({ clientId, clientName = "Cliente", refreshTrigger, pppData }: GeneratedContentViewerProps) {
+export function GeneratedContentViewer({ clientId, clientName = "Cliente", refreshTrigger, onboardingData }: GeneratedContentViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
@@ -722,7 +722,7 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                             selectedOptions={selectedOptions}
                             onOptionsUpdate={(opts, sel) => handleOptionsUpdate(offer.id, opts, sel)}
                             onEditChange={(opts, sel) => handleEditChange(offer.id, opts, sel)}
-                            pppData={pppData}
+                            onboardingData={onboardingData}
                           />
                         ) : (
                           <>
@@ -1038,7 +1038,7 @@ export function GeneratedContentViewer({ clientId, clientName = "Cliente", refre
                             clientId={clientId}
                             demandPlan={demandPlan}
                             onPlanUpdate={(plan) => handleDemandPlanUpdate(offer.id, plan)}
-                            pppData={pppData}
+                            onboardingData={onboardingData}
                           />
                         )}
                       </div>

@@ -1179,7 +1179,7 @@ function selectModelForTask(type: string, aiConfig: AIConfig): AIConfig {
   return aiConfig;
 }
 
-interface PPPData {
+interface OnboardingData {
   profile: {
     product_name?: string | null;
     product_description?: string | null;
@@ -1201,7 +1201,7 @@ interface PPPData {
 interface ReqBody {
   type: string; 
   clientId: string; 
-  pppData?: PPPData; 
+  onboardingData?: OnboardingData; 
   icpId?: string; 
   offerId?: string; 
   field?: string; 
@@ -1216,7 +1216,7 @@ interface ReqBody {
   bankOfferId?: string;
 }
 
-function buildCtx(p: PPPData): string {
+function buildCtx(p: OnboardingData): string {
   let s = '';
   if (p.niche) s += `Nicho: ${p.niche}\n`;
   if (p.profile?.product_name) s += `Produto: ${p.profile.product_name}\n`;
@@ -1422,7 +1422,7 @@ Deno.serve(async (req) => {
 
   try {
     const b = await req.json() as ReqBody;
-    const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig, bankOfferText, bankOfferDocumentId, bankOfferId } = b;
+    const { type, clientId, onboardingData, icpId, offerId, field, lpVariant, aiConfig, bankOfferText, bankOfferDocumentId, bankOfferId } = b;
     if (authorizedClientId && clientId !== authorizedClientId) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
@@ -1441,7 +1441,7 @@ Deno.serve(async (req) => {
     // Aplicar seleção automática de modelo baseada no tipo de tarefa
     const config = selectModelForTask(type, baseConfig);
     
-    const ctx = pppData ? buildCtx(pppData) : '';
+    const ctx = onboardingData ? buildCtx(onboardingData) : '';
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     if (type === "refine-ad") {
@@ -1574,12 +1574,12 @@ JSON com a seguinte estrutura EXATA:
       prompt = `${ctx}\nCrie LP.\nJSON: {"hero":{"headline":"","subheadline":"","cta_button":""},"problem_agitation":{"problems":[]},"solution":{},"benefits":[],"how_it_works":{"steps":[]},"social_proof":{"testimonials":[],"stats":[]},"guarantee":{},"value_stack":{"items":[]},"faq":[],"final_cta":{}}`;
     } else if (type === "generate-icps") {
       sys = 'Estrategista de perfis de clientes.';
-      prompt = `Nicho: ${pppData?.niche}
-Produto: ${pppData?.profile?.product_name}
-Descrição: ${pppData?.profile?.product_description}
-Dor principal: ${pppData?.profile?.main_pain}
-Desejo: ${pppData?.profile?.desire_1}
-Promessa: ${pppData?.promise?.promise_text || ''}
+      prompt = `Nicho: ${onboardingData?.niche}
+Produto: ${onboardingData?.profile?.product_name}
+Descrição: ${onboardingData?.profile?.product_description}
+Dor principal: ${onboardingData?.profile?.main_pain}
+Desejo: ${onboardingData?.profile?.desire_1}
+Promessa: ${onboardingData?.promise?.promise_text || ''}
 
 Gere 3 perfis de clientes que compram esse produto.
 
@@ -2149,8 +2149,8 @@ JSON exato:
         const { data: o } = await supabase.from('offers_hormozi').select('*').eq('id', offerId).maybeSingle();
         if (o) { vOid = offerId; oCtx = `Oferta: ${o.promise || ''}`; }
       }
-      // Contexto completo do onboarding (banco prevalece sobre pppData)
-      let bp = pppData?.profile ? `Dor: ${pppData.profile.main_pain || ''}\nDesejos: ${pppData.profile.desire_1 || ''}\nRegião: ${pppData.profile.region?.join(', ') || ''}` : '';
+      // Contexto completo do onboarding (banco prevalece sobre onboardingData)
+      let bp = onboardingData?.profile ? `Dor: ${onboardingData.profile.main_pain || ''}\nDesejos: ${onboardingData.profile.desire_1 || ''}\nRegião: ${onboardingData.profile.region?.join(', ') || ''}` : '';
       try {
         const pkg = await buildOnboardingContext(supabase, clientId);
         const fullCtx = serializeOnboardingContext(pkg);
