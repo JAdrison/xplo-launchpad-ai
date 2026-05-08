@@ -21,7 +21,7 @@ import { PipelinesConfig } from "@/components/crm/config/PipelinesConfig";
 import { TagsConfig } from "@/components/crm/config/TagsConfig";
 import { FieldsConfig } from "@/components/crm/config/FieldsConfig";
 import { TemplatesConfig } from "@/components/crm/config/TemplatesConfig";
-import { CrmActivitiesView } from "./CrmActivities";
+
 import { CrmContactsView } from "./CrmContacts";
 import { usePipelines, usePipelineData } from "@/hooks/useCrm";
 
@@ -40,7 +40,7 @@ export default function CrmKanban() {
   const activeId = pipelineId ?? pipelines[0]?.id ?? null;
   const { columns, deals, refetch, moveDeal } = usePipelineData(activeId);
 
-  const [tab, setTab] = useState<"kanban" | "atividades" | "contatos">("kanban");
+  const [tab, setTab] = useState<"kanban" | "contatos">("kanban");
   const [search, setSearch] = useState("");
   const [newDealOpen, setNewDealOpen] = useState(false);
   const [newDealColumn, setNewDealColumn] = useState<string | null>(null);
@@ -59,7 +59,6 @@ export default function CrmKanban() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
-            <TabsTrigger value="atividades">Atividades</TabsTrigger>
             <TabsTrigger value="contatos">Contatos</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -149,9 +148,6 @@ export default function CrmKanban() {
           </div>
         )}
 
-        {tab === "atividades" && (
-          <div className="h-full overflow-y-auto"><CrmActivitiesView /></div>
-        )}
 
         {tab === "contatos" && (
           <div className="h-full overflow-y-auto"><CrmContactsView /></div>

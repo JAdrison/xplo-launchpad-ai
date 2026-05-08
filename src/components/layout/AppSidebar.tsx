@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Kanban,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Workspace", href: "/workspace", icon: Briefcase },
   { name: "CRM", href: "/crm", icon: Kanban },
+  { name: "Atividades", href: "/crm/atividades", icon: CheckSquare },
   { name: "Configurações", href: "/settings", icon: Settings },
 ];
 
