@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientPipelineBar } from "@/components/client/ClientPipelineBar";
 import { useToast } from "@/hooks/use-toast";
@@ -88,6 +88,9 @@ export default function ClientDetails() {
   const [isSavingXploLab, setIsSavingXploLab] = useState(false);
   const [showXploLabPasswordInput, setShowXploLabPasswordInput] = useState(false);
   const [xploLabForm, setXploLabForm] = useState({ login: "", password: "" });
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
+  const [isSavingDrive, setIsSavingDrive] = useState(false);
+  const [driveForm, setDriveForm] = useState({ url: "" });
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
   const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
@@ -142,6 +145,7 @@ export default function ClientDetails() {
           product_description: data.product_description || "",
           notes: data.notes || "",
         });
+        setDriveForm({ url: (data as any).drive_url || "" });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
           password: (data as any).xplo_lab_password || "",
@@ -264,6 +268,24 @@ export default function ClientDetails() {
       setIsXploLabOpen(false);
     }
     setIsSavingXploLab(false);
+  };
+
+  const handleSaveDrive = async () => {
+    if (!id) return;
+    setIsSavingDrive(true);
+    const url = driveForm.url.trim() || null;
+    const { error } = await supabase
+      .from("clients")
+      .update({ drive_url: url } as any)
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao salvar Drive", description: error.message, variant: "destructive" });
+    } else {
+      setClient((prev) => (prev ? ({ ...prev, drive_url: url } as any) : prev));
+      toast({ title: "Link do Drive salvo" });
+      setIsDriveOpen(false);
+    }
+    setIsSavingDrive(false);
   };
 
   const handleSaveSocial = async () => {
@@ -590,7 +612,74 @@ export default function ClientDetails() {
         </CardContent>
       </Card>
 
-      {/* Credenciais Meta Ads */}
+      {/* Acesso ao Drive do cliente */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Acesso Drive do Cliente
+              <Badge variant="secondary" className="ml-2 text-xs">Interno</Badge>
+            </CardTitle>
+            <Dialog open={isDriveOpen} onOpenChange={setIsDriveOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-3.5 w-3.5" />
+                  {(client as any).drive_url ? "Editar link" : "Adicionar link"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Link do Drive</DialogTitle>
+                  <DialogDescription>
+                    Cole o link da pasta no Google Drive onde ficam os arquivos deste cliente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="drive-url">URL da pasta</Label>
+                    <Input
+                      id="drive-url"
+                      type="url"
+                      autoComplete="off"
+                      value={driveForm.url}
+                      onChange={(e) => setDriveForm({ url: e.target.value })}
+                      placeholder="https://drive.google.com/drive/folders/..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDriveOpen(false)} disabled={isSavingDrive}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveDrive} disabled={isSavingDrive}>
+                    {isSavingDrive ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(client as any).drive_url ? (
+            <a
+              href={(client as any).drive_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-primary hover:underline break-all"
+            >
+              <FolderOpen className="h-4 w-4 shrink-0" />
+              {(client as any).drive_url}
+            </a>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum link cadastrado. Use o botão acima para adicionar.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2 flex-wrap">
