@@ -593,10 +593,122 @@ export default function ClientDetails() {
       {/* Credenciais Meta Ads */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Acesso às Redes Sociais (Meta Ads)
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Acesso às Redes Sociais (Meta Ads)
+            </CardTitle>
+            <Dialog open={isSocialOpen} onOpenChange={setIsSocialOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  {clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login)
+                    ? "Editar acessos"
+                    : "Cadastrar acessos"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Acessos Meta Ads</DialogTitle>
+                  <DialogDescription>
+                    Cadastre ou atualize login e senha de Instagram e Facebook do cliente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-5">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Instagram className="h-4 w-4" /> Instagram
+                    </h4>
+                    <div className="space-y-2">
+                      <Label>Link do perfil</Label>
+                      <Input
+                        value={socialForm.instagram_link}
+                        onChange={(e) => setSocialForm((p) => ({ ...p, instagram_link: e.target.value }))}
+                        placeholder="https://instagram.com/usuario"
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Login</Label>
+                        <Input
+                          value={socialForm.instagram_login}
+                          onChange={(e) => setSocialForm((p) => ({ ...p, instagram_login: e.target.value }))}
+                          placeholder="usuario ou e-mail"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Senha</Label>
+                        <div className="relative">
+                          <Input
+                            type={showSocialIgPwd ? "text" : "password"}
+                            value={socialForm.instagram_password}
+                            onChange={(e) => setSocialForm((p) => ({ ...p, instagram_password: e.target.value }))}
+                            placeholder="••••••••"
+                            className="pr-9"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1 h-8 w-8"
+                            onClick={() => setShowSocialIgPwd((s) => !s)}
+                          >
+                            {showSocialIgPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Facebook className="h-4 w-4" /> Facebook
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Login</Label>
+                        <Input
+                          value={socialForm.facebook_login}
+                          onChange={(e) => setSocialForm((p) => ({ ...p, facebook_login: e.target.value }))}
+                          placeholder="e-mail ou telefone"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Senha</Label>
+                        <div className="relative">
+                          <Input
+                            type={showSocialFbPwd ? "text" : "password"}
+                            value={socialForm.facebook_password}
+                            onChange={(e) => setSocialForm((p) => ({ ...p, facebook_password: e.target.value }))}
+                            placeholder="••••••••"
+                            className="pr-9"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1 h-8 w-8"
+                            onClick={() => setShowSocialFbPwd((s) => !s)}
+                          >
+                            {showSocialFbPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsSocialOpen(false)} disabled={isSavingSocial}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveSocial} disabled={isSavingSocial} className="gap-2">
+                    {isSavingSocial && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login) ? (
