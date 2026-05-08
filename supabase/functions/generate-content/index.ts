@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-client-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface AIConfig {
@@ -1374,6 +1374,7 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization');
   const clientToken = req.headers.get('x-client-token');
   let isAuthorized = false;
+  let authorizedClientId: string | null = null;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice('Bearer '.length).trim();
     try {
@@ -1382,19 +1383,19 @@ Deno.serve(async (req) => {
         Deno.env.get('SUPABASE_ANON_KEY')!,
         { global: { headers: { Authorization: `Bearer ${token}` } } }
       );
-      // Tenta validar via getClaims (JWKS local — mais rápido e resiliente)
-      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-      if (!claimsError && claimsData?.claims?.sub) {
-        isAuthorized = true;
-      } else {
-        console.log('[generate-content] getClaims failed:', claimsError?.message);
-        // Fallback: getUser via servidor de auth
-        const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
-        if (!userError && userData?.user?.id) {
+      // Valida o JWT usando a API disponível na versão runtime do SDK.
+      const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+      if (!userError && userData?.user?.id) {
+        const { data: hasAccess, error: accessError } = await supabaseAuth.rpc('has_crm_access', {
+          _user_id: userData.user.id,
+        });
+        if (!accessError && hasAccess === true) {
           isAuthorized = true;
         } else {
-          console.log('[generate-content] getUser failed:', userError?.message);
+          console.log('[generate-content] access denied:', accessError?.message || 'missing crm role');
         }
+      } else {
+        console.log('[generate-content] getUser failed:', userError?.message);
       }
     } catch (e) {
       console.log('[generate-content] auth exception:', (e as Error).message);
@@ -1404,11 +1405,12 @@ Deno.serve(async (req) => {
     const supaSrv = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const { data: tok } = await supaSrv
       .from('client_tokens')
-      .select('id, expires_at, used_at')
+      .select('id, client_id, expires_at, used_at')
       .eq('token', clientToken)
       .maybeSingle();
     if (tok && new Date(tok.expires_at) > new Date() && !tok.used_at) {
       isAuthorized = true;
+      authorizedClientId = tok.client_id;
     }
   }
   if (!isAuthorized) {
@@ -1421,6 +1423,12 @@ Deno.serve(async (req) => {
   try {
     const b = await req.json() as ReqBody;
     const { type, clientId, pppData, icpId, offerId, field, lpVariant, aiConfig, bankOfferText, bankOfferDocumentId, bankOfferId } = b;
+    if (authorizedClientId && clientId !== authorizedClientId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     console.log(`[generate-content] ${type} for ${clientId}`);
     
     // Usar config recebida ou padrão XPLO (arquitetura dual)
