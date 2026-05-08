@@ -140,6 +140,7 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
   const [regenInstruction, setRegenInstruction] = useState("");
 
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
+  const [pdfBuilders, setPdfBuilders] = useState<Record<string, () => Promise<any>>>({});
 
   useEffect(() => {
     void load();
