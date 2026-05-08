@@ -266,6 +266,37 @@ export default function ClientDetails() {
     setIsSavingXploLab(false);
   };
 
+  const handleSaveSocial = async () => {
+    if (!id) return;
+    setIsSavingSocial(true);
+    const payload = {
+      instagram_link: socialForm.instagram_link.trim() || null,
+      instagram_login: socialForm.instagram_login.trim() || null,
+      instagram_password: socialForm.instagram_password.trim() || null,
+      facebook_login: socialForm.facebook_login.trim() || null,
+      facebook_password: socialForm.facebook_password.trim() || null,
+    };
+
+    const { data: existing } = await supabase
+      .from("client_profile")
+      .select("id")
+      .eq("client_id", id)
+      .maybeSingle();
+
+    const { error } = existing
+      ? await supabase.from("client_profile").update(payload).eq("client_id", id)
+      : await supabase.from("client_profile").insert({ client_id: id, ...payload });
+
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      setClientProfile((prev) => ({ ...(prev || {}), ...payload }));
+      toast({ title: "Acessos salvos", description: "Credenciais de redes sociais atualizadas." });
+      setIsSocialOpen(false);
+    }
+    setIsSavingSocial(false);
+  };
+
   const handleDelete = async () => {
     if (!id) return;
 
