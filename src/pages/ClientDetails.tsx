@@ -298,7 +298,52 @@ export default function ClientDetails() {
     setIsSavingDrive(false);
   };
 
-  const handleSaveSocial = async () => {
+  const handleSaveTrafficPayment = async () => {
+    if (!id) return;
+    const dayNum = parseInt(trafficPayForm.day, 10);
+    const leadNum = parseInt(trafficPayForm.lead_days, 10);
+    if (!dayNum || dayNum < 1 || dayNum > 31) {
+      toast({ title: "Dia inválido", description: "Informe um dia entre 1 e 31.", variant: "destructive" });
+      return;
+    }
+    if (isNaN(leadNum) || leadNum < 0 || leadNum > 60) {
+      toast({ title: "Antecedência inválida", description: "Informe entre 0 e 60 dias.", variant: "destructive" });
+      return;
+    }
+    const valueCents = trafficPayForm.value_brl
+      ? Math.round(parseFloat(trafficPayForm.value_brl.replace(/\./g, "").replace(",", ".")) * 100)
+      : null;
+
+    setIsSavingTrafficPay(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        traffic_payment_day: dayNum,
+        traffic_payment_lead_days: leadNum,
+        traffic_payment_value_cents: valueCents,
+      } as any)
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      setIsSavingTrafficPay(false);
+      return;
+    }
+    const { error: rpcError } = await supabase.rpc("sync_traffic_payment_task" as any, { _client_id: id });
+    if (rpcError) {
+      toast({ title: "Erro ao agendar tarefa", description: rpcError.message, variant: "destructive" });
+    } else {
+      setClient((prev) => (prev ? ({
+        ...prev,
+        traffic_payment_day: dayNum,
+        traffic_payment_lead_days: leadNum,
+        traffic_payment_value_cents: valueCents,
+      } as any) : prev));
+      toast({ title: "Pagamento de tráfego configurado", description: "Tarefa recorrente criada/atualizada." });
+      setIsTrafficPayOpen(false);
+    }
+    setIsSavingTrafficPay(false);
+  };
+
     if (!id) return;
     setIsSavingSocial(true);
     const payload = {
