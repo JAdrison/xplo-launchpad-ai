@@ -239,6 +239,38 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
               <Button size="sm" variant="ghost" className="w-full" onClick={() => navigate(`/clients/${client.id}`)}>
                 <ExternalLink className="h-4 w-4 mr-2" /> Ver onboarding completo
               </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={async () => {
+                  if (!confirm(`Excluir o negócio "${deal.name}" do CRM?\n\nO cliente NÃO será excluído.`)) return;
+                  const { error } = await supabase.from("deals").delete().eq("id", deal.id);
+                  if (error) toast({ title: "Erro ao excluir negócio", description: error.message, variant: "destructive" });
+                  else { toast({ title: "Negócio excluído" }); onChanged(); onClose(); }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Excluir negócio
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={async () => {
+                  if (!confirm(`ATENÇÃO: excluir o cliente "${client.name}" PERMANENTEMENTE?\n\nIsso remove o cliente, todos os negócios, atividades, ofertas, ICPs, anúncios e dados de onboarding. Não há como desfazer.`)) return;
+                  if (!confirm(`Tem CERTEZA? Digite OK no próximo passo se quiser confirmar.`)) return;
+                  const typed = prompt(`Para confirmar, digite o nome exato do cliente:\n\n${client.name}`);
+                  if (typed !== client.name) {
+                    toast({ title: "Cancelado", description: "Nome não confere.", variant: "destructive" });
+                    return;
+                  }
+                  const { error } = await supabase.from("clients").delete().eq("id", client.id);
+                  if (error) toast({ title: "Erro ao excluir cliente", description: error.message, variant: "destructive" });
+                  else { toast({ title: "Cliente excluído" }); onChanged(); onClose(); }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Excluir cliente
+              </Button>
             </div>
           </div>
 
