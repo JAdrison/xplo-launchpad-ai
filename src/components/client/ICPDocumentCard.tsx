@@ -61,10 +61,12 @@ function PDFTarget({
   doc,
   clientName,
   onReady,
+  onBuildReady,
 }: {
   doc: ICPDoc;
   clientName: string;
   onReady: (toPDF: () => void) => void;
+  onBuildReady?: (build: () => Promise<any>) => void;
 }) {
   const sanitized = `${clientName}-${doc.name}`
     .toLowerCase()
@@ -79,6 +81,7 @@ function PDFTarget({
 
   useEffect(() => {
     onReady(() => toPDF());
+    onBuildReady?.(() => toPDF({ method: "build" } as any));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
