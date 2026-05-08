@@ -38,6 +38,9 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, sdr
     observacoes: "",
   });
 
+  const [existingClients, setExistingClients] = useState<ExistingClient[]>([]);
+  const [selectedExistingId, setSelectedExistingId] = useState<string>("");
+
   useEffect(() => {
     if (open) {
       setForm({
@@ -49,8 +52,22 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, sdr
         dia_vencimento: String(cliente?.dia_vencimento ?? 1),
         observacoes: cliente?.observacoes ?? "",
       });
+      setSelectedExistingId("");
+      if (!cliente) {
+        supabase
+          .from("clients")
+          .select("id, name")
+          .order("name", { ascending: true })
+          .then(({ data }) => setExistingClients((data ?? []) as ExistingClient[]));
+      }
     }
   }, [open, cliente]);
+
+  const handleSelectExisting = (id: string) => {
+    setSelectedExistingId(id);
+    const c = existingClients.find((x) => x.id === id);
+    if (c) setForm((f) => ({ ...f, nome: c.name }));
+  };
 
   const handleSave = async () => {
     if (!form.nome.trim() || form.nome.trim().length < 2) {
