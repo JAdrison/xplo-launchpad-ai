@@ -1,73 +1,129 @@
-# Integração Google Drive — Envio de PDFs
+## Nova área "Vendas" (admin-only)
 
-## Objetivo
-Adicionar um botão **"Enviar para Drive"** ao lado dos botões de PDF já existentes nos documentos: **ICP, Banco de Ofertas, Plano de Demanda, Anúncios e Onboarding**. Cada PDF é salvo no **Drive da XPLO** (uma única conta Google conectada uma vez), dentro de uma **pasta numerada por cliente**, seguindo a sequência que você já usa hoje (`42 - Pousada Bela Vista`, `43 - Cliente Novo`, etc.).
+Adiciona em `/admin/vendas` uma área completa de acompanhamento financeiro de clientes vendidos, inspirada na aba Vendas do XPLO Metrics. Acesso restrito a admins, item visível na sidebar logo abaixo de "Usuários", dentro do bloco **Administração**.
 
-## Estrutura no Drive
+---
+
+### 1. Backend (migrations Supabase)
+
+Criar 3 tabelas novas + função auxiliar; dados compartilhados entre admins.
+
+```text
+clientes_vendidos
+  id, nome, valor_mensal_cents, valor_setup_cents,
+  vendedor_id (uuid → auth user), sdr_id (uuid → auth user),
+  dia_vencimento (1–31), ativo (bool, default true),
+  meta_leads_mes (int, opcional), observacoes,
+  created_at (define o "mês da venda"), updated_at
+
+pagamentos_clientes
+  id, cliente_id, mes (1–12), ano, pago_em, valor_cents
+  UNIQUE(cliente_id, mes, ano)
+
+gastos_anuncios
+  id, mes, ano, valor_cents, leads_manual, reunioes_manual
+  UNIQUE(mes, ano)
 ```
-XPLO Starter/
-├── 41 - Cliente Existente/      ← (já existe no seu Drive)
-├── 42 - Pousada Bela Vista/     ← (próxima pasta criada automaticamente)
-│   ├── ICP.pdf
-│   ├── Banco-de-Ofertas.pdf
-│   ├── Plano-de-Demanda-1.pdf
-│   ├── Anuncios.pdf
-│   └── Onboarding.pdf
-├── 43 - Clínica Sorriso/
-│   └── ...
+
+Campos `leads_manual` e `reunioes_manual` permitem **override manual** sobre o que vier do CRM (resposta híbrida do usuário).
+
+**RLS:** todas as 3 tabelas só permitem SELECT/INSERT/UPDATE/DELETE para `has_role(auth.uid(), 'admin')`.
+
+Triggers: `update_updated_at_column` em `clientes_vendidos`.
+
+---
+
+### 2. Funil — origem dos números (CRM + manual)
+
+KPIs CPL/CPR usam, para cada mês:
+
+- **Leads** = nº de deals criados no mês (`deals.created_at`) — sobreescrito por `leads_manual` se preenchido.
+- **Reuniões** = nº de deals que entraram em alguma coluna do tipo `meeting` no mês (heurística: `pipeline_columns.checkpoint_code` específico OU coluna marcada como reunião). Como não há esse marcador hoje, na primeira versão usamos **apenas o campo manual** `reunioes_manual` e leads vêm dos deals. Pode ser refinado depois.
+- **Vendas** = nº de `clientes_vendidos` criados no mês.
+
+---
+
+### 3. Vendedores e SDRs
+
+Vêm de `user_job_functions` filtrando `job_function IN ('vendedor', 'sdr')` (já existem no enum). Selects no formulário listam usuários com a função correspondente, exibindo o email (via edge `get-user-emails`).
+
+---
+
+### 4. Frontend — nova página `/admin/vendas`
+
+Rota protegida com `requireAdmin`. Item de sidebar "Vendas" (ícone `DollarSign`) adicionado em `adminNavigation` no `AppSidebar.tsx`.
+
+**Estrutura da página** (espelha o screenshot):
+
+```text
+Header
+  Título "Vendas" + subtítulo
+  Botão olho (ocultar valores — persiste em localStorage)
+  Seletor Mês/Ano (controla métricas)
+
+Grid 4 cards principais
+  Total de Vendas (Σ mensal+setup do mês) + Δ% MoM + meta opcional
+  Ticket Médio
+  MRR (Σ valor_mensal de ativos até o mês) + Δ% MoM + meta opcional
+  Qtd de Vendas + Δ% MoM + meta opcional
+
+Grid 4 cards de custo
+  Gasto em Anúncios (mês)
+  CPL = gasto / leads
+  CPR = gasto / reuniões
+  CAC = gasto / vendas
+
+Card "Clientes Ativos"
+  Header com:
+    Botão "Gasto em Anúncios" → modal 12 meses do ano
+    Botão "+ Novo Cliente"
+  Sub-header "Pagamentos de [Mês]":
+    Badge X de Y pagos · Recebido: R$ X · barra de progresso
+    Seletor mês independente (de pagamento)
+  Filtros: Ordenar por · Pagos/Pendentes · Vendedor · SDR
+  Tabela: Status (toggle) · Nome · Vencimento · Mensal · Setup · Vendedor · SDR · Ações (editar/remover-soft)
+
+Gráfico (Recharts)
+  "Evolução de Vendas e MRR" — barras dos últimos 6 meses
+  Vendas do mês + MRR acumulado, badge crescimento MRR
 ```
-- Pasta raiz fixa: `XPLO Starter` (criada automaticamente na 1ª vez se não existir).
-- Subpasta com formato: `{numero} - {Nome do Cliente}`.
-- Numeração detectada **automaticamente do Drive**: na primeira vez que um cliente é enviado, a função lista as pastas existentes em `XPLO Starter`, extrai o maior número via regex `^(\d+)\s*-\s*` e usa **maior + 1**.
-- Arquivos com mesmo nome são **substituídos** (mantém o link, atualiza o conteúdo).
 
-## O que vai mudar
+**Componentes a criar** (em `src/components/admin/vendas/`):
+- `VendasHeader.tsx`
+- `MetricsCards.tsx`, `CostCards.tsx`
+- `ClientesAtivosTable.tsx` (filtros, toggle pagamento via upsert)
+- `NewClientDialog.tsx` / `EditClientDialog.tsx`
+- `GastoAnunciosDialog.tsx` (12 meses + leads/reuniões manual)
+- `EvolucaoChart.tsx`
+- `useVendas.ts` (hook único com queries do mês selecionado, MoM, gráfico, vendedores/SDRs)
 
-### 1. Conexão Google Drive
-Conectar o connector **Google Drive** uma única vez (fluxo do Lovable abre janela pra logar com a conta Google da XPLO). Os secrets `LOVABLE_API_KEY` e `GOOGLE_DRIVE_API_KEY` ficam disponíveis nas edge functions.
+**Página:** `src/pages/AdminVendas.tsx` + rota em `src/App.tsx`.
 
-### 2. Tabela `client_drive_folders`
-Cache do mapeamento cliente → pasta no Drive (evita listar tudo a cada envio):
-- `client_id`, `drive_folder_id`, `drive_folder_name`, `client_number`, `drive_folder_url`, `created_at`.
-- RLS: somente `has_crm_access` lê/escreve (mesmo padrão das outras tabelas).
+---
 
-### 3. Edge Function `upload-to-drive`
-Recebe `{ clientId, fileName, pdfBase64 }` e faz:
-1. Garante a pasta raiz `XPLO Starter` (busca, cria se não existir).
-2. Busca a pasta do cliente em `client_drive_folders`. Se não tiver:
-   - Lista pastas dentro de `XPLO Starter` no Drive.
-   - Extrai o maior número existente (`^(\d+)\s*-\s*`).
-   - Cria pasta `{maiorNumero + 1} - {NomeDoCliente}`.
-   - Salva no `client_drive_folders`.
-3. Procura arquivo com o mesmo nome dentro da pasta — se existir, **atualiza** (mesma URL); senão, **cria** (multipart upload).
-4. Retorna `{ fileId, webViewLink, folderName }`.
+### 5. UX / Segurança
 
-Tudo via gateway: `https://connector-gateway.lovable.dev/google_drive/...`
+- Soft delete (`ativo=false`), nunca apaga histórico.
+- Mascarar valores monetários quando o "olho" está fechado, salvo em `localStorage`.
+- Variação MoM com cor (verde/vermelho) e seta.
+- Toasts em todas ações.
+- Responsivo: 2 colunas mobile → 4 desktop.
+- Tudo segue tokens do design system (light mode, primary `#8B5CF6`).
 
-### 4. Componente `<SendToDriveButton />`
-Botão compartilhado:
-- Gera o PDF localmente reutilizando o `react-to-pdf` já presente nos cards.
-- Captura o blob → converte pra base64.
-- Chama a edge function.
-- Toast com link "Abrir no Drive" + nome da pasta criada (ex: `Salvo em "42 - Pousada Bela Vista"`).
+---
 
-### 5. Onde o botão será adicionado
-- `TrafficPlanCard.tsx` — ao lado do PDF de cada plano.
-- `OfferBancoCard.tsx` — ao lado do PDF do banco de ofertas.
-- `ICPDocumentCard.tsx` — ao lado do PDF do ICP.
-- `GeneratedAssetsSection.tsx` — no export de anúncios.
-- Tela de Onboarding — no export do PDF completo.
+### 6. Memória a salvar após implementar
 
-## Detalhes técnicos
-- Recomenda-se conectar o Drive da conta dedicada da agência (ex: `xplolabcreator@gmail.com`) — assim a pasta `XPLO Starter` já é a que você usa hoje.
-- Se a pasta `XPLO Starter` já existir no seu Drive com as 41 pastas, a função vai detectá-las naturalmente e criar a próxima como `42 - ...`.
-- Upload via `uploadType=multipart`, sobrescrita via `PATCH /upload/drive/v3/files/{fileId}?uploadType=media`.
-- Numeração é **monotonica**: nunca reutiliza número de pasta deletada (o sistema sempre pega `max + 1`).
+`mem://admin/vendas-modulo` — descreve tabelas, RLS admin-only, fonte de vendedor/SDR (job_functions), e regra de funil híbrido (CRM + manual).
 
-## Fora do escopo desta entrega
-- Compartilhamento automático da pasta com o e-mail do cliente.
-- Renumeração de clientes existentes.
-- Sincronização bidirecional (Drive → app).
+---
 
-## Pré-requisito
-Conectar o Google Drive da conta XPLO via connector Lovable — faço isso no primeiro passo da implementação, vai abrir uma janela pra você autorizar no Google.
+### Detalhes técnicos (resumo para devs)
+
+- Migrations: 3 CREATE TABLE + RLS policies via `has_role`.
+- Armazenar valores em **centavos** (bigint) para evitar float.
+- Δ% MoM = `((atual − anterior) / anterior) × 100`, tratando divisão por zero.
+- MRR do mês N = soma `valor_mensal` de clientes com `created_at <= último dia do mês N` AND (`ativo=true` OR desativados após mês N — para versão 1, usar simplesmente `ativo=true`).
+- Toggle de pagamento faz `upsert` em `pagamentos_clientes` por `(cliente_id, mes, ano)`.
+- Gastos em anúncios: `upsert` por `(mes, ano)`.
+- Sem alterar tabelas existentes do CRM.
