@@ -112,6 +112,7 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
 
   // PDF triggers por doc
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
+  const [pdfBuilders, setPdfBuilders] = useState<Record<string, () => Promise<any>>>({});
 
   useEffect(() => {
     void load();
