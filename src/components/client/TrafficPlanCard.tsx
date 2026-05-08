@@ -513,7 +513,8 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
                 <PDFTarget
                   doc={doc}
                   clientName={clientName}
-                  onReady={(fn) => setPdfTriggers((prev) => ({ ...prev, [doc.id]: fn }))}
+                  onReady={(fn) => setPdfTriggers((prev) => (prev[doc.id] === fn ? prev : { ...prev, [doc.id]: fn }))}
+                  onBuildReady={(fn) => setPdfBuilders((prev) => (prev[doc.id] === fn ? prev : { ...prev, [doc.id]: fn }))}
                 />
               </div>
             );
