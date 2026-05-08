@@ -388,13 +388,21 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                             </div>
                             <div className="divide-y divide-border">
                               {[...g.items].sort((a, b) => {
-                                const da = getDueState(a.scheduled_at, a.status);
-                                const db = getDueState(b.scheduled_at, b.status);
-                                if (da.overdue !== db.overdue) return da.overdue ? -1 : 1;
-                                const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Infinity;
-                                const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
-                                return ta - tb;
-                              }).map((a) => {
+                                 const aDone = a.status === "completed";
+                                 const bDone = b.status === "completed";
+                                 if (aDone !== bDone) return aDone ? 1 : -1;
+                                 if (aDone && bDone) {
+                                   const ca = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+                                   const cb = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+                                   return cb - ca;
+                                 }
+                                 const da = getDueState(a.scheduled_at, a.status);
+                                 const db = getDueState(b.scheduled_at, b.status);
+                                 if (da.overdue !== db.overdue) return da.overdue ? -1 : 1;
+                                 const ta = a.scheduled_at ? new Date(a.scheduled_at).getTime() : Infinity;
+                                 const tb = b.scheduled_at ? new Date(b.scheduled_at).getTime() : Infinity;
+                                 return ta - tb;
+                               }).map((a) => {
                                 const due = getDueState(a.scheduled_at, a.status);
                                 return (
                                 <div key={a.id} className={`flex items-start gap-2 p-2 ${due.overdue ? "bg-destructive/5" : ""}`}>
