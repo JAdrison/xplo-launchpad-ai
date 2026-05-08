@@ -142,6 +142,12 @@ export function OfferBancoCard({ clientId, clientName }: OfferBancoCardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  useRealtimeReload(
+    ["client_offer_documents", "client_icp_documents", "client_icp"],
+    () => { void load(); },
+    { clientId }
+  );
+
   const load = async () => {
     setIsLoading(true);
     const [docsRes, icpDocsRes, icpLegacyRes] = await Promise.all([
