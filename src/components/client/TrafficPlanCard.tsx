@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRealtimeReload } from "@/hooks/useRealtimeReload";
 import { usePDF, Margin } from "react-to-pdf";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,12 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  useRealtimeReload(
+    ["client_traffic_plan_documents", "client_offer_documents", "client_icp_documents", "client_icp"],
+    () => { void load(); },
+    { clientId }
+  );
 
   const load = async () => {
     setIsLoading(true);
