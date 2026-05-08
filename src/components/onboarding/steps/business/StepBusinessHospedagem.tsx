@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin, BedDouble } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hotel, Loader2, Plus, Trash2, MapPin, BedDouble, Save } from "lucide-react";
 import { TagInput } from "../../shared/TagInput";
 import { SuggestedTagInput } from "../../shared/SuggestedTagInput";
 
