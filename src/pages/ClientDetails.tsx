@@ -542,100 +542,104 @@ export default function ClientDetails() {
       </Card>
 
       {/* Credenciais Meta Ads */}
-      {clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Acesso às Redes Sociais (Meta Ads)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Instagram */}
-            {(clientProfile.instagram_link || clientProfile.instagram_login) && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Instagram className="h-4 w-4" />
-                  Instagram
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {clientProfile.instagram_link && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Link</p>
-                      <a 
-                        href={clientProfile.instagram_link.startsWith('http') ? clientProfile.instagram_link : `https://${clientProfile.instagram_link}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline break-all"
-                      >
-                        {clientProfile.instagram_link}
-                      </a>
-                    </div>
-                  )}
-                  {clientProfile.instagram_login && (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Acesso às Redes Sociais (Meta Ads)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {clientProfile && (clientProfile.instagram_login || clientProfile.facebook_login) ? (
+            <>
+              {/* Instagram */}
+              {(clientProfile.instagram_link || clientProfile.instagram_login) && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Instagram className="h-4 w-4" />
+                    Instagram
+                  </h4>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {clientProfile.instagram_link && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Link</p>
+                        <a 
+                          href={clientProfile.instagram_link.startsWith('http') ? clientProfile.instagram_link : `https://${clientProfile.instagram_link}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline break-all"
+                        >
+                          {clientProfile.instagram_link}
+                        </a>
+                      </div>
+                    )}
+                    {clientProfile.instagram_login && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Login</p>
+                        <p className="text-foreground">{clientProfile.instagram_login}</p>
+                      </div>
+                    )}
+                    {clientProfile.instagram_password && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-foreground">
+                            {showInstagramPassword ? clientProfile.instagram_password : "••••••••"}
+                          </p>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6"
+                            onClick={() => setShowInstagramPassword(!showInstagramPassword)}
+                          >
+                            {showInstagramPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Facebook */}
+              {clientProfile.facebook_login && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Facebook className="h-4 w-4" />
+                    Facebook
+                  </h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Login</p>
-                      <p className="text-foreground">{clientProfile.instagram_login}</p>
+                      <p className="text-foreground">{clientProfile.facebook_login}</p>
                     </div>
-                  )}
-                  {clientProfile.instagram_password && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Senha</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-mono text-foreground">
-                          {showInstagramPassword ? clientProfile.instagram_password : "••••••••"}
-                        </p>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => setShowInstagramPassword(!showInstagramPassword)}
-                        >
-                          {showInstagramPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
+                    {clientProfile.facebook_password && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-foreground">
+                            {showFacebookPassword ? clientProfile.facebook_password : "••••••••"}
+                          </p>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6"
+                            onClick={() => setShowFacebookPassword(!showFacebookPassword)}
+                          >
+                            {showFacebookPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Facebook */}
-            {clientProfile.facebook_login && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <Facebook className="h-4 w-4" />
-                  Facebook
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Login</p>
-                    <p className="text-foreground">{clientProfile.facebook_login}</p>
+                    )}
                   </div>
-                  {clientProfile.facebook_password && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Senha</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-mono text-foreground">
-                          {showFacebookPassword ? clientProfile.facebook_password : "••••••••"}
-                        </p>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6"
-                          onClick={() => setShowFacebookPassword(!showFacebookPassword)}
-                        >
-                          {showFacebookPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Não cadastrado</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Investimento em Tráfego */}
       {clientProfile && (clientProfile.initial_traffic_investment || clientProfile.monthly_investment || clientProfile.current_revenue || clientProfile.revenue_goal) && (
