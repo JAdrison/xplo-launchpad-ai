@@ -218,7 +218,7 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
               size="sm"
               className="gap-1"
               onClick={() =>
-                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "" }] }))
+                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "", comodidades: [], descricao: "" }] }))
               }
             >
               <Plus className="h-4 w-4" /> Adicionar quarto
