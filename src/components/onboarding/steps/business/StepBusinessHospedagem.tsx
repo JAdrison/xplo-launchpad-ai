@@ -96,6 +96,8 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         experiencia: pd.experiencia || "",
         extras: pd.extras || "",
         promotions: data.promotions || "",
+        checkin: pd.checkin || "",
+        checkout: pd.checkout || "",
         passeios: Array.isArray(pd.passeios) ? pd.passeios : [],
         quartos: Array.isArray(pd.quartos) ? pd.quartos.map((q: any) => ({ nome: q.nome || "", valor: q.valor || "", comodidades: Array.isArray(q.comodidades) ? q.comodidades : [], descricao: q.descricao || "" })) : [],
       });
