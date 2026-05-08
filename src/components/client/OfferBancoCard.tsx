@@ -930,6 +930,7 @@ function OfferDocBlock(props: OfferDocBlockProps) {
                 >
                   <FileDown className="h-4 w-4" /> PDF
                 </Button>
+                {driveSlot}
                 <Button
                   onClick={onDeleteDoc}
                   variant="ghost"
