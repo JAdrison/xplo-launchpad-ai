@@ -5,6 +5,7 @@ import { OfferPDFTemplate } from "./OfferPDFTemplate";
 import { LandingPagePDFTemplate } from "./LandingPagePDFTemplate";
 import { OnboardingPDFTemplate } from "./OnboardingPDFTemplate";
 import { AdsPDFTemplate } from "./AdsPDFTemplate";
+import { SendToDriveButton } from "@/components/drive/SendToDriveButton";
 
 interface PDFExportButtonProps {
   type: "offer" | "landing-page" | "onboarding" | "ads";
@@ -19,6 +20,9 @@ interface PDFExportButtonProps {
   // For ads: filter which ads to include
   adsFilter?: "all" | "static" | "video";
   label?: string;
+  // Drive integration (optional)
+  clientId?: string;
+  driveFileName?: string;
 }
 
 export function PDFExportButton({ 
@@ -33,6 +37,8 @@ export function PDFExportButton({
   refreshKey = 0,
   adsFilter = "all",
   label,
+  clientId,
+  driveFileName,
 }: PDFExportButtonProps) {
   const sanitizedClientName = clientName
     .toLowerCase()
@@ -74,6 +80,20 @@ export function PDFExportButton({
     }
   });
 
+  // Friendly name for Drive
+  const safeClient = (clientName || "Cliente").replace(/[\\/:*?"<>|]/g, "").trim();
+  const driveDefaults: Record<string, string> = {
+    offer: `Oferta - ${safeClient}.pdf`,
+    "landing-page": `Landing Page - ${safeClient}.pdf`,
+    onboarding: `Onboarding X1 - ${safeClient}.pdf`,
+    ads: adsFilter === "static"
+      ? `Anuncios Estaticos - ${safeClient}.pdf`
+      : adsFilter === "video"
+      ? `Roteiros Video - ${safeClient}.pdf`
+      : `Anuncios - ${safeClient}.pdf`,
+  };
+  const driveName = driveFileName || driveDefaults[type];
+
   return (
     <>
       <Button 
@@ -85,6 +105,15 @@ export function PDFExportButton({
         <FileDown className="h-4 w-4" />
         {size !== "icon" && <span className="ml-1">{label ?? defaultLabel}</span>}
       </Button>
+
+      {clientId && (
+        <SendToDriveButton
+          buildPdf={() => Promise.resolve(toPDF({ method: "build" } as any))}
+          clientId={clientId}
+          fileName={driveName}
+          size={size === "icon" ? "icon" : "sm"}
+        />
+      )}
       
       {/* Hidden template for PDF generation */}
       <div 
