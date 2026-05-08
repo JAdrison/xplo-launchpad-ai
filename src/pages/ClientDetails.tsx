@@ -88,6 +88,9 @@ export default function ClientDetails() {
   const [isSavingXploLab, setIsSavingXploLab] = useState(false);
   const [showXploLabPasswordInput, setShowXploLabPasswordInput] = useState(false);
   const [xploLabForm, setXploLabForm] = useState({ login: "", password: "" });
+  const [isDriveOpen, setIsDriveOpen] = useState(false);
+  const [isSavingDrive, setIsSavingDrive] = useState(false);
+  const [driveForm, setDriveForm] = useState({ url: "" });
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
   const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
