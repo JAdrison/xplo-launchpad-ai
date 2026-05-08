@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound, FolderOpen } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound, FolderOpen, CalendarClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientPipelineBar } from "@/components/client/ClientPipelineBar";
 import { useToast } from "@/hooks/use-toast";
@@ -91,6 +91,9 @@ export default function ClientDetails() {
   const [isDriveOpen, setIsDriveOpen] = useState(false);
   const [isSavingDrive, setIsSavingDrive] = useState(false);
   const [driveForm, setDriveForm] = useState({ url: "" });
+  const [isTrafficPayOpen, setIsTrafficPayOpen] = useState(false);
+  const [isSavingTrafficPay, setIsSavingTrafficPay] = useState(false);
+  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "" });
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
   const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
@@ -146,6 +149,13 @@ export default function ClientDetails() {
           notes: data.notes || "",
         });
         setDriveForm({ url: (data as any).drive_url || "" });
+        setTrafficPayForm({
+          day: (data as any).traffic_payment_day != null ? String((data as any).traffic_payment_day) : "",
+          lead_days: (data as any).traffic_payment_lead_days != null ? String((data as any).traffic_payment_lead_days) : "3",
+          value_brl: (data as any).traffic_payment_value_cents != null
+            ? ((data as any).traffic_payment_value_cents / 100).toFixed(2).replace(".", ",")
+            : "",
+        });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
           password: (data as any).xplo_lab_password || "",
@@ -286,6 +296,52 @@ export default function ClientDetails() {
       setIsDriveOpen(false);
     }
     setIsSavingDrive(false);
+  };
+
+  const handleSaveTrafficPayment = async () => {
+    if (!id) return;
+    const dayNum = parseInt(trafficPayForm.day, 10);
+    const leadNum = parseInt(trafficPayForm.lead_days, 10);
+    if (!dayNum || dayNum < 1 || dayNum > 31) {
+      toast({ title: "Dia inválido", description: "Informe um dia entre 1 e 31.", variant: "destructive" });
+      return;
+    }
+    if (isNaN(leadNum) || leadNum < 0 || leadNum > 60) {
+      toast({ title: "Antecedência inválida", description: "Informe entre 0 e 60 dias.", variant: "destructive" });
+      return;
+    }
+    const valueCents = trafficPayForm.value_brl
+      ? Math.round(parseFloat(trafficPayForm.value_brl.replace(/\./g, "").replace(",", ".")) * 100)
+      : null;
+
+    setIsSavingTrafficPay(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        traffic_payment_day: dayNum,
+        traffic_payment_lead_days: leadNum,
+        traffic_payment_value_cents: valueCents,
+      } as any)
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      setIsSavingTrafficPay(false);
+      return;
+    }
+    const { error: rpcError } = await supabase.rpc("sync_traffic_payment_task" as any, { _client_id: id });
+    if (rpcError) {
+      toast({ title: "Erro ao agendar tarefa", description: rpcError.message, variant: "destructive" });
+    } else {
+      setClient((prev) => (prev ? ({
+        ...prev,
+        traffic_payment_day: dayNum,
+        traffic_payment_lead_days: leadNum,
+        traffic_payment_value_cents: valueCents,
+      } as any) : prev));
+      toast({ title: "Pagamento de tráfego configurado", description: "Tarefa recorrente criada/atualizada." });
+      setIsTrafficPayOpen(false);
+    }
+    setIsSavingTrafficPay(false);
   };
 
   const handleSaveSocial = async () => {
@@ -675,6 +731,109 @@ export default function ClientDetails() {
           ) : (
             <p className="text-sm text-muted-foreground">
               Nenhum link cadastrado. Use o botão acima para adicionar.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pagamento de verba de tráfego */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5" />
+              Pagamento da Verba de Tráfego
+              <Badge variant="secondary" className="ml-2 text-xs">Recorrente</Badge>
+            </CardTitle>
+            <Dialog open={isTrafficPayOpen} onOpenChange={setIsTrafficPayOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-3.5 w-3.5" />
+                  {(client as any).traffic_payment_day ? "Editar configuração" : "Configurar"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Pagamento da verba de tráfego</DialogTitle>
+                  <DialogDescription>
+                    Define o dia do vencimento, com quantos dias de antecedência cobrar e o valor.
+                    Uma tarefa será criada automaticamente para o Gestor de Tráfego e se renova a cada mês ao ser concluída.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-day">Dia do vencimento</Label>
+                      <Input
+                        id="tp-day"
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={trafficPayForm.day}
+                        onChange={(e) => setTrafficPayForm((p) => ({ ...p, day: e.target.value }))}
+                        placeholder="Ex: 10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-lead">Cobrar com antecedência (dias)</Label>
+                      <Input
+                        id="tp-lead"
+                        type="number"
+                        min={0}
+                        max={60}
+                        value={trafficPayForm.lead_days}
+                        onChange={(e) => setTrafficPayForm((p) => ({ ...p, lead_days: e.target.value }))}
+                        placeholder="Ex: 3"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tp-value">Valor (R$)</Label>
+                    <Input
+                      id="tp-value"
+                      inputMode="decimal"
+                      value={trafficPayForm.value_brl}
+                      onChange={(e) => setTrafficPayForm((p) => ({ ...p, value_brl: e.target.value }))}
+                      placeholder="Ex: 1500,00"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsTrafficPayOpen(false)} disabled={isSavingTrafficPay}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveTrafficPayment} disabled={isSavingTrafficPay}>
+                    {isSavingTrafficPay ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(client as any).traffic_payment_day ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Dia do vencimento</p>
+                <p className="font-semibold">Todo dia {(client as any).traffic_payment_day}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Antecedência</p>
+                <p className="font-semibold">{(client as any).traffic_payment_lead_days ?? 3} dias antes</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Valor</p>
+                <p className="font-semibold">
+                  {(client as any).traffic_payment_value_cents != null
+                    ? ((client as any).traffic_payment_value_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma configuração ativa. Configure para gerar automaticamente a tarefa de cobrança recorrente.
             </p>
           )}
         </CardContent>
