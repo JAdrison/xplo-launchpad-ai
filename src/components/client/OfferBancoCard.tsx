@@ -718,6 +718,7 @@ function OfferDocBlock(props: OfferDocBlockProps) {
     onRegenerateAll,
     onCopy,
     onPDF,
+    driveSlot,
     onDeleteDoc,
     onToggleEnabled,
     onRequestDeleteOffer,
