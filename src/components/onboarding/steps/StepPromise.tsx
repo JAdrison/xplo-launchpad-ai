@@ -47,7 +47,7 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
     setIsGenerating(true);
 
     try {
-      // Fetch all PPP data
+      // Fetch all onboarding data
       const [clientRes, profileRes, icpsRes, painsRes] = await Promise.all([
         supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
         supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
@@ -55,7 +55,7 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
         supabase.from("icp_pains").select("*, icps(name)").eq("icps.client_id", clientId),
       ]);
 
-      const pppData = {
+      const onboardingData = {
         niche: clientRes.data?.niche || null,
         profile: profileRes.data || null,
         icps: icpsRes.data || [],
@@ -68,7 +68,7 @@ export function StepPromise({ clientId, onNext, onPrevious }: StepPromiseProps) 
         body: {
           type: "generate-promise",
           clientId,
-          pppData,
+          onboardingData,
           aiConfig,
         },
       });

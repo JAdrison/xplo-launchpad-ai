@@ -354,7 +354,7 @@ export default function Settings() {
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>Cadastro de clientes</li>
-            <li>Wizard PPP (Produto, Público, Problema, Promessa)</li>
+            <li>Wizard de Onboarding</li>
             <li>Geração de Oferta Hormozi</li>
             <li>Geração de LPs e Anúncios</li>
           </ul>

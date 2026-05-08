@@ -44,8 +44,8 @@ type Client = Tables<"clients">;
 
 const STATUS_LABELS: Record<Client["status"], string> = {
   draft: "Rascunho",
-  ppp_in_progress: "PPP em andamento",
-  ppp_completed: "PPP concluído",
+  ppp_in_progress: "Onboarding em andamento",
+  ppp_completed: "Onboarding concluído",
   offer_generated: "Oferta gerada",
   assets_generated: "Assets gerados",
   archived: "Arquivado",

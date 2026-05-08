@@ -49,7 +49,7 @@ interface DemandPlanEditorProps {
   clientId: string;
   demandPlan: DemandPlan | null;
   onPlanUpdate: (plan: DemandPlan) => void;
-  pppData?: any;
+  onboardingData?: any;
 }
 
 export function DemandPlanEditor({
@@ -57,7 +57,7 @@ export function DemandPlanEditor({
   clientId,
   demandPlan,
   onPlanUpdate,
-  pppData,
+  onboardingData,
 }: DemandPlanEditorProps) {
   const [localPlan, setLocalPlan] = useState<DemandPlan>(demandPlan || {});
   const [isSaving, setIsSaving] = useState(false);
@@ -156,7 +156,7 @@ export function DemandPlanEditor({
           type: "refresh-demand-plan",
           clientId,
           offerId,
-          pppData,
+          onboardingData,
           aiConfig,
         },
       });

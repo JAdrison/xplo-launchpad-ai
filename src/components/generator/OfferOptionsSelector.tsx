@@ -35,7 +35,7 @@ interface OfferOptionsSelectorProps {
   selectedOptions: SelectedOptions;
   onOptionsUpdate: (options: GeneratedOptions, selected: SelectedOptions) => void;
   onEditChange?: (currentOptions: GeneratedOptions, currentSelected: SelectedOptions) => void;
-  pppData?: any;
+  onboardingData?: any;
 }
 
 interface FieldConfig {
@@ -60,7 +60,7 @@ export function OfferOptionsSelector({
   selectedOptions,
   onOptionsUpdate,
   onEditChange,
-  pppData,
+  onboardingData,
 }: OfferOptionsSelectorProps) {
   const [localOptions, setLocalOptions] = useState<GeneratedOptions>(generatedOptions);
   const [localSelected, setLocalSelected] = useState<SelectedOptions>(selectedOptions);
@@ -118,7 +118,7 @@ export function OfferOptionsSelector({
           clientId,
           offerId,
           field,
-          pppData,
+          onboardingData,
           aiConfig,
         },
       });

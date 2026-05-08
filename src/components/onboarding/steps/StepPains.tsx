@@ -99,7 +99,7 @@ export function StepPains({ clientId, onNext, onPrevious }: StepPainsProps) {
         supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
       ]);
 
-      const pppData = {
+      const onboardingData = {
         niche: clientRes.data?.niche || null,
         profile: profileRes.data || null,
         icps: [],
@@ -112,7 +112,7 @@ export function StepPains({ clientId, onNext, onPrevious }: StepPainsProps) {
         body: {
           type: "generate-buyer-pains",
           clientId,
-          pppData,
+          onboardingData,
           aiConfig,
         },
       });

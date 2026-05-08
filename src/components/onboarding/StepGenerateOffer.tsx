@@ -44,7 +44,7 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
     setIsGenerating(true);
 
     try {
-      // Fetch PPP data for the selected ICP
+      // Fetch onboarding data for the selected ICP
       const [profileRes, icpRes, painRes, promiseRes, clientRes] = await Promise.all([
         supabase.from("client_profile").select("*").eq("client_id", clientId).maybeSingle(),
         supabase.from("icps").select("*").eq("id", selectedIcpId).maybeSingle(),
@@ -53,7 +53,7 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
         supabase.from("clients").select("niche").eq("id", clientId).maybeSingle(),
       ]);
 
-      const pppData = {
+      const onboardingData = {
         profile: profileRes.data,
         icps: icpRes.data ? [icpRes.data] : [],
         pains: painRes.data ? [painRes.data] : [],
@@ -67,7 +67,7 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
           type: "offer",
           clientId,
           icpId: selectedIcpId,
-          pppData,
+          onboardingData,
           aiConfig,
         },
       });
@@ -120,7 +120,7 @@ export function StepGenerateOffer({ clientId, icps, onOfferGenerated }: StepGene
     <div className="space-y-6">
       <div className="rounded-lg bg-muted/50 p-4">
         <p className="text-sm text-muted-foreground">
-          <strong>Opcional:</strong> Gere uma oferta com IA baseada nas informações do PPP.
+          <strong>Opcional:</strong> Gere uma oferta com IA baseada nas informações do onboarding.
           Você pode pular esta etapa e gerar ofertas depois no Gerador IA.
         </p>
       </div>
