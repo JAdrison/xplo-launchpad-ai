@@ -102,7 +102,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     else {
       await supabase.from("deal_history").insert({
         deal_id: deal!.id,
-        event_type: completed ? "activity_completed" : "activity_reopened",
+        event_type: completed ? "activity_completed" : "activity_created",
         event_data: {
           activity_id: a.id,
           subject: a.subject,
