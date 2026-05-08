@@ -260,17 +260,31 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
             <Label className="flex items-center gap-2 text-sm font-medium">
               <BedDouble className="h-4 w-4" /> Quartos / Acomodações e valores
             </Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              onClick={() =>
-                setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "", comodidades: [], descricao: "" }] }))
-              }
-            >
-              <Plus className="h-4 w-4" /> Adicionar quarto
-            </Button>
+            <div className="flex items-center gap-2">
+              {form.quartos.length > 0 && (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="gap-1"
+                  disabled={isSavingQuartos}
+                  onClick={handleSaveQuartos}
+                >
+                  {isSavingQuartos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar quartos
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() =>
+                  setForm((p) => ({ ...p, quartos: [...p.quartos, { nome: "", valor: "", comodidades: [], descricao: "" }] }))
+                }
+              >
+                <Plus className="h-4 w-4" /> Adicionar quarto
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             💡 Ex: "Suíte Master — R$ 550/diária", "Chalé Família — R$ 780/diária"
