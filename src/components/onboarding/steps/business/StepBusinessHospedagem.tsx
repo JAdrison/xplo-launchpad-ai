@@ -168,6 +168,37 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
     }
   };
 
+  const [isSavingQuartos, setIsSavingQuartos] = useState(false);
+  const handleSaveQuartos = async () => {
+    setIsSavingQuartos(true);
+    try {
+      const cleanQuartos = form.quartos
+        .map((q) => ({
+          nome: (q.nome || "").trim(),
+          valor: (q.valor || "").trim(),
+          comodidades: Array.isArray(q.comodidades) ? q.comodidades : [],
+          descricao: (q.descricao || "").trim(),
+        }))
+        .filter((q) => q.nome.length > 0);
+      const { data: existing } = await supabase
+        .from("client_profile")
+        .select("id, profile_data")
+        .eq("client_id", clientId)
+        .maybeSingle();
+      const merged = { ...((existing?.profile_data as any) || {}), quartos: cleanQuartos };
+      if (existing?.id) {
+        await supabase.from("client_profile").update({ profile_data: merged }).eq("id", existing.id);
+      } else {
+        await supabase.from("client_profile").insert({ client_id: clientId, profile_data: merged });
+      }
+      toast({ title: "Quartos salvos" });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erro ao salvar quartos", variant: "destructive" });
+    } finally {
+      setIsSavingQuartos(false);
+    }
+  };
   if (isLoading) return <Card><CardContent className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></CardContent></Card>;
 
   return (
