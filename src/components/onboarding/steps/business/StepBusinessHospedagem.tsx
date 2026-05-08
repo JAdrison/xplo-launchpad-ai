@@ -121,7 +121,12 @@ export function StepBusinessHospedagem({ clientId, onNext, onPrevious }: Props) 
         .map((p) => ({ nome: (p.nome || "").trim(), descricao: (p.descricao || "").trim() }))
         .filter((p) => p.nome.length > 0);
       const cleanQuartos = form.quartos
-        .map((q) => ({ nome: (q.nome || "").trim(), valor: (q.valor || "").trim() }))
+        .map((q) => ({
+          nome: (q.nome || "").trim(),
+          valor: (q.valor || "").trim(),
+          comodidades: Array.isArray(q.comodidades) ? q.comodidades : [],
+          descricao: (q.descricao || "").trim(),
+        }))
         .filter((q) => q.nome.length > 0);
       const profile_data = {
         type: form.type,
