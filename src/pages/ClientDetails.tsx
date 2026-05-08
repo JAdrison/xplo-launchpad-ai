@@ -88,6 +88,17 @@ export default function ClientDetails() {
   const [isSavingXploLab, setIsSavingXploLab] = useState(false);
   const [showXploLabPasswordInput, setShowXploLabPasswordInput] = useState(false);
   const [xploLabForm, setXploLabForm] = useState({ login: "", password: "" });
+  const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const [isSavingSocial, setIsSavingSocial] = useState(false);
+  const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
+  const [showSocialFbPwd, setShowSocialFbPwd] = useState(false);
+  const [socialForm, setSocialForm] = useState({
+    instagram_link: "",
+    instagram_login: "",
+    instagram_password: "",
+    facebook_login: "",
+    facebook_password: "",
+  });
 
   const [formData, setFormData] = useState({
     name: "",
