@@ -78,11 +78,13 @@ function PDFTarget({
   clientName,
   exportText,
   onReady,
+  onBuildReady,
 }: {
   doc: OfferDoc;
   clientName: string;
   exportText: string;
   onReady: (toPDF: () => void) => void;
+  onBuildReady?: (build: () => Promise<any>) => void;
 }) {
   const sanitized = `${clientName}-${doc.name}`
     .toLowerCase()
@@ -97,6 +99,7 @@ function PDFTarget({
 
   useEffect(() => {
     onReady(() => toPDF());
+    onBuildReady?.(() => Promise.resolve(toPDF({ method: "build" } as any)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
