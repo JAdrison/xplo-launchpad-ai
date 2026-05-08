@@ -154,6 +154,13 @@ export default function ClientDetails() {
 
         if (profileData) {
           setClientProfile(profileData);
+          setSocialForm({
+            instagram_link: profileData.instagram_link || "",
+            instagram_login: profileData.instagram_login || "",
+            instagram_password: profileData.instagram_password || "",
+            facebook_login: profileData.facebook_login || "",
+            facebook_password: profileData.facebook_password || "",
+          });
         }
       }
       setIsLoading(false);
