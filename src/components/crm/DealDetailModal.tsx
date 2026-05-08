@@ -101,8 +101,16 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else {
       await supabase.from("deal_history").insert({
-        deal_id: a.id ? deal!.id : "", event_type: completed ? "activity_completed" : "activity_created",
-        event_data: { activity_id: a.id, subject: a.subject }, actor_id: user?.id ?? null,
+        deal_id: deal!.id,
+        event_type: completed ? "activity_completed" : "activity_reopened",
+        event_data: {
+          activity_id: a.id,
+          subject: a.subject,
+          checkpoint_code: a.checkpoint_code ?? null,
+          checkpoint_label: a.checkpoint_label ?? null,
+          type: a.type,
+        },
+        actor_id: user?.id ?? null,
       });
       refetch();
     }
