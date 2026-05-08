@@ -5,10 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Link2 } from "lucide-react";
 import type { ClienteVendido, UserOption } from "@/hooks/useVendas";
+
+interface ExistingClient {
+  id: string;
+  name: string;
+}
 
 interface Props {
   open: boolean;
@@ -32,6 +38,9 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, sdr
     observacoes: "",
   });
 
+  const [existingClients, setExistingClients] = useState<ExistingClient[]>([]);
+  const [selectedExistingId, setSelectedExistingId] = useState<string>("");
+
   useEffect(() => {
     if (open) {
       setForm({
@@ -43,8 +52,22 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, sdr
         dia_vencimento: String(cliente?.dia_vencimento ?? 1),
         observacoes: cliente?.observacoes ?? "",
       });
+      setSelectedExistingId("");
+      if (!cliente) {
+        supabase
+          .from("clients")
+          .select("id, name")
+          .order("name", { ascending: true })
+          .then(({ data }) => setExistingClients((data ?? []) as ExistingClient[]));
+      }
     }
   }, [open, cliente]);
+
+  const handleSelectExisting = (id: string) => {
+    setSelectedExistingId(id);
+    const c = existingClients.find((x) => x.id === id);
+    if (c) setForm((f) => ({ ...f, nome: c.name }));
+  };
 
   const handleSave = async () => {
     if (!form.nome.trim() || form.nome.trim().length < 2) {
@@ -91,6 +114,26 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, vendedores, sdr
           <DialogTitle>{cliente ? "Editar cliente" : "Novo cliente vendido"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {!cliente && existingClients.length > 0 && (
+            <>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" /> Puxar de cliente existente
+                </Label>
+                <Select value={selectedExistingId || "none"} onValueChange={(v) => handleSelectExisting(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um cliente já cadastrado" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Cadastro manual —</SelectItem>
+                    {existingClients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Preenche o nome automaticamente. Você ainda precisa informar valores e responsáveis.</p>
+              </div>
+              <Separator />
+            </>
+          )}
           <div className="space-y-1.5">
             <Label>Nome *</Label>
             <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
