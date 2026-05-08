@@ -114,6 +114,12 @@ export function ICPDocumentCard({ clientId, clientName }: ICPDocumentCardProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  useRealtimeReload(
+    ["client_icp_documents", "client_icp"],
+    () => { void load(); },
+    { clientId }
+  );
+
   const load = async () => {
     setIsLoading(true);
     const { data } = await supabase
