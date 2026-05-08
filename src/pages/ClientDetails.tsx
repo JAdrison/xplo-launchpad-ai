@@ -145,6 +145,7 @@ export default function ClientDetails() {
           product_description: data.product_description || "",
           notes: data.notes || "",
         });
+        setDriveForm({ url: (data as any).drive_url || "" });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
           password: (data as any).xplo_lab_password || "",
