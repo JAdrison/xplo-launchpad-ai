@@ -199,6 +199,7 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
   };
 
   const handleGenerateNew = async () => {
+    if (generatingId === "new") return;
     setGeneratingId("new");
     setIsAddOpen(false);
     try {
@@ -545,8 +546,8 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
             <Button variant="ghost" onClick={() => setIsAddOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleGenerateNew} className="gap-2">
-              <Sparkles className="h-4 w-4" />
+            <Button onClick={handleGenerateNew} className="gap-2" disabled={generatingId === "new"}>
+              {generatingId === "new" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Gerar
             </Button>
           </DialogFooter>
