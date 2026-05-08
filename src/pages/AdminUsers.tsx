@@ -397,6 +397,19 @@ export default function AdminUsers() {
                     </div>
                     {!isMaster && (
                       <div className="flex items-center gap-2 flex-wrap">
+                        <Select
+                          value={user.role}
+                          onValueChange={(v) => changeRole(user.user_id, v as "admin" | "user")}
+                          disabled={busyKey("role")}
+                        >
+                          <SelectTrigger className="h-9 w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">Usuário</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="outline"
