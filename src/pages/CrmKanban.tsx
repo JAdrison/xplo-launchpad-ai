@@ -21,7 +21,7 @@ import { PipelinesConfig } from "@/components/crm/config/PipelinesConfig";
 import { TagsConfig } from "@/components/crm/config/TagsConfig";
 import { FieldsConfig } from "@/components/crm/config/FieldsConfig";
 import { TemplatesConfig } from "@/components/crm/config/TemplatesConfig";
-import { CrmActivitiesView } from "./CrmActivities";
+
 import { CrmContactsView } from "./CrmContacts";
 import { usePipelines, usePipelineData } from "@/hooks/useCrm";
 
