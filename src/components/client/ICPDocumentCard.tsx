@@ -68,14 +68,14 @@ function PDFTarget({
   onReady: (toPDF: () => void) => void;
   onBuildReady?: (build: () => Promise<any>) => void;
 }) {
-  const sanitized = `${clientName}-${doc.name}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-  const dateStr = new Date().toLocaleDateString("pt-BR").replace(/\//g, "-");
+  const theme = (doc.name || "")
+    .replace(/^\s*icp\s*\d*\s*[-–:]?\s*/i, "")
+    .trim() || "Principal";
+  const numStr = String(doc.sort_order || 1).padStart(2, "0");
+  const safeClient = (clientName || "Cliente").replace(/[\\/:*?"<>|]/g, "").trim();
+  const safeTheme = theme.replace(/[\\/:*?"<>|]/g, "").trim();
   const { toPDF, targetRef } = usePDF({
-    filename: `icp-${sanitized}-${dateStr}.pdf`,
+    filename: `ICP ${numStr} ${safeTheme} - ${safeClient}.pdf`,
     page: { margin: Margin.MEDIUM, format: "A4", orientation: "portrait" },
   });
 
