@@ -199,6 +199,7 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
   };
 
   const handleGenerateNew = async () => {
+    if (generatingId === "new") return;
     setGeneratingId("new");
     setIsAddOpen(false);
     try {
