@@ -9,6 +9,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import PendingApproval from "./pages/PendingApproval";
 import AdminUsers from "./pages/AdminUsers";
+import AdminVendas from "./pages/AdminVendas";
 import Dashboard from "./pages/Dashboard";
 import ClientDetails from "./pages/ClientDetails";
 import ClientNew from "./pages/ClientNew";
@@ -72,6 +73,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminUsers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/vendas"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminVendas />
                   </ProtectedRoute>
                 }
               />

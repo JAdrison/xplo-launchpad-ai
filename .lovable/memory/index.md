@@ -48,6 +48,7 @@
 - [Resiliência ads nulos](mem://arquitetura/resiliencia-ads) — Ad FK constraints handling when offers are removed
 - [Integridade ICPs](mem://arquitetura/integridade-referencial-perfis) — Foreign key safeguards when removing client profiles
 - [Admin gestão usuários](mem://funcionalidades/admin-gestao-usuarios) — Revogar/suspender/reset/definir senha em /admin/users com proteção do master
+- [Admin Vendas](mem://admin/vendas-modulo) — /admin/vendas: clientes vendidos, pagamentos mensais, gastos em anúncios (admin-only)
 - [CRM arquitetura](mem://crm/arquitetura-modulo) — Tabelas, RLS, triggers e componentes do Kanban /crm (Fase 1)
 - [CRM ↔ onboarding](mem://crm/integracao-onboarding) — Cliente vira deal; modal linka para /clients/:id
 - [CRM Fase 2](mem://crm/fase2-automacoes-atividades) — Automações por coluna (templates de tarefa) + tela /crm/atividades global filtrável

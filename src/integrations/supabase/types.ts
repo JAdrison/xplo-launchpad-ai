@@ -678,6 +678,48 @@ export type Database = {
         }
         Relationships: []
       }
+      clientes_vendidos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dia_vencimento: number
+          id: string
+          nome: string
+          observacoes: string | null
+          sdr_id: string | null
+          updated_at: string
+          valor_mensal_cents: number
+          valor_setup_cents: number
+          vendedor_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dia_vencimento?: number
+          id?: string
+          nome: string
+          observacoes?: string | null
+          sdr_id?: string | null
+          updated_at?: string
+          valor_mensal_cents?: number
+          valor_setup_cents?: number
+          vendedor_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dia_vencimento?: number
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          sdr_id?: string | null
+          updated_at?: string
+          valor_mensal_cents?: number
+          valor_setup_cents?: number
+          vendedor_id?: string | null
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           cnpj: string | null
@@ -965,6 +1007,39 @@ export type Database = {
           },
         ]
       }
+      gastos_anuncios: {
+        Row: {
+          ano: number
+          created_at: string
+          id: string
+          leads_manual: number | null
+          mes: number
+          reunioes_manual: number | null
+          updated_at: string
+          valor_cents: number
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          id?: string
+          leads_manual?: number | null
+          mes: number
+          reunioes_manual?: number | null
+          updated_at?: string
+          valor_cents?: number
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          id?: string
+          leads_manual?: number | null
+          mes?: number
+          reunioes_manual?: number | null
+          updated_at?: string
+          valor_cents?: number
+        }
+        Relationships: []
+      }
       icp_pains: {
         Row: {
           consequence: string | null
@@ -1238,6 +1313,44 @@ export type Database = {
             columns: ["icp_id"]
             isOneToOne: false
             referencedRelation: "icps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagamentos_clientes: {
+        Row: {
+          ano: number
+          cliente_id: string
+          created_at: string
+          id: string
+          mes: number
+          pago_em: string
+          valor_cents: number
+        }
+        Insert: {
+          ano: number
+          cliente_id: string
+          created_at?: string
+          id?: string
+          mes: number
+          pago_em?: string
+          valor_cents?: number
+        }
+        Update: {
+          ano?: number
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          mes?: number
+          pago_em?: string
+          valor_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_vendidos"
             referencedColumns: ["id"]
           },
         ]

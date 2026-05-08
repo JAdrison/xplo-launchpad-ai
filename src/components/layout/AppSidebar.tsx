@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Kanban,
   CheckSquare,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ const navigation = [
 
 const adminNavigation = [
   { name: "Usuários", href: "/admin/users", icon: Shield },
+  { name: "Vendas", href: "/admin/vendas", icon: DollarSign },
 ];
 
 function SidebarContent({ 
