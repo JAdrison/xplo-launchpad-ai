@@ -968,6 +968,7 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                     content={{ videoAds, staticAds }}
                     createdAt={new Date().toISOString()}
                     refreshKey={adsRefreshKey}
+                    clientId={clientId}
                   />
                   <PDFExportButton
                     type="ads"
@@ -976,6 +977,7 @@ export function GeneratedAssetsSection({ clientId, clientName = "Cliente" }: Gen
                     content={{ videoAds, staticAds }}
                     createdAt={new Date().toISOString()}
                     refreshKey={adsRefreshKey}
+                    clientId={clientId}
                   />
                 </div>
 

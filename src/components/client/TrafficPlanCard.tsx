@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAIConfig } from "@/lib/aiConfig";
 import { TrafficPlanPDFTemplate } from "@/components/export/TrafficPlanPDFTemplate";
+import { SendToDriveButton } from "@/components/drive/SendToDriveButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,6 +122,7 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
   const [regenInstruction, setRegenInstruction] = useState("");
 
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
+  const [pdfBuilders, setPdfBuilders] = useState<Record<string, () => Promise<any>>>({});
 
   useEffect(() => {
     void load();
@@ -465,6 +467,13 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
                         >
                           <FileDown className="h-3.5 w-3.5" /> PDF
                         </Button>
+                        {doc.generated_text && pdfBuilders[doc.id] && (
+                          <SendToDriveButton
+                            buildPdf={pdfBuilders[doc.id]}
+                            clientId={clientId}
+                            fileName={`Plano ${String(doc.sort_order || 1).padStart(2, "0")} ${(doc.name || "").replace(/^\s*plano(\s*de\s*demanda)?\s*\d*\s*[-–:]?\s*/i, "").trim() || "Principal"} - ${clientName}.pdf`}
+                          />
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -504,7 +513,8 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
                 <PDFTarget
                   doc={doc}
                   clientName={clientName}
-                  onReady={(fn) => setPdfTriggers((prev) => ({ ...prev, [doc.id]: fn }))}
+                  onReady={(fn) => setPdfTriggers((prev) => (prev[doc.id] === fn ? prev : { ...prev, [doc.id]: fn }))}
+                  onBuildReady={(fn) => setPdfBuilders((prev) => (prev[doc.id] === fn ? prev : { ...prev, [doc.id]: fn }))}
                 />
               </div>
             );

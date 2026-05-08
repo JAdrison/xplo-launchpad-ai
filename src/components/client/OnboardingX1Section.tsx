@@ -608,6 +608,7 @@ export function OnboardingX1Section({ client, onStatusChange }: OnboardingX1Sect
                 content={pdfContent as any}
                 createdAt={client.created_at}
                 size="icon"
+                clientId={client.id}
               />
             )}
             {isCompleted && (
