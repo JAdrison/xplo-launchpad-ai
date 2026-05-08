@@ -694,6 +694,7 @@ interface OfferDocBlockProps {
   onRegenerateAll: () => void;
   onCopy: () => void;
   onPDF: () => void;
+  driveSlot?: React.ReactNode;
   onDeleteDoc: () => void;
   onToggleEnabled: (offerId: string, enabled: boolean) => void;
   onRequestDeleteOffer: (offerId: string) => void;
