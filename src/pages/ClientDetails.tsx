@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientPipelineBar } from "@/components/client/ClientPipelineBar";
 import { useToast } from "@/hooks/use-toast";
