@@ -121,6 +121,7 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
   const [regenInstruction, setRegenInstruction] = useState("");
 
   const [pdfTriggers, setPdfTriggers] = useState<Record<string, () => void>>({});
+  const [pdfBuilders, setPdfBuilders] = useState<Record<string, () => Promise<any>>>({});
 
   useEffect(() => {
     void load();
