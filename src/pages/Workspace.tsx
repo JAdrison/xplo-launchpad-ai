@@ -94,12 +94,13 @@ export default function Workspace() {
 
     // Counts em paralelo
     const counts = await Promise.all(clients.map(async (c) => {
-      const [o, l, a] = await Promise.all([
+      const [oH, oD, l, a] = await Promise.all([
         supabase.from("offers_hormozi").select("id", { count: "exact", head: true }).eq("client_id", c.id),
+        supabase.from("client_offer_documents").select("id", { count: "exact", head: true }).eq("client_id", c.id),
         supabase.from("landing_pages").select("id", { count: "exact", head: true }).eq("client_id", c.id),
         supabase.from("ads").select("id", { count: "exact", head: true }).eq("client_id", c.id),
       ]);
-      return { id: c.id, o: o.count ?? 0, l: l.count ?? 0, a: a.count ?? 0 };
+      return { id: c.id, o: (oH.count ?? 0) + (oD.count ?? 0), l: l.count ?? 0, a: a.count ?? 0 };
     }));
     const countMap = new Map(counts.map((x) => [x.id, x]));
 
