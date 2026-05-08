@@ -123,6 +123,12 @@ export function TrafficPlanCard({ clientId, clientName }: TrafficPlanCardProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  useRealtimeReload(
+    ["client_traffic_plan_documents", "client_offer_documents", "client_icp_documents", "client_icp"],
+    () => { void load(); },
+    { clientId }
+  );
+
   const load = async () => {
     setIsLoading(true);
     const [docsRes, icpDocsRes, icpLegacyRes, offersRes] = await Promise.all([
