@@ -148,9 +148,6 @@ export default function CrmKanban() {
           </div>
         )}
 
-        {tab === "atividades" && (
-          <div className="h-full overflow-y-auto"><CrmActivitiesView /></div>
-        )}
 
         {tab === "contatos" && (
           <div className="h-full overflow-y-auto"><CrmContactsView /></div>
