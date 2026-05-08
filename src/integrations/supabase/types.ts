@@ -737,6 +737,9 @@ export type Database = {
           responsible_cpf: string | null
           responsible_name: string | null
           status: Database["public"]["Enums"]["client_status"]
+          traffic_payment_day: number | null
+          traffic_payment_lead_days: number | null
+          traffic_payment_value_cents: number | null
           updated_at: string
           xplo_bonuses: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login: string | null
@@ -759,6 +762,9 @@ export type Database = {
           responsible_cpf?: string | null
           responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          traffic_payment_day?: number | null
+          traffic_payment_lead_days?: number | null
+          traffic_payment_value_cents?: number | null
           updated_at?: string
           xplo_bonuses?: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login?: string | null
@@ -781,6 +787,9 @@ export type Database = {
           responsible_cpf?: string | null
           responsible_name?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          traffic_payment_day?: number | null
+          traffic_payment_lead_days?: number | null
+          traffic_payment_value_cents?: number | null
           updated_at?: string
           xplo_bonuses?: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login?: string | null
@@ -1664,12 +1673,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      next_payment_due_date: {
+        Args: { _day: number; _from: string }
+        Returns: string
+      }
       seed_xplo_template_tasks: {
         Args: { _checkpoint: string; _client_id: string; _deal_id: string }
         Returns: undefined
       }
       start_maintenance_for_deal: {
         Args: { _deal_id: string }
+        Returns: undefined
+      }
+      sync_traffic_payment_task: {
+        Args: { _client_id: string }
         Returns: undefined
       }
     }
