@@ -81,7 +81,27 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
     setColumns((colRes.data ?? []) as ColLite[]);
     setActivities((aRes.data ?? []) as Activity[]);
     setNotes((nRes.data ?? []) as Note[]);
-    setHistory((hRes.data ?? []) as HistoryEvt[]);
+    const histRows = (hRes.data ?? []) as HistoryEvt[];
+    setHistory(histRows);
+
+    const actorIds = Array.from(new Set(histRows.map((h) => h.actor_id).filter(Boolean))) as string[];
+    const missing = actorIds.filter((id) => !actorMap[id]);
+    if (missing.length > 0) {
+      try {
+        const { data: emailData } = await supabase.functions.invoke("get-user-emails", {
+          body: { userIds: missing },
+        });
+        if (emailData && typeof emailData === "object") {
+          const next: Record<string, string> = { ...actorMap };
+          for (const [uid, info] of Object.entries(emailData as Record<string, { email: string; name: string | null }>)) {
+            next[uid] = info.name || (info.email ? info.email.split("@")[0] : "Usuário");
+          }
+          setActorMap(next);
+        }
+      } catch (e) {
+        console.error("Failed to fetch actor names", e);
+      }
+    }
   };
 
   useEffect(() => { if (dealId) refetch(); /* eslint-disable-next-line */ }, [dealId]);
