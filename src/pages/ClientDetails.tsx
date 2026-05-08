@@ -149,6 +149,13 @@ export default function ClientDetails() {
           notes: data.notes || "",
         });
         setDriveForm({ url: (data as any).drive_url || "" });
+        setTrafficPayForm({
+          day: (data as any).traffic_payment_day != null ? String((data as any).traffic_payment_day) : "",
+          lead_days: (data as any).traffic_payment_lead_days != null ? String((data as any).traffic_payment_lead_days) : "3",
+          value_brl: (data as any).traffic_payment_value_cents != null
+            ? ((data as any).traffic_payment_value_cents / 100).toFixed(2).replace(".", ",")
+            : "",
+        });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
           password: (data as any).xplo_lab_password || "",
