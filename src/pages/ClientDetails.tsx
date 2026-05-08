@@ -270,6 +270,24 @@ export default function ClientDetails() {
     setIsSavingXploLab(false);
   };
 
+  const handleSaveDrive = async () => {
+    if (!id) return;
+    setIsSavingDrive(true);
+    const url = driveForm.url.trim() || null;
+    const { error } = await supabase
+      .from("clients")
+      .update({ drive_url: url } as any)
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao salvar Drive", description: error.message, variant: "destructive" });
+    } else {
+      setClient((prev) => (prev ? ({ ...prev, drive_url: url } as any) : prev));
+      toast({ title: "Link do Drive salvo" });
+      setIsDriveOpen(false);
+    }
+    setIsSavingDrive(false);
+  };
+
   const handleSaveSocial = async () => {
     if (!id) return;
     setIsSavingSocial(true);
