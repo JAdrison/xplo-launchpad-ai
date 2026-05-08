@@ -59,7 +59,6 @@ export default function CrmKanban() {
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
           <TabsList>
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
-            <TabsTrigger value="atividades">Atividades</TabsTrigger>
             <TabsTrigger value="contatos">Contatos</TabsTrigger>
           </TabsList>
         </Tabs>
