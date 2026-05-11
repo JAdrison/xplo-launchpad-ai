@@ -14,11 +14,13 @@
 
 - [Visão Geral](#-visão-geral)
 - [Principais Módulos](#-principais-módulos)
+- [API & MCP](#-api--mcp)
 - [Arquitetura](#-arquitetura)
 - [Como Rodar Localmente](#-como-rodar-localmente)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [Segurança & LGPD](#-segurança--lgpd)
 - [Deploy](#-deploy)
+
 
 ---
 
