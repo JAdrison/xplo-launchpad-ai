@@ -207,7 +207,7 @@ paths:
         required: true
         schema: { type: string, format: uuid }
     patch:
-      summary: Atualizar atividade (ex: status=completed)
+      summary: "Atualizar atividade (ex: status=completed)"
       requestBody:
         required: true
         content:
