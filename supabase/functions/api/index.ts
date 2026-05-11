@@ -174,6 +174,26 @@ async function deleteDeal(id: string) {
   return jsonResp({ deleted: true });
 }
 
+async function enrichActivities(rows: any[]) {
+  if (!rows?.length) return rows;
+  const dealIds = [...new Set(rows.map(r => r.deal_id).filter(Boolean))];
+  const cliIds = [...new Set(rows.map(r => r.client_id).filter(Boolean))];
+  const s = sb();
+  const [deals, clis] = await Promise.all([
+    dealIds.length ? s.from("deals").select("id, name").in("id", dealIds) : { data: [] as any[] },
+    cliIds.length ? s.from("clients").select("id, name").in("id", cliIds) : { data: [] as any[] },
+  ]);
+  const dMap = new Map((deals.data || []).map((d: any) => [d.id, d.name]));
+  const cMap = new Map((clis.data || []).map((c: any) => [c.id, c.name]));
+  return rows.map(r => ({
+    ...r,
+    deal_name: dMap.get(r.deal_id) ?? null,
+    client_name: cMap.get(r.client_id) ?? null,
+    type_label: ACTIVITY_TYPE_LABELS[r.type] ?? r.type,
+    status_label: ACTIVITY_STATUS_LABELS[r.status] ?? r.status,
+  }));
+}
+
 async function listActivities(url: URL) {
   const limit = Math.min(Number(url.searchParams.get("limit") || 100), 500);
   const status = url.searchParams.get("status");
@@ -185,7 +205,7 @@ async function listActivities(url: URL) {
   if (clientId) q = q.eq("client_id", clientId);
   const { data, error } = await q;
   if (error) return errResp("INTERNAL_ERROR", error.message, 500);
-  return jsonResp(data);
+  return jsonResp(await enrichActivities(data || []));
 }
 
 async function createActivity(req: Request) {
@@ -223,7 +243,33 @@ async function listClients(url: URL) {
     .select("id, name, niche, niche_label, status, email, phone, xplo_plan, xplo_bonuses, created_at, updated_at")
     .order("updated_at", { ascending: false }).limit(limit);
   if (error) return errResp("INTERNAL_ERROR", error.message, 500);
-  return jsonResp(data);
+  const ids = (data || []).map(c => c.id);
+  const { data: deals } = ids.length
+    ? await sb().from("deals").select("client_id, name, column_id, pipeline_id, status, updated_at")
+        .in("client_id", ids).order("updated_at", { ascending: false })
+    : { data: [] as any[] };
+  const latestByClient = new Map<string, any>();
+  for (const d of (deals || [])) if (!latestByClient.has(d.client_id)) latestByClient.set(d.client_id, d);
+  const colIds = [...new Set([...latestByClient.values()].map(d => d.column_id).filter(Boolean))];
+  const pipeIds = [...new Set([...latestByClient.values()].map(d => d.pipeline_id).filter(Boolean))];
+  const [cols, pipes] = await Promise.all([
+    colIds.length ? sb().from("pipeline_columns").select("id, name").in("id", colIds) : { data: [] as any[] },
+    pipeIds.length ? sb().from("pipelines").select("id, name").in("id", pipeIds) : { data: [] as any[] },
+  ]);
+  const colMap = new Map((cols.data || []).map((c: any) => [c.id, c.name]));
+  const pipeMap = new Map((pipes.data || []).map((p: any) => [p.id, p.name]));
+  const enriched = (data || []).map(c => {
+    const d = latestByClient.get(c.id);
+    return {
+      ...c,
+      status_label: labelStatus(c.status),
+      crm_deal_name: d?.name ?? null,
+      crm_column_name: d ? (colMap.get(d.column_id) ?? null) : null,
+      crm_pipeline_name: d ? (pipeMap.get(d.pipeline_id) ?? null) : null,
+      crm_deal_status_label: d ? (DEAL_STATUS_LABELS[d.status] ?? d.status) : null,
+    };
+  });
+  return jsonResp(enriched);
 }
 
 async function getClient(id: string) {
@@ -232,8 +278,29 @@ async function getClient(id: string) {
     .eq("id", id).maybeSingle();
   if (error) return errResp("INTERNAL_ERROR", error.message, 500);
   if (!data) return errResp("NOT_FOUND", "Client not found", 404);
-  return jsonResp(data);
+  const { data: deal } = await sb().from("deals")
+    .select("id, name, column_id, pipeline_id, status")
+    .eq("client_id", id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  let crm_column_name: string | null = null;
+  let crm_pipeline_name: string | null = null;
+  if (deal?.column_id) {
+    const { data: col } = await sb().from("pipeline_columns").select("name").eq("id", deal.column_id).maybeSingle();
+    crm_column_name = col?.name ?? null;
+  }
+  if (deal?.pipeline_id) {
+    const { data: pipe } = await sb().from("pipelines").select("name").eq("id", deal.pipeline_id).maybeSingle();
+    crm_pipeline_name = pipe?.name ?? null;
+  }
+  return jsonResp({
+    ...data,
+    status_label: labelStatus(data.status),
+    crm_deal_name: deal?.name ?? null,
+    crm_column_name,
+    crm_pipeline_name,
+    crm_deal_status_label: deal ? (DEAL_STATUS_LABELS[deal.status] ?? deal.status) : null,
+  });
 }
+
 
 async function getClientOnboarding(id: string) {
   if (!await ownsClient(id)) return errResp("NOT_FOUND", "Client not found", 404);
