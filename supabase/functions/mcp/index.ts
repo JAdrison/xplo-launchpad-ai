@@ -36,22 +36,19 @@ const ok = (obj: unknown) => ({ content: [{ type: "text" as const, text: JSON.st
 
 const mcp = new McpServer({ name: "xplo-starter", version: "1.0.0" });
 
-mcp.tool({
-  name: "list_deals",
+mcp.tool("list_deals", {
   description: "List CRM deals (most recent first).",
   inputSchema: { type: "object", properties: { limit: { type: "number" }, status: { type: "string" } } },
-  handler: async (args, ctx: any) => ok(await callApi(`/deals?limit=${args.limit ?? 50}${args.status ? `&status=${args.status}` : ""}`, { rawAuth: ctx?.rawAuth })),
+  handler: async (args, ctx: any) => ok(await callApi(`/deals?limit=${args.limit ?? 50}${args.status ? `&status=${args.status}` : ""}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth })),
 });
 
-mcp.tool({
-  name: "get_deal",
+mcp.tool("get_deal", {
   description: "Get a single deal by id.",
   inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
-  handler: async (args, ctx: any) => ok(await callApi(`/deals/${args.id}`, { rawAuth: ctx?.rawAuth })),
+  handler: async (args, ctx: any) => ok(await callApi(`/deals/${args.id}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth })),
 });
 
-mcp.tool({
-  name: "create_deal",
+mcp.tool("create_deal", {
   description: "Create a new CRM deal for an existing client.",
   inputSchema: {
     type: "object",
@@ -59,23 +56,21 @@ mcp.tool({
     required: ["client_id", "name"],
   },
   handler: async (args, ctx: any) => ok(await callApi("/deals", {
-    method: "POST", rawAuth: ctx?.rawAuth,
+    method: "POST", rawAuth: ctx?.authInfo?.extra?.rawAuth,
     headers: { "Content-Type": "application/json" }, body: JSON.stringify(args),
   })),
 });
 
-mcp.tool({
-  name: "move_deal",
+mcp.tool("move_deal", {
   description: "Move a deal to a different pipeline column.",
   inputSchema: { type: "object", properties: { id: { type: "string" }, column_id: { type: "string" } }, required: ["id", "column_id"] },
   handler: async (args, ctx: any) => ok(await callApi(`/deals/${args.id}`, {
-    method: "PATCH", rawAuth: ctx?.rawAuth,
+    method: "PATCH", rawAuth: ctx?.authInfo?.extra?.rawAuth,
     headers: { "Content-Type": "application/json" }, body: JSON.stringify({ column_id: args.column_id }),
   })),
 });
 
-mcp.tool({
-  name: "list_activities",
+mcp.tool("list_activities", {
   description: "List activities (tasks) optionally filtered by deal/client/status.",
   inputSchema: {
     type: "object",
@@ -84,12 +79,11 @@ mcp.tool({
   handler: async (args, ctx: any) => {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(args || {})) if (v != null) qs.set(k, String(v));
-    return ok(await callApi(`/activities?${qs}`, { rawAuth: ctx?.rawAuth }));
+    return ok(await callApi(`/activities?${qs}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth }));
   },
 });
 
-mcp.tool({
-  name: "create_activity",
+mcp.tool("create_activity", {
   description: "Create a CRM activity (task/call/meeting/reminder) on a deal.",
   inputSchema: {
     type: "object",
@@ -101,50 +95,46 @@ mcp.tool({
     required: ["deal_id", "client_id", "type", "subject"],
   },
   handler: async (args, ctx: any) => ok(await callApi("/activities", {
-    method: "POST", rawAuth: ctx?.rawAuth,
+    method: "POST", rawAuth: ctx?.authInfo?.extra?.rawAuth,
     headers: { "Content-Type": "application/json" }, body: JSON.stringify(args),
   })),
 });
 
-mcp.tool({
-  name: "complete_activity",
+mcp.tool("complete_activity", {
   description: "Mark an activity as completed.",
   inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
   handler: async (args, ctx: any) => ok(await callApi(`/activities/${args.id}`, {
-    method: "PATCH", rawAuth: ctx?.rawAuth,
+    method: "PATCH", rawAuth: ctx?.authInfo?.extra?.rawAuth,
     headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "completed" }),
   })),
 });
 
-mcp.tool({
-  name: "list_clients",
+mcp.tool("list_clients", {
   description: "List XPLO clients.",
   inputSchema: { type: "object", properties: { limit: { type: "number" } } },
-  handler: async (args, ctx: any) => ok(await callApi(`/clients?limit=${args.limit ?? 50}`, { rawAuth: ctx?.rawAuth })),
+  handler: async (args, ctx: any) => ok(await callApi(`/clients?limit=${args.limit ?? 50}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth })),
 });
 
-mcp.tool({
-  name: "get_client_onboarding",
+mcp.tool("get_client_onboarding", {
   description: "Get consolidated onboarding for a client (profile, promise, ICPs, offers, LPs, ads).",
   inputSchema: { type: "object", properties: { client_id: { type: "string" } }, required: ["client_id"] },
-  handler: async (args, ctx: any) => ok(await callApi(`/clients/${args.client_id}/onboarding`, { rawAuth: ctx?.rawAuth })),
+  handler: async (args, ctx: any) => ok(await callApi(`/clients/${args.client_id}/onboarding`, { rawAuth: ctx?.authInfo?.extra?.rawAuth })),
 });
 
-mcp.tool({
-  name: "start_onboarding",
+mcp.tool("start_onboarding", {
   description: "Generate a 7-day external onboarding token + URL for a client.",
   inputSchema: { type: "object", properties: { client_id: { type: "string" } }, required: ["client_id"] },
   handler: async (args, ctx: any) => ok(await callApi(`/clients/${args.client_id}/onboarding/start`, {
-    method: "POST", rawAuth: ctx?.rawAuth,
+    method: "POST", rawAuth: ctx?.authInfo?.extra?.rawAuth,
   })),
 });
 
 const aiTool = (name: string, slug: string, desc: string) =>
-  mcp.tool({
-    name, description: desc,
+  mcp.tool(name, {
+    description: desc,
     inputSchema: { type: "object", properties: { client_id: { type: "string" } }, required: ["client_id"] },
     handler: async (args: any, ctx: any) => ok(await callApi(`/clients/${args.client_id}/${slug}/generate`, {
-      method: "POST", rawAuth: ctx?.rawAuth,
+      method: "POST", rawAuth: ctx?.authInfo?.extra?.rawAuth,
       headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
     })),
   });
@@ -155,6 +145,7 @@ aiTool("generate_offers", "offers", "Generate the offers document for the client
 aiTool("generate_demand_plan", "demand-plan", "Generate the demand-generation plan for the client.");
 
 const transport = new StreamableHttpTransport();
+const httpHandler = transport.bind(mcp);
 const app = new Hono();
 
 app.options("/*", (c) => {
@@ -172,7 +163,7 @@ app.all("/*", async (c) => {
     });
   }
   const rawAuth = c.req.raw.headers.get("Authorization") || "";
-  const res = await transport.handleRequest(c.req.raw, mcp, { rawAuth } as any);
+  const res = await httpHandler(c.req.raw, { authInfo: { token: rawAuth, scopes: auth.scopes, extra: { rawAuth } } } as any);
   res.headers.set("Access-Control-Allow-Origin", "*");
   return res;
 });
