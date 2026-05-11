@@ -1,98 +1,78 @@
-## XPLO Starter — API REST + MCP + Documentação
+Ajustes no `DealDetailModal` e `ActivityFormDialog` para resolver os 6 pontos reportados.
 
-Plano enxuto baseado na proposta original (sem hierarquia de chaves, sem rate-limit em tabela, sem custom domain) + página de docs interativa + manual de uso em Markdown.
+## 1. Sidebar fixa no modal do deal
 
-### 1. Banco — 1 tabela nova
+**Arquivo:** `src/components/crm/DealDetailModal.tsx`
 
-`api_keys`:
-- `id`, `user_id` (dono), `name`, `key_prefix` (visível, ex: `xplo_sk_abc12345`), `key_hash` (SHA-256), `scopes text[]`, `last_used_at`, `revoked_at`, `created_at`
-- RLS: dono lê/cria/revoga só as próprias
-- RPC `verify_api_key(_raw text)` SECURITY DEFINER → retorna `user_id` + `scopes` se válida
+Hoje o `DialogContent` usa `overflow-hidden` mas, em telas menores ou com sumário longo, o conteúdo do lado esquerdo acompanha o scroll do lado direito (porque o grid `h-[85vh]` empurra para fora). Vou:
 
-Sem tabela de logs, sem tabela de rate-limit (v1 simples).
+- Garantir que a coluna esquerda tenha `h-full overflow-y-auto sticky top-0` independente.
+- Manter a coluna direita como o único container que rola junto com as tabs.
+- Ajustar o grid para `min-h-0` nas colunas (necessário em flex/grid para permitir scroll interno sem propagar).
 
-### 2. Edge Function `api` (router único)
+## 2. Campo "Ano" limitado a 4 dígitos
 
-`supabase/functions/api/index.ts` com Hono + middleware:
-1. Lê `Authorization: Bearer xplo_sk_...`
-2. Chama `verify_api_key` → obtém `user_id`
-3. Cria client Supabase com service role + injeta `user_id` no contexto via header customizado
-4. Roteia para handler
+**Arquivo:** `src/components/crm/ActivityFormDialog.tsx`
 
-**Endpoints (escopo enxuto, cobre o essencial):**
+O input `datetime-local` nativo aceita até 6 dígitos no ano. Vou adicionar:
+- `min="2000-01-01T00:00"` e `max="2099-12-31T23:59"` no input de Vencimento, o que força o navegador a limitar a 4 dígitos.
+- Validação no `submit()` rejeitando datas fora do intervalo razoável (ex.: ano > 2100).
 
-CRM:
-- `GET /deals` `POST /deals` `PATCH /deals/:id` `DELETE /deals/:id`
-- `GET /activities` `POST /activities` `PATCH /activities/:id`
-- `GET /clients` `GET /clients/:id`
+## 3. Unificar tabs "Negócios" e "Atividades"
 
-Onboarding:
-- `GET /clients/:id/onboarding` (consolidado: profile + swot + market + icps + promise + pains)
-- `POST /clients/:id/onboarding/start` (cria token externo de 7 dias)
+**Arquivo:** `src/components/crm/DealDetailModal.tsx`
 
-IA (reusa `generate-content` existente):
-- `POST /clients/:id/icps/generate`
-- `POST /clients/:id/promise/generate`
-- `POST /clients/:id/offers/generate`
-- `POST /clients/:id/landing-pages/generate`
-- `POST /clients/:id/ads/generate`
-- `POST /clients/:id/demand-plan/generate`
+Hoje a tab **Negócios** mostra os checkpoints do processo XPLO + tarefas, e **Atividades** mostra as mesmas tarefas agrupadas por status (atraso/pendentes/concluídas) — duplicando informação.
 
-Envelope padrão `{ data, meta: { request_id, timestamp } }` ou `{ error: { code, message }, meta }`.
+Plano:
+- Remover a tab **Atividades**.
+- Renomear **Negócios** para **Tarefas & Checkpoints** (ou manter "Negócios" se preferir).
+- Adicionar no topo da tab atual um resumo compacto: 🔴 X em atraso · 🟠 Y pendentes · 🟣 Z concluídas (clicáveis para filtrar).
+- Botão **"Criar atividade"** (que vivia em Atividades) sobe para o cabeçalho da tab unificada.
 
-### 3. Edge Function `mcp` (mcp-lite + Hono)
+## 4. Checkpoints concluídos vão para o fim
 
-`supabase/functions/mcp/index.ts` expõe as mesmas operações como tools MCP:
-- `list_deals`, `get_deal`, `create_deal`, `move_deal`
-- `create_activity`, `complete_activity`
-- `get_client_onboarding`, `start_onboarding`
-- `generate_icps`, `generate_offers`, `generate_ads`, `generate_landing_page`
+**Arquivo:** `src/components/crm/DealDetailModal.tsx` (linha ~375)
 
-Mesma auth via API Key (`Authorization: Bearer xplo_sk_...`). Reusa internamente os handlers da function `api`.
+Hoje os grupos são ordenados só por `code.localeCompare`. Vou trocar a ordenação para:
 
-### 4. UI — gestão de chaves + docs
+1. Grupos com tarefas pendentes/atrasadas primeiro (ordenados por código asc).
+2. Grupos 100% concluídos no fim (ordenados por código asc entre si).
 
-**`/settings` → nova seção "API Keys":**
-- Botão "Criar chave" → modal pede nome → mostra chave completa **uma única vez** com botão copiar
-- Lista chaves existentes (prefix + nome + últ. uso) com botão revogar
+Critério: `done === total` → vai para o final.
 
-**Nova página `/api-docs` (rota no `App.tsx`):**
-- Renderiza Swagger UI a partir de `public/openapi.yaml`
-- Bloco extra "MCP Server" no topo com:
-  - URL: `https://fsfspsydntutwftdihih.supabase.co/functions/v1/mcp`
-  - Snippet JSON pronto para Claude Desktop (`claude_desktop_config.json`)
-  - Snippet para Cursor
+## 5. Mostrar última data de conclusão em tarefas recorrentes
 
-### 5. Documentação (3 arquivos)
+**Arquivo:** `src/components/crm/DealDetailModal.tsx`
 
-**`public/openapi.yaml`** — spec OpenAPI 3.1 completa de todos os endpoints REST. Renderizada pela `/api-docs` e baixável.
+Para tarefas com `recurrence_days` (ex: "Programar 30 dias de Instagram"), além de "Vence em DD/MM", mostrar logo abaixo:
 
-**`public/mcp.json`** — manifesto MCP com todas as tools, inputSchemas e descriptions.
+> Última conclusão: DD/MM/YYYY
 
-**`docs/MANUAL.md`** (e link de download na `/api-docs`) — manual de uso em PT-BR com:
-- Como gerar uma API key em `/settings`
-- Como testar com `curl` (exemplos para 5 cenários: listar deals, criar deal, buscar onboarding, gerar ICPs, conectar MCP no Claude)
-- Tabela de erros (`UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_ERROR`)
-- Boas práticas (não commitar a key, revogar se vazou, usar em backend não em browser)
-- Seção MCP: passo-a-passo configurar Claude Desktop / Cursor
+Fonte: precisa do histórico de conclusões. Hoje `activities` armazena só o `completed_at` da instância atual. Como tarefas recorrentes são reabertas (status volta para pending), o `completed_at` é zerado.
 
-### 6. Ordem de execução (1 sprint)
+Solução: consultar `deal_history` para `event_type = 'activity_completed'` filtrando por `event_data.activity_id = a.id` e pegando o `created_at` mais recente. Já temos `history` carregado no modal — basta indexar por `activity_id` e exibir.
 
-1. Migration `api_keys` + RPC `verify_api_key` (peço aprovação)
-2. Edge function `api` com auth middleware + endpoints REST
-3. Edge function `mcp` reusando handlers
-4. UI em `/settings` (criar/listar/revogar chaves)
-5. Página `/api-docs` + `public/openapi.yaml` + `public/mcp.json`
-6. `docs/MANUAL.md`
-7. Testes via `curl` nos 5 cenários do manual
+## 6. Responsável = pessoas reais, não funções
 
-### Decisões já tomadas (do plano original)
+**Arquivo:** `src/components/crm/ActivityFormDialog.tsx`
 
-- ✅ Auth: API Key por usuário (sem hierarquia/scopes complexos — apenas `read` e `write` por enquanto)
-- ✅ Hash: SHA-256 (rápido, suficiente para chaves high-entropy)
-- ✅ Sem custom domain — usa URL Supabase
-- ✅ Sem rate limit em v1 (adicionar depois se necessário)
-- ✅ MCP via mcp-lite na mesma infra
-- ✅ Docs: Swagger UI em `/api-docs` + Manual MD baixável
+Hoje o campo "Função responsável" lista `JOB_FUNCTIONS` (Designer, Copywriter, etc.). O usuário quer atribuir a **pessoas ativas da plataforma**.
 
-Confirma? Se sim, começo pela migration.
+Plano:
+- Manter o campo `required_function` como está (já é usado em filtros e cores), mas **renomear o label** para "Função (opcional)".
+- Adicionar **novo campo "Responsável"** que lista usuários da plataforma:
+  - Buscar via edge function `get-user-emails` ou query a `profiles` (verificar qual está disponível com RLS).
+  - Salvar em `activities.responsible_id` (coluna já existe no schema).
+  - Default: usuário logado.
+- O Select mostra nome (ou email) de cada usuário aprovado/ativo.
+
+**Observação:** preciso confirmar se há tabela `profiles` com lista de usuários ativos acessível via RLS, ou se devo usar a edge function `get-user-emails` para listar todos. Vou inspecionar antes de implementar.
+
+## Arquivos tocados
+
+- `src/components/crm/DealDetailModal.tsx` (itens 1, 3, 4, 5)
+- `src/components/crm/ActivityFormDialog.tsx` (itens 2, 6)
+- Possível pequena edge function update ou novo helper para listar usuários ativos (item 6)
+
+Sem mudanças de schema do banco.

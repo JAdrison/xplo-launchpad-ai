@@ -21,6 +21,7 @@ export interface ActivityEditable {
   duration_minutes?: number | null;
   required_function?: JobFunction | null;
   recurrence_days?: number | null;
+  responsible_id?: string | null;
 }
 
 interface Props {
@@ -32,6 +33,8 @@ interface Props {
   /** Quando informado, abre em modo edição. */
   activity?: ActivityEditable | null;
 }
+
+interface PlatformUser { id: string; email: string; name: string; }
 
 const FUNCTIONS: (JobFunction | "none")[] = ["none", ...JOB_FUNCTIONS];
 
@@ -45,7 +48,23 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
   const [duration, setDuration] = useState("");
   const [requiredFunction, setRequiredFunction] = useState<JobFunction | "none">("none");
   const [recurrenceDays, setRecurrenceDays] = useState("");
+  const [responsibleId, setResponsibleId] = useState<string>("none");
+  const [users, setUsers] = useState<PlatformUser[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Carrega usuários ativos quando o dialog abre
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("list-platform-users");
+        if (error) throw error;
+        setUsers((data?.users as PlatformUser[]) ?? []);
+      } catch (e: any) {
+        console.error("list-platform-users", e);
+      }
+    })();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +76,7 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
       setDuration(activity.duration_minutes ? String(activity.duration_minutes) : "");
       setRequiredFunction((activity.required_function as JobFunction) ?? "none");
       setRecurrenceDays(activity.recurrence_days ? String(activity.recurrence_days) : "");
+      setResponsibleId(activity.responsible_id ?? "none");
     } else {
       setType("lembrete");
       setSubject("");
@@ -65,13 +85,23 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
       setDuration("");
       setRequiredFunction("none");
       setRecurrenceDays("");
+      setResponsibleId(user?.id ?? "none");
     }
-  }, [open, activity]);
+  }, [open, activity, user?.id]);
 
   const submit = async () => {
     if (!subject.trim()) {
       toast({ title: "Informe o assunto", variant: "destructive" });
       return;
+    }
+    // Valida ano (4 dígitos, 2000–2099)
+    if (scheduledAt) {
+      const d = new Date(scheduledAt);
+      const y = d.getFullYear();
+      if (isNaN(y) || y < 2000 || y > 2099) {
+        toast({ title: "Ano inválido", description: "Use um ano entre 2000 e 2099.", variant: "destructive" });
+        return;
+      }
     }
     setSaving(true);
     const payload: any = {
@@ -82,6 +112,7 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
       duration_minutes: duration ? parseInt(duration) : null,
       required_function: requiredFunction === "none" ? null : requiredFunction,
       recurrence_days: recurrenceDays ? parseInt(recurrenceDays) : null,
+      responsible_id: responsibleId === "none" ? null : responsibleId,
     };
 
     let error;
@@ -92,7 +123,7 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
         ...payload,
         deal_id: dealId,
         client_id: clientId,
-        responsible_id: user?.id ?? null,
+        responsible_id: payload.responsible_id ?? user?.id ?? null,
         auto_generated: false,
       }));
     }
@@ -132,7 +163,13 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Vencimento</Label>
-              <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+              <Input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                min="2000-01-01T00:00"
+                max="2099-12-31T23:59"
+              />
             </div>
             <div>
               <Label>Duração (min)</Label>
@@ -141,7 +178,21 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Função responsável</Label>
+              <Label>Responsável</Label>
+              <Select value={responsibleId} onValueChange={setResponsibleId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem responsável</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}{u.email ? ` (${u.email})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Função (opcional)</Label>
               <Select value={requiredFunction} onValueChange={(v) => setRequiredFunction(v as JobFunction | "none")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -153,10 +204,10 @@ export function ActivityFormDialog({ open, onOpenChange, dealId, clientId, onCre
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Recorrência (dias)</Label>
-              <Input type="number" placeholder="ex.: 30" value={recurrenceDays} onChange={(e) => setRecurrenceDays(e.target.value)} />
-            </div>
+          </div>
+          <div>
+            <Label>Recorrência (dias)</Label>
+            <Input type="number" placeholder="ex.: 30" value={recurrenceDays} onChange={(e) => setRecurrenceDays(e.target.value)} />
           </div>
           <div>
             <Label>Descrição</Label>

@@ -147,6 +147,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
       duration_minutes: a.duration_minutes ?? null,
       required_function: a.required_function ?? null,
       recurrence_days: a.recurrence_days ?? null,
+      responsible_id: a.responsible_id ?? null,
     });
     setActDialog(true);
   };
@@ -209,9 +210,9 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[85vh]">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] h-[85vh] min-h-0">
           {/* Sidebar */}
-          <div className="border-r border-border p-4 overflow-y-auto bg-muted/20">
+          <div className="border-r border-border p-4 overflow-y-auto bg-muted/20 h-full min-h-0">
             <div className="flex flex-col items-center text-center mb-4">
               <Avatar className="h-16 w-16 mb-2">
                 <AvatarFallback className="bg-primary/10 text-primary text-lg">{initialsOf(client.name)}</AvatarFallback>
@@ -304,20 +305,29 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
           </div>
 
           {/* Right tabs */}
-          <div className="flex flex-col overflow-hidden">
+          <div className="flex flex-col overflow-hidden min-h-0 h-full">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-xl font-semibold">{deal.name}</h2>
             </div>
-            <Tabs defaultValue="negocios" className="flex-1 flex flex-col overflow-hidden">
+            <Tabs defaultValue="negocios" className="flex-1 flex flex-col overflow-hidden min-h-0">
               <TabsList className="mx-6 mt-3 w-fit">
-                <TabsTrigger value="negocios">Negócios</TabsTrigger>
-                <TabsTrigger value="atividades">Atividades</TabsTrigger>
+                <TabsTrigger value="negocios">Tarefas & Checkpoints</TabsTrigger>
                 <TabsTrigger value="historico">Histórico</TabsTrigger>
                 <TabsTrigger value="notas">Notas</TabsTrigger>
               </TabsList>
 
-              {/* Negócios */}
+              {/* Tarefas & Checkpoints (unificado) */}
               <TabsContent value="negocios" className="flex-1 overflow-y-auto p-6 mt-0">
+                <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="px-2 py-1 rounded bg-destructive/10 text-destructive font-medium">🔴 {overdue.length} em atraso</span>
+                    <span className="px-2 py-1 rounded bg-amber-100 text-amber-700 font-medium">🟠 {pending.length} pendentes</span>
+                    <span className="px-2 py-1 rounded bg-primary/10 text-primary font-medium">🟣 {done.length} concluídas</span>
+                  </div>
+                  <Button size="sm" onClick={() => { setEditingActivity(null); setActDialog(true); }}>
+                    <Plus className="h-4 w-4 mr-1" /> Criar atividade
+                  </Button>
+                </div>
                 <div className="flex gap-2 flex-wrap mb-6">
                   {columns.map((c) => (
                     <button
@@ -372,7 +382,24 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                       others.push(a);
                     }
                   }
-                  const sorted = Array.from(groups.values()).sort((x, y) => x.code.localeCompare(y.code));
+                  // Última conclusão por activity_id (a partir do histórico) — útil para tarefas recorrentes
+                  const lastDoneByActivity = new Map<string, string>();
+                  for (const h of history) {
+                    if (h.event_type !== "activity_completed") continue;
+                    const aid = (h.event_data as any)?.activity_id as string | undefined;
+                    if (!aid) continue;
+                    const cur = lastDoneByActivity.get(aid);
+                    if (!cur || new Date(h.created_at).getTime() > new Date(cur).getTime()) {
+                      lastDoneByActivity.set(aid, h.created_at);
+                    }
+                  }
+                  // Grupos com tudo concluído vão para o final
+                  const sorted = Array.from(groups.values()).sort((x, y) => {
+                    const xAllDone = x.items.length > 0 && x.items.every((i) => i.status === "completed");
+                    const yAllDone = y.items.length > 0 && y.items.every((i) => i.status === "completed");
+                    if (xAllDone !== yAllDone) return xAllDone ? 1 : -1;
+                    return x.code.localeCompare(y.code);
+                  });
                   if (sorted.length === 0 && others.length === 0) {
                     return <p className="text-sm text-muted-foreground">Nenhuma tarefa. Defina o plano do cliente para gerar o processo automaticamente.</p>;
                   }
@@ -380,8 +407,9 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     <div className="space-y-4">
                       {sorted.map((g) => {
                         const done = g.items.filter((i) => i.status === "completed").length;
+                        const allDone = done === g.items.length;
                         return (
-                          <div key={g.code} className="border border-border rounded-md overflow-hidden">
+                          <div key={g.code} className={`border border-border rounded-md overflow-hidden ${allDone ? "opacity-70" : ""}`}>
                             <div className="flex items-center justify-between bg-muted/40 px-3 py-2">
                               <p className="text-sm font-semibold">{g.code} · {g.label}</p>
                               <span className="text-xs text-muted-foreground">{done}/{g.items.length}</span>
@@ -437,6 +465,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                         Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
                                       </p>
                                     )}
+                                    {a.recurrence_days && lastDoneByActivity.get(a.id) && (
+                                      <p className="text-[11px] mt-0.5 text-emerald-700">
+                                        Última conclusão: {format(new Date(lastDoneByActivity.get(a.id)!), "dd/MM/yyyy", { locale: ptBR })}
+                                      </p>
+                                    )}
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
@@ -478,61 +511,6 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                 })()}
               </TabsContent>
 
-              {/* Atividades */}
-              <TabsContent value="atividades" className="flex-1 overflow-y-auto p-6 mt-0">
-                <div className="flex justify-end mb-4">
-                  <Button size="sm" onClick={() => { setEditingActivity(null); setActDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-1" /> Criar atividade
-                  </Button>
-                </div>
-                {[
-                  { title: `🔴 Em atraso (${overdue.length})`, list: overdue },
-                  { title: `🟠 Pendentes (${pending.length})`, list: pending },
-                  { title: `🟣 Concluídas (${done.length})`, list: done },
-                ].map((g) => (
-                  <div key={g.title} className="mb-5">
-                    <h4 className="text-sm font-semibold mb-2">{g.title}</h4>
-                    <div className="space-y-2">
-                      {g.list.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma.</p>}
-                      {g.list.map((a) => {
-                        const due = getDueState(a.scheduled_at, a.status);
-                        return (
-                          <div
-                            key={a.id}
-                            className={`flex items-center gap-2 p-3 rounded-md border ${
-                              due.overdue ? "border-destructive/40 bg-destructive/5" : "border-border"
-                            }`}
-                          >
-                            <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="outline" className="text-xs">{a.type}</Badge>
-                                <p className="text-sm font-medium truncate">{a.subject}</p>
-                                {due.overdue && (
-                                  <Badge variant="destructive" className="text-[10px] py-0 h-4">
-                                    Atrasada {due.daysLate}d
-                                  </Badge>
-                                )}
-                              </div>
-                              {a.scheduled_at && (
-                                <p className={`text-xs mt-1 ${due.textClass}`}>
-                                  Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                </p>
-                              )}
-                            </div>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </TabsContent>
 
               {/* Histórico */}
               <TabsContent value="historico" className="flex-1 overflow-y-auto p-6 mt-0">
