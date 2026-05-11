@@ -36,14 +36,6 @@ const CONFIG_TITLES: Record<ConfigKey, string> = {
   xplo: "Tarefas automáticas XPLO (recorrência)",
 };
 
-type ConfigKey = "pipelines" | "tags" | "fields" | "templates";
-
-const CONFIG_TITLES: Record<ConfigKey, string> = {
-  pipelines: "Pipelines",
-  tags: "Tags",
-  fields: "Campos customizáveis",
-  templates: "Templates de atividade",
-};
 
 export default function CrmKanban() {
   const { pipelines, loading: pLoading, refetch: refetchPipelines } = usePipelines();
