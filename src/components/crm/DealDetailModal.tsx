@@ -209,9 +209,9 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[85vh]">
+        <div className="grid grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] h-[85vh] min-h-0">
           {/* Sidebar */}
-          <div className="border-r border-border p-4 overflow-y-auto bg-muted/20">
+          <div className="border-r border-border p-4 overflow-y-auto bg-muted/20 h-full min-h-0">
             <div className="flex flex-col items-center text-center mb-4">
               <Avatar className="h-16 w-16 mb-2">
                 <AvatarFallback className="bg-primary/10 text-primary text-lg">{initialsOf(client.name)}</AvatarFallback>
