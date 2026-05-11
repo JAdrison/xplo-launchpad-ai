@@ -101,11 +101,36 @@ KPIs em tempo real, funil do CRM, evolução do portfólio, donut de status de o
 - **MCP Server** (`/functions/v1/mcp`) compatível com Model Context Protocol
   - Transporte: `StreamableHttpTransport` (JSON-RPC 2.0)
   - Tools expostas: `list_deals`, `get_deal`, `create_deal`, `update_deal`, `delete_deal`, `list_activities`, `create_activity`, `update_activity`, `list_clients`, `get_client`, `get_client_onboarding`, `start_onboarding`, `generate_icps`, `generate_promise`, `generate_pains`, `generate_swot`, `generate_offers`, `generate_demand_plan`
-  - Integração pronta com Codex, Claude Desktop e outros clientes MCP
-  - Configuração automática via `https://starter.xplo.com.br/mcp.json`
+- Integração pronta com Codex, Claude Desktop e outros clientes MCP
+- Configuração automática via `https://starter.xplo.com.br/mcp.json`
 
+**Configurando no Codex / Claude Desktop:**
 
----
+1. Gere uma chave de API em **Configurações → API Keys** (`/settings`) e copie o token (`xplo_sk_...`).
+2. Abra o arquivo de configuração do MCP do seu cliente:
+   - **Codex (VS Code):** `.codex/settings.json` na raiz do workspace
+   - **Claude Desktop:** `%APPDATA%\Claude\settings.json` (Windows) ou `~/Library/Application Support/Claude/settings.json` (macOS)
+3. Adicione o servidor `xplo-starter` dentro de `"mcpServers"`:
+
+```json
+{
+  "mcpServers": {
+    "xplo-starter": {
+      "url": "https://fsfspsydntutwftdihih.supabase.co/functions/v1/mcp",
+      "transport": { "type": "http" },
+      "headers": {
+        "Authorization": "Bearer xplo_sk_SUA_CHAVE_AQUI"
+      }
+    }
+  }
+}
+```
+
+4. Substitua `xplo_sk_SUA_CHAVE_AQUI` pela chave real gerada no passo 1.
+5. Reinicie o cliente (Codex: `Ctrl+Shift+P` → "Codex: Restart"; Claude Desktop: feche e reabra).
+6. Pronto! O agente agora pode executar tools como `list_deals`, `create_deal`, `generate_icps` etc.
+
+> **Dica:** o arquivo `public/mcp.json` serve como descritor do servidor para clientes que suportam descoberta automática.
 
 ## 🏗 Arquitetura
 
