@@ -207,7 +207,7 @@ paths:
         required: true
         schema: { type: string, format: uuid }
     patch:
-      summary: Atualizar atividade (ex: status=completed)
+      summary: "Atualizar atividade (ex: status=completed)"
       requestBody:
         required: true
         content:
@@ -274,22 +274,35 @@ paths:
         '200': { description: OK }
 
   /clients/{id}/promise/generate:
-    parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
     post:
       summary: Gera promessa Hormozi via IA
       responses:
         '200': { description: OK }
 
   /clients/{id}/offers/generate:
-    parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
     post:
       summary: Gera documento de ofertas via IA
       responses:
         '200': { description: OK }
 
   /clients/{id}/demand-plan/generate:
-    parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
     post:
       summary: Gera plano de geração de demanda via IA
       responses:
         '200': { description: OK }
+
