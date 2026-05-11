@@ -155,6 +155,7 @@ export default function ClientDetails() {
           value_brl: (data as any).traffic_payment_value_cents != null
             ? ((data as any).traffic_payment_value_cents / 100).toFixed(2).replace(".", ",")
             : "",
+          recurrence_days: (data as any).traffic_payment_recurrence_days != null ? String((data as any).traffic_payment_recurrence_days) : "30",
         });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
