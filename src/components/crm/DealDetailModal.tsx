@@ -380,7 +380,9 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                       groups.get(key)!.items.push(a);
                     } else {
                       others.push(a);
-                    }
+                  }
+                  if (others.length > 0) {
+                    groups.set("ZZ", { code: "ZZ", label: "Outras tarefas", items: others });
                   }
                   // Histórico de conclusões para tarefas recorrentes (agrupado por subject,
                   // pois cada recorrência cria uma nova activity com id diferente).
