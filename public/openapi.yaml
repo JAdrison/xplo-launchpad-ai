@@ -1,0 +1,295 @@
+openapi: 3.1.0
+info:
+  title: XPLO Starter API
+  version: 1.0.0
+  description: |
+    API REST do XPLO Starter — CRM, Onboarding e geração com IA.
+    Autenticação via API Key (`Authorization: Bearer xplo_sk_...`).
+    Gere sua chave em `/admin/settings`.
+servers:
+  - url: https://fsfspsydntutwftdihih.supabase.co/functions/v1/api
+    description: Produção
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: xplo_sk
+  schemas:
+    Meta:
+      type: object
+      properties:
+        request_id: { type: string }
+        timestamp: { type: string, format: date-time }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, enum: [UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION_ERROR, INTERNAL_ERROR, AI_ERROR] }
+            message: { type: string }
+        meta: { $ref: '#/components/schemas/Meta' }
+    Deal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        pipeline_id: { type: string, format: uuid }
+        column_id: { type: string, format: uuid }
+        name: { type: string }
+        value_cents: { type: integer }
+        status: { type: string, enum: [active, won, lost] }
+        responsible_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Activity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        type: { type: string, enum: [ligacao, reuniao, tarefa, email, whatsapp, lembrete] }
+        subject: { type: string }
+        description: { type: string, nullable: true }
+        scheduled_at: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [pending, completed, cancelled] }
+    Client:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        niche: { type: string, nullable: true }
+        status: { type: string }
+        email: { type: string, nullable: true }
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200': { description: OK }
+
+  /me:
+    get:
+      summary: Identifica a chave em uso
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user_id: { type: string, format: uuid }
+                      scopes: { type: array, items: { type: string } }
+
+  /deals:
+    get:
+      summary: Listar deals
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+        - in: query
+          name: status
+          schema: { type: string, enum: [active, won, lost] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Deal' } }
+    post:
+      summary: Criar deal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_id, name]
+              properties:
+                client_id: { type: string, format: uuid }
+                name: { type: string }
+                value_cents: { type: integer }
+                pipeline_id: { type: string, format: uuid }
+                column_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Created }
+
+  /deals/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Buscar deal
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+    patch:
+      summary: Atualizar deal (incl. mover de coluna)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                value_cents: { type: integer }
+                column_id: { type: string, format: uuid }
+                responsible_id: { type: string, format: uuid }
+                status: { type: string, enum: [active, won, lost] }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Deletar deal
+      responses:
+        '200': { description: OK }
+
+  /activities:
+    get:
+      summary: Listar atividades
+      parameters:
+        - in: query
+          name: deal_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: client_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          schema: { type: string, enum: [pending, completed, cancelled] }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Criar atividade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deal_id, client_id, type, subject]
+              properties:
+                deal_id: { type: string, format: uuid }
+                client_id: { type: string, format: uuid }
+                type: { type: string, enum: [ligacao, reuniao, tarefa, email, whatsapp, lembrete] }
+                subject: { type: string }
+                description: { type: string }
+                scheduled_at: { type: string, format: date-time }
+                duration_minutes: { type: integer }
+                responsible_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Created }
+
+  /activities/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      summary: Atualizar atividade (ex: status=completed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: { type: string }
+                description: { type: string }
+                scheduled_at: { type: string, format: date-time }
+                status: { type: string, enum: [pending, completed, cancelled] }
+                completed_at: { type: string, format: date-time }
+      responses:
+        '200': { description: OK }
+
+  /clients:
+    get:
+      summary: Listar clientes
+      responses:
+        '200': { description: OK }
+
+  /clients/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Buscar cliente
+      responses:
+        '200': { description: OK }
+
+  /clients/{id}/onboarding:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Onboarding consolidado (perfil, promessa, ICPs, ofertas, LPs, anúncios)
+      responses:
+        '200': { description: OK }
+
+  /clients/{id}/onboarding/start:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      summary: Gera token externo de 7 dias com URL de onboarding
+      responses:
+        '201': { description: Created }
+
+  /clients/{id}/icps/generate:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      summary: Gera 3 ICPs via IA
+      responses:
+        '200': { description: OK }
+
+  /clients/{id}/promise/generate:
+    parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+    post:
+      summary: Gera promessa Hormozi via IA
+      responses:
+        '200': { description: OK }
+
+  /clients/{id}/offers/generate:
+    parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+    post:
+      summary: Gera documento de ofertas via IA
+      responses:
+        '200': { description: OK }
+
+  /clients/{id}/demand-plan/generate:
+    parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+    post:
+      summary: Gera plano de geração de demanda via IA
+      responses:
+        '200': { description: OK }
