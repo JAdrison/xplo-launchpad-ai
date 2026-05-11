@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -93,7 +94,7 @@ export default function ClientDetails() {
   const [driveForm, setDriveForm] = useState({ url: "" });
   const [isTrafficPayOpen, setIsTrafficPayOpen] = useState(false);
   const [isSavingTrafficPay, setIsSavingTrafficPay] = useState(false);
-  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "" });
+  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "", recurrence_days: "30" });
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
   const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
@@ -155,6 +156,7 @@ export default function ClientDetails() {
           value_brl: (data as any).traffic_payment_value_cents != null
             ? ((data as any).traffic_payment_value_cents / 100).toFixed(2).replace(".", ",")
             : "",
+          recurrence_days: (data as any).traffic_payment_recurrence_days != null ? String((data as any).traffic_payment_recurrence_days) : "30",
         });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
@@ -314,6 +316,12 @@ export default function ClientDetails() {
       ? Math.round(parseFloat(trafficPayForm.value_brl.replace(/\./g, "").replace(",", ".")) * 100)
       : null;
 
+    const recNum = parseInt(trafficPayForm.recurrence_days, 10);
+    if (isNaN(recNum) || recNum < 1 || recNum > 365) {
+      toast({ title: "Periodicidade inválida", description: "Informe entre 1 e 365 dias.", variant: "destructive" });
+      return;
+    }
+
     setIsSavingTrafficPay(true);
     const { error } = await supabase
       .from("clients")
@@ -321,6 +329,7 @@ export default function ClientDetails() {
         traffic_payment_day: dayNum,
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
+        traffic_payment_recurrence_days: recNum,
       } as any)
       .eq("id", id);
     if (error) {
@@ -337,6 +346,7 @@ export default function ClientDetails() {
         traffic_payment_day: dayNum,
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
+        traffic_payment_recurrence_days: recNum,
       } as any) : prev));
       toast({ title: "Pagamento de tráfego configurado", description: "Tarefa recorrente criada/atualizada." });
       setIsTrafficPayOpen(false);
@@ -787,15 +797,33 @@ export default function ClientDetails() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tp-value">Valor (R$)</Label>
-                    <Input
-                      id="tp-value"
-                      inputMode="decimal"
-                      value={trafficPayForm.value_brl}
-                      onChange={(e) => setTrafficPayForm((p) => ({ ...p, value_brl: e.target.value }))}
-                      placeholder="Ex: 1500,00"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-value">Valor (R$)</Label>
+                      <Input
+                        id="tp-value"
+                        inputMode="decimal"
+                        value={trafficPayForm.value_brl}
+                        onChange={(e) => setTrafficPayForm((p) => ({ ...p, value_brl: e.target.value }))}
+                        placeholder="Ex: 1500,00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-rec">Periodicidade</Label>
+                      <Select
+                        value={trafficPayForm.recurrence_days}
+                        onValueChange={(v) => setTrafficPayForm((p) => ({ ...p, recurrence_days: v }))}
+                      >
+                        <SelectTrigger id="tp-rec"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7">Semanal (7 dias)</SelectItem>
+                          <SelectItem value="15">Quinzenal (15 dias)</SelectItem>
+                          <SelectItem value="30">Mensal (30 dias)</SelectItem>
+                          <SelectItem value="60">Bimestral (60 dias)</SelectItem>
+                          <SelectItem value="90">Trimestral (90 dias)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -813,10 +841,24 @@ export default function ClientDetails() {
         </CardHeader>
         <CardContent>
           {(client as any).traffic_payment_day ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Dia do vencimento</p>
                 <p className="font-semibold">Todo dia {(client as any).traffic_payment_day}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Periodicidade</p>
+                <p className="font-semibold">
+                  {(() => {
+                    const r = (client as any).traffic_payment_recurrence_days ?? 30;
+                    if (r === 7) return "Semanal";
+                    if (r === 15) return "Quinzenal";
+                    if (r === 30) return "Mensal";
+                    if (r === 60) return "Bimestral";
+                    if (r === 90) return "Trimestral";
+                    return `${r} dias`;
+                  })()}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Antecedência</p>
