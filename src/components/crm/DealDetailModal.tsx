@@ -61,6 +61,13 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
   const [actDialog, setActDialog] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityEditable | null>(null);
   const [editClientOpen, setEditClientOpen] = useState(false);
+  const [expandedDoneGroups, setExpandedDoneGroups] = useState<Set<string>>(new Set());
+  const toggleDoneGroup = (code: string) =>
+    setExpandedDoneGroups((prev) => {
+      const next = new Set(prev);
+      next.has(code) ? next.delete(code) : next.add(code);
+      return next;
+    });
 
   const open = !!dealId;
 
