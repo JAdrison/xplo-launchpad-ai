@@ -21,9 +21,20 @@ import { PipelinesConfig } from "@/components/crm/config/PipelinesConfig";
 import { TagsConfig } from "@/components/crm/config/TagsConfig";
 import { FieldsConfig } from "@/components/crm/config/FieldsConfig";
 import { TemplatesConfig } from "@/components/crm/config/TemplatesConfig";
+import { XploTasksConfig } from "@/components/crm/config/XploTasksConfig";
 
 import { CrmContactsView } from "./CrmContacts";
 import { usePipelines, usePipelineData } from "@/hooks/useCrm";
+
+type ConfigKey = "pipelines" | "tags" | "fields" | "templates" | "xplo";
+
+const CONFIG_TITLES: Record<ConfigKey, string> = {
+  pipelines: "Pipelines",
+  tags: "Tags",
+  fields: "Campos customizáveis",
+  templates: "Templates de atividade",
+  xplo: "Tarefas automáticas XPLO (recorrência)",
+};
 
 type ConfigKey = "pipelines" | "tags" | "fields" | "templates";
 
