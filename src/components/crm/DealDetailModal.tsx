@@ -381,7 +381,24 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                       others.push(a);
                     }
                   }
-                  const sorted = Array.from(groups.values()).sort((x, y) => x.code.localeCompare(y.code));
+                  // Última conclusão por activity_id (a partir do histórico) — útil para tarefas recorrentes
+                  const lastDoneByActivity = new Map<string, string>();
+                  for (const h of history) {
+                    if (h.event_type !== "activity_completed") continue;
+                    const aid = (h.event_data as any)?.activity_id as string | undefined;
+                    if (!aid) continue;
+                    const cur = lastDoneByActivity.get(aid);
+                    if (!cur || new Date(h.created_at).getTime() > new Date(cur).getTime()) {
+                      lastDoneByActivity.set(aid, h.created_at);
+                    }
+                  }
+                  // Grupos com tudo concluído vão para o final
+                  const sorted = Array.from(groups.values()).sort((x, y) => {
+                    const xAllDone = x.items.length > 0 && x.items.every((i) => i.status === "completed");
+                    const yAllDone = y.items.length > 0 && y.items.every((i) => i.status === "completed");
+                    if (xAllDone !== yAllDone) return xAllDone ? 1 : -1;
+                    return x.code.localeCompare(y.code);
+                  });
                   if (sorted.length === 0 && others.length === 0) {
                     return <p className="text-sm text-muted-foreground">Nenhuma tarefa. Defina o plano do cliente para gerar o processo automaticamente.</p>;
                   }
@@ -389,8 +406,9 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                     <div className="space-y-4">
                       {sorted.map((g) => {
                         const done = g.items.filter((i) => i.status === "completed").length;
+                        const allDone = done === g.items.length;
                         return (
-                          <div key={g.code} className="border border-border rounded-md overflow-hidden">
+                          <div key={g.code} className={`border border-border rounded-md overflow-hidden ${allDone ? "opacity-70" : ""}`}>
                             <div className="flex items-center justify-between bg-muted/40 px-3 py-2">
                               <p className="text-sm font-semibold">{g.code} · {g.label}</p>
                               <span className="text-xs text-muted-foreground">{done}/{g.items.length}</span>
