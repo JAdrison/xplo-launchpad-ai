@@ -193,6 +193,7 @@ export default function CrmKanban() {
           {configDialog === "tags" && <TagsConfig inDialog onChanged={refetch} />}
           {configDialog === "fields" && <FieldsConfig inDialog onChanged={refetch} />}
           {configDialog === "templates" && <TemplatesConfig inDialog onChanged={refetch} />}
+          {configDialog === "xplo" && <XploTasksConfig />}
         </DialogContent>
       </Dialog>
     </div>
