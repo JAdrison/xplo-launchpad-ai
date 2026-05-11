@@ -1,0 +1,42 @@
+{
+  "name": "xplo-starter",
+  "version": "1.0.0",
+  "description": "Servidor MCP do XPLO Starter — CRM, Onboarding e IA.",
+  "endpoint": "https://fsfspsydntutwftdihih.supabase.co/functions/v1/mcp",
+  "transport": "streamable-http",
+  "auth": {
+    "type": "bearer",
+    "header": "Authorization",
+    "format": "xplo_sk_..."
+  },
+  "tools": [
+    { "name": "list_deals", "description": "Lista deals do CRM." },
+    { "name": "get_deal", "description": "Busca deal por id." },
+    { "name": "create_deal", "description": "Cria deal para um cliente." },
+    { "name": "move_deal", "description": "Move deal para outra coluna." },
+    { "name": "list_activities", "description": "Lista atividades (filtra por deal/cliente/status)." },
+    { "name": "create_activity", "description": "Cria atividade (tarefa/ligação/reunião)." },
+    { "name": "complete_activity", "description": "Marca atividade como concluída." },
+    { "name": "list_clients", "description": "Lista clientes." },
+    { "name": "get_client_onboarding", "description": "Onboarding consolidado do cliente." },
+    { "name": "start_onboarding", "description": "Gera token externo de 7 dias para onboarding." },
+    { "name": "generate_icps", "description": "Gera 3 ICPs via IA." },
+    { "name": "generate_promise", "description": "Gera promessa Hormozi via IA." },
+    { "name": "generate_offers", "description": "Gera documento de ofertas via IA." },
+    { "name": "generate_demand_plan", "description": "Gera plano de demanda via IA." }
+  ],
+  "clients": {
+    "claude_desktop": {
+      "config_file": "claude_desktop_config.json",
+      "snippet": {
+        "mcpServers": {
+          "xplo-starter": {
+            "url": "https://fsfspsydntutwftdihih.supabase.co/functions/v1/mcp",
+            "transport": { "type": "http" },
+            "headers": { "Authorization": "Bearer xplo_sk_SUA_CHAVE_AQUI" }
+          }
+        }
+      }
+    }
+  }
+}
