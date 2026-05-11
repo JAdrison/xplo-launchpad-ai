@@ -464,6 +464,11 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                         Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
                                       </p>
                                     )}
+                                    {a.recurrence_days && lastDoneByActivity.get(a.id) && (
+                                      <p className="text-[11px] mt-0.5 text-emerald-700">
+                                        Última conclusão: {format(new Date(lastDoneByActivity.get(a.id)!), "dd/MM/yyyy", { locale: ptBR })}
+                                      </p>
+                                    )}
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
