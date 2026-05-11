@@ -382,16 +382,26 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                       others.push(a);
                     }
                   }
-                  // Última conclusão por activity_id (a partir do histórico) — útil para tarefas recorrentes
-                  const lastDoneByActivity = new Map<string, string>();
+                  // Histórico de conclusões para tarefas recorrentes (agrupado por subject,
+                  // pois cada recorrência cria uma nova activity com id diferente).
+                  const completionsBySubject = new Map<string, string[]>();
                   for (const h of history) {
                     if (h.event_type !== "activity_completed") continue;
-                    const aid = (h.event_data as any)?.activity_id as string | undefined;
-                    if (!aid) continue;
-                    const cur = lastDoneByActivity.get(aid);
-                    if (!cur || new Date(h.created_at).getTime() > new Date(cur).getTime()) {
-                      lastDoneByActivity.set(aid, h.created_at);
-                    }
+                    const subj = (h.event_data as any)?.subject as string | undefined;
+                    if (!subj) continue;
+                    const arr = completionsBySubject.get(subj) ?? [];
+                    arr.push(h.created_at);
+                    completionsBySubject.set(subj, arr);
+                  }
+                  // Também inclui completed_at das próprias activities concluídas (caso histórico esteja incompleto)
+                  for (const a of activities) {
+                    if (!a.recurrence_days || a.status !== "completed" || !a.completed_at) continue;
+                    const arr = completionsBySubject.get(a.subject) ?? [];
+                    if (!arr.includes(a.completed_at)) arr.push(a.completed_at);
+                    completionsBySubject.set(a.subject, arr);
+                  }
+                  for (const [k, v] of completionsBySubject) {
+                    completionsBySubject.set(k, v.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()));
                   }
                   // Grupos com tudo concluído vão para o final
                   const sorted = Array.from(groups.values()).sort((x, y) => {
@@ -465,10 +475,24 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                         Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
                                       </p>
                                     )}
-                                    {a.recurrence_days && lastDoneByActivity.get(a.id) && (
-                                      <p className="text-[11px] mt-0.5 text-emerald-700">
-                                        Última conclusão: {format(new Date(lastDoneByActivity.get(a.id)!), "dd/MM/yyyy", { locale: ptBR })}
-                                      </p>
+                                    {a.recurrence_days && (completionsBySubject.get(a.subject)?.length ?? 0) > 0 && (
+                                      <div className="mt-1 rounded border border-emerald-200 bg-emerald-50/60 px-2 py-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                                          Conclusões registradas ({completionsBySubject.get(a.subject)!.length})
+                                        </p>
+                                        <ul className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                                          {completionsBySubject.get(a.subject)!.slice(0, 12).map((d, i) => (
+                                            <li key={i} className="text-[11px] text-emerald-700">
+                                              ✓ {format(new Date(d), "dd/MM/yyyy", { locale: ptBR })}
+                                            </li>
+                                          ))}
+                                          {completionsBySubject.get(a.subject)!.length > 12 && (
+                                            <li className="text-[11px] text-emerald-700/70">
+                                              +{completionsBySubject.get(a.subject)!.length - 12} anteriores
+                                            </li>
+                                          )}
+                                        </ul>
+                                      </div>
                                     )}
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
