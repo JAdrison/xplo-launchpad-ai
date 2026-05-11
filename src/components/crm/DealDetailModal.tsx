@@ -530,6 +530,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                 );
                               })}
                             </div>
+                            )}
                           </div>
                         );
                       })}
