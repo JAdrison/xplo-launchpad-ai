@@ -382,16 +382,26 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                       others.push(a);
                     }
                   }
-                  // Última conclusão por activity_id (a partir do histórico) — útil para tarefas recorrentes
-                  const lastDoneByActivity = new Map<string, string>();
+                  // Histórico de conclusões para tarefas recorrentes (agrupado por subject,
+                  // pois cada recorrência cria uma nova activity com id diferente).
+                  const completionsBySubject = new Map<string, string[]>();
                   for (const h of history) {
                     if (h.event_type !== "activity_completed") continue;
-                    const aid = (h.event_data as any)?.activity_id as string | undefined;
-                    if (!aid) continue;
-                    const cur = lastDoneByActivity.get(aid);
-                    if (!cur || new Date(h.created_at).getTime() > new Date(cur).getTime()) {
-                      lastDoneByActivity.set(aid, h.created_at);
-                    }
+                    const subj = (h.event_data as any)?.subject as string | undefined;
+                    if (!subj) continue;
+                    const arr = completionsBySubject.get(subj) ?? [];
+                    arr.push(h.created_at);
+                    completionsBySubject.set(subj, arr);
+                  }
+                  // Também inclui completed_at das próprias activities concluídas (caso histórico esteja incompleto)
+                  for (const a of activities) {
+                    if (!a.recurrence_days || a.status !== "completed" || !a.completed_at) continue;
+                    const arr = completionsBySubject.get(a.subject) ?? [];
+                    if (!arr.includes(a.completed_at)) arr.push(a.completed_at);
+                    completionsBySubject.set(a.subject, arr);
+                  }
+                  for (const [k, v] of completionsBySubject) {
+                    completionsBySubject.set(k, v.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()));
                   }
                   // Grupos com tudo concluído vão para o final
                   const sorted = Array.from(groups.values()).sort((x, y) => {
