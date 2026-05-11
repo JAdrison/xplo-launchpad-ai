@@ -796,15 +796,33 @@ export default function ClientDetails() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tp-value">Valor (R$)</Label>
-                    <Input
-                      id="tp-value"
-                      inputMode="decimal"
-                      value={trafficPayForm.value_brl}
-                      onChange={(e) => setTrafficPayForm((p) => ({ ...p, value_brl: e.target.value }))}
-                      placeholder="Ex: 1500,00"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-value">Valor (R$)</Label>
+                      <Input
+                        id="tp-value"
+                        inputMode="decimal"
+                        value={trafficPayForm.value_brl}
+                        onChange={(e) => setTrafficPayForm((p) => ({ ...p, value_brl: e.target.value }))}
+                        placeholder="Ex: 1500,00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tp-rec">Periodicidade</Label>
+                      <Select
+                        value={trafficPayForm.recurrence_days}
+                        onValueChange={(v) => setTrafficPayForm((p) => ({ ...p, recurrence_days: v }))}
+                      >
+                        <SelectTrigger id="tp-rec"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="7">Semanal (7 dias)</SelectItem>
+                          <SelectItem value="15">Quinzenal (15 dias)</SelectItem>
+                          <SelectItem value="30">Mensal (30 dias)</SelectItem>
+                          <SelectItem value="60">Bimestral (60 dias)</SelectItem>
+                          <SelectItem value="90">Trimestral (90 dias)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
