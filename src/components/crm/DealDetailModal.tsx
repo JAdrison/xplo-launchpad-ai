@@ -147,6 +147,7 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
       duration_minutes: a.duration_minutes ?? null,
       required_function: a.required_function ?? null,
       recurrence_days: a.recurrence_days ?? null,
+      responsible_id: a.responsible_id ?? null,
     });
     setActDialog(true);
   };
