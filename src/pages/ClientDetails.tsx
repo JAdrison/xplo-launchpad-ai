@@ -315,6 +315,12 @@ export default function ClientDetails() {
       ? Math.round(parseFloat(trafficPayForm.value_brl.replace(/\./g, "").replace(",", ".")) * 100)
       : null;
 
+    const recNum = parseInt(trafficPayForm.recurrence_days, 10);
+    if (isNaN(recNum) || recNum < 1 || recNum > 365) {
+      toast({ title: "Periodicidade inválida", description: "Informe entre 1 e 365 dias.", variant: "destructive" });
+      return;
+    }
+
     setIsSavingTrafficPay(true);
     const { error } = await supabase
       .from("clients")
@@ -322,6 +328,7 @@ export default function ClientDetails() {
         traffic_payment_day: dayNum,
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
+        traffic_payment_recurrence_days: recNum,
       } as any)
       .eq("id", id);
     if (error) {
@@ -338,6 +345,7 @@ export default function ClientDetails() {
         traffic_payment_day: dayNum,
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
+        traffic_payment_recurrence_days: recNum,
       } as any) : prev));
       toast({ title: "Pagamento de tráfego configurado", description: "Tarefa recorrente criada/atualizada." });
       setIsTrafficPayOpen(false);
