@@ -430,10 +430,22 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                         const allDone = done === g.items.length;
                         return (
                           <div key={g.code} className={`border border-border rounded-md overflow-hidden ${allDone ? "opacity-70" : ""}`}>
-                            <div className="flex items-center justify-between bg-muted/40 px-3 py-2">
-                              <p className="text-sm font-semibold">{g.code} · {g.label}</p>
+                            <div
+                              className={`flex items-center justify-between bg-muted/40 px-3 py-2 ${allDone ? "cursor-pointer hover:bg-muted/60" : ""}`}
+                              onClick={allDone ? () => toggleDoneGroup(g.code) : undefined}
+                            >
+                              <p className="text-sm font-semibold flex items-center gap-2">
+                                {allDone && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {expandedDoneGroups.has(g.code) ? "▾" : "▸"}
+                                  </span>
+                                )}
+                                {g.code} · {g.label}
+                                {allDone && <span className="text-[10px] font-medium text-emerald-600">✓ concluído</span>}
+                              </p>
                               <span className="text-xs text-muted-foreground">{done}/{g.items.length}</span>
                             </div>
+                            {(!allDone || expandedDoneGroups.has(g.code)) && (
                             <div className="divide-y divide-border">
                               {[...g.items].sort((a, b) => {
                                  const aDone = a.status === "completed";
