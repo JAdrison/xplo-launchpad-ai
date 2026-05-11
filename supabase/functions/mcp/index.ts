@@ -1,7 +1,7 @@
 // XPLO Starter — Remote MCP server (mcp-lite + Hono)
 // Auth: Authorization: Bearer xplo_sk_...
 import { Hono } from "npm:hono@4.6.14";
-import { McpServer, StreamableHttpTransport } from "npm:mcp-lite@^0.10.0";
+import { McpServer, StreamableHttpTransport } from "npm:mcp-lite@0.10.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -156,16 +156,23 @@ app.options("/*", (c) => {
 });
 
 app.all("/*", async (c) => {
-  const auth = await verifyKey(c.req.raw);
-  if (!auth) {
-    return c.json({ error: "Unauthorized: provide Authorization: Bearer xplo_sk_..." }, 401, {
+  try {
+    const auth = await verifyKey(c.req.raw);
+    if (!auth) {
+      return c.json({ error: "Unauthorized: provide Authorization: Bearer xplo_sk_..." }, 401, {
+        "Access-Control-Allow-Origin": "*",
+      });
+    }
+    const rawAuth = c.req.raw.headers.get("Authorization") || "";
+    const res = await httpHandler(c.req.raw, { authInfo: { token: rawAuth, scopes: auth.scopes, extra: { rawAuth } } } as any);
+    res.headers.set("Access-Control-Allow-Origin", "*");
+    return res;
+  } catch (error) {
+    console.error("MCP request failed", error);
+    return c.json({ error: "MCP request failed" }, 500, {
       "Access-Control-Allow-Origin": "*",
     });
   }
-  const rawAuth = c.req.raw.headers.get("Authorization") || "";
-  const res = await httpHandler(c.req.raw, { authInfo: { token: rawAuth, scopes: auth.scopes, extra: { rawAuth } } } as any);
-  res.headers.set("Access-Control-Allow-Origin", "*");
-  return res;
 });
 
 Deno.serve(app.fetch);
