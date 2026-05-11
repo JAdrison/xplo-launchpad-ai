@@ -475,10 +475,24 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                         Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
                                       </p>
                                     )}
-                                    {a.recurrence_days && lastDoneByActivity.get(a.id) && (
-                                      <p className="text-[11px] mt-0.5 text-emerald-700">
-                                        Última conclusão: {format(new Date(lastDoneByActivity.get(a.id)!), "dd/MM/yyyy", { locale: ptBR })}
-                                      </p>
+                                    {a.recurrence_days && (completionsBySubject.get(a.subject)?.length ?? 0) > 0 && (
+                                      <div className="mt-1 rounded border border-emerald-200 bg-emerald-50/60 px-2 py-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                                          Conclusões registradas ({completionsBySubject.get(a.subject)!.length})
+                                        </p>
+                                        <ul className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+                                          {completionsBySubject.get(a.subject)!.slice(0, 12).map((d, i) => (
+                                            <li key={i} className="text-[11px] text-emerald-700">
+                                              ✓ {format(new Date(d), "dd/MM/yyyy", { locale: ptBR })}
+                                            </li>
+                                          ))}
+                                          {completionsBySubject.get(a.subject)!.length > 12 && (
+                                            <li className="text-[11px] text-emerald-700/70">
+                                              +{completionsBySubject.get(a.subject)!.length - 12} anteriores
+                                            </li>
+                                          )}
+                                        </ul>
+                                      </div>
                                     )}
                                     {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
                                   </div>
