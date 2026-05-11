@@ -304,14 +304,13 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
           </div>
 
           {/* Right tabs */}
-          <div className="flex flex-col overflow-hidden">
+          <div className="flex flex-col overflow-hidden min-h-0 h-full">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="text-xl font-semibold">{deal.name}</h2>
             </div>
-            <Tabs defaultValue="negocios" className="flex-1 flex flex-col overflow-hidden">
+            <Tabs defaultValue="negocios" className="flex-1 flex flex-col overflow-hidden min-h-0">
               <TabsList className="mx-6 mt-3 w-fit">
-                <TabsTrigger value="negocios">Negócios</TabsTrigger>
-                <TabsTrigger value="atividades">Atividades</TabsTrigger>
+                <TabsTrigger value="negocios">Tarefas & Checkpoints</TabsTrigger>
                 <TabsTrigger value="historico">Histórico</TabsTrigger>
                 <TabsTrigger value="notas">Notas</TabsTrigger>
               </TabsList>
