@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Save, Sparkles, Key, Brain, Zap, Webhook } from "lucide-react";
 import { getAIConfig, hydrateAIConfig, saveAIConfig } from "@/lib/aiConfig";
+import { ApiKeysManager } from "@/components/settings/ApiKeysManager";
 
 type AISource = "lovable" | "xplo" | "custom";
 type AIProvider = "gemini" | "openai";
@@ -342,6 +343,9 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* API Keys */}
+      <ApiKeysManager />
 
       {/* Info card */}
       <Card>
