@@ -246,6 +246,42 @@ export type Database = {
           },
         ]
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_drive_folders: {
         Row: {
           client_id: string
@@ -1688,6 +1724,14 @@ export type Database = {
       sync_traffic_payment_task: {
         Args: { _client_id: string }
         Returns: undefined
+      }
+      verify_api_key: {
+        Args: { _raw: string }
+        Returns: {
+          key_id: string
+          scopes: string[]
+          user_id: string
+        }[]
       }
     }
     Enums: {
