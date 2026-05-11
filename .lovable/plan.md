@@ -1,78 +1,53 @@
-Ajustes no `DealDetailModal` e `ActivityFormDialog` para resolver os 6 pontos reportados.
+## Problema
 
-## 1. Sidebar fixa no modal do deal
+Na tarefa "Cobrar verba de tráfego" o card mostra **"Vence em 11/05/2026"**, mas:
+- O dia configurado é **15** (vencimento real 15/05)
+- O `scheduled_at` no banco é `2026-05-12 00:00:00+00` (correto: 3 dias antes do dia 15)
+- Renderizado no fuso de Brasília (UTC−3), `2026-05-12 00:00 UTC` vira **11/05/2026 21:00** → exibe 11/05
 
-**Arquivo:** `src/components/crm/DealDetailModal.tsx`
+São dois problemas combinados:
 
-Hoje o `DialogContent` usa `overflow-hidden` mas, em telas menores ou com sumário longo, o conteúdo do lado esquerdo acompanha o scroll do lado direito (porque o grid `h-[85vh]` empurra para fora). Vou:
+1. **Bug de fuso horário**: as funções SQL salvam `scheduled_at` como meia-noite UTC, então qualquer data "redondinha" volta um dia no fuso BRT.
+2. **Rótulo enganoso**: "Vence em" mostra o `scheduled_at` (data de **agendamento da cobrança**, com a antecedência aplicada), não o **vencimento real** da verba.
 
-- Garantir que a coluna esquerda tenha `h-full overflow-y-auto sticky top-0` independente.
-- Manter a coluna direita como o único container que rola junto com as tabs.
-- Ajustar o grid para `min-h-0` nas colunas (necessário em flex/grid para permitir scroll interno sem propagar).
+## Correção
 
-## 2. Campo "Ano" limitado a 4 dígitos
+### 1. Backend (SQL) — datas em fuso de Brasília
 
-**Arquivo:** `src/components/crm/ActivityFormDialog.tsx`
+Em `sync_traffic_payment_task` e `handle_traffic_payment_completion`, trocar:
 
-O input `datetime-local` nativo aceita até 6 dígitos no ano. Vou adicionar:
-- `min="2000-01-01T00:00"` e `max="2099-12-31T23:59"` no input de Vencimento, o que força o navegador a limitar a 4 dígitos.
-- Validação no `submit()` rejeitando datas fora do intervalo razoável (ex.: ano > 2100).
+```sql
+v_scheduled := (v_due - (v_lead || ' days')::interval)::timestamptz;
+```
 
-## 3. Unificar tabs "Negócios" e "Atividades"
+por
 
-**Arquivo:** `src/components/crm/DealDetailModal.tsx`
+```sql
+v_scheduled := ((v_due - (v_lead || ' days')::interval)::timestamp
+                AT TIME ZONE 'America/Sao_Paulo');
+```
 
-Hoje a tab **Negócios** mostra os checkpoints do processo XPLO + tarefas, e **Atividades** mostra as mesmas tarefas agrupadas por status (atraso/pendentes/concluídas) — duplicando informação.
+Isso ancora o horário em meia-noite de Brasília → não desloca o dia ao renderizar.
 
-Plano:
-- Remover a tab **Atividades**.
-- Renomear **Negócios** para **Tarefas & Checkpoints** (ou manter "Negócios" se preferir).
-- Adicionar no topo da tab atual um resumo compacto: 🔴 X em atraso · 🟠 Y pendentes · 🟣 Z concluídas (clicáveis para filtrar).
-- Botão **"Criar atividade"** (que vivia em Atividades) sobe para o cabeçalho da tab unificada.
+### 2. Frontend — rótulo correto para a tarefa de tráfego
 
-## 4. Checkpoints concluídos vão para o fim
+Em `src/components/crm/DealDetailModal.tsx` (linha ~496), trocar o rótulo quando for tarefa `traffic_payment`:
 
-**Arquivo:** `src/components/crm/DealDetailModal.tsx` (linha ~375)
+- **Tarefas normais**: continuam exibindo "Vence em {scheduled_at}".
+- **Tarefas `traffic_payment_*`**: extrair o vencimento real do `subject` (`— vence 15/05`) e exibir:
+  - `Cobrar até {scheduled_at}` (data da ação)
+  - `Vencimento da verba: {due}` (data real)
 
-Hoje os grupos são ordenados só por `code.localeCompare`. Vou trocar a ordenação para:
+Resultado esperado para o caso atual:
+- "Cobrar até 12/05/2026"
+- "Vencimento da verba: 15/05"
 
-1. Grupos com tarefas pendentes/atrasadas primeiro (ordenados por código asc).
-2. Grupos 100% concluídos no fim (ordenados por código asc entre si).
+### 3. Migrar tarefa já existente
 
-Critério: `done === total` → vai para o final.
+Reagendar a tarefa pendente atual (`6564d3bb-…`) chamando `sync_traffic_payment_task` para o cliente, ou um UPDATE direto ajustando `scheduled_at` para `2026-05-12 03:00:00+00` (≈ meia-noite BRT).
 
-## 5. Mostrar última data de conclusão em tarefas recorrentes
+## Detalhes técnicos
 
-**Arquivo:** `src/components/crm/DealDetailModal.tsx`
-
-Para tarefas com `recurrence_days` (ex: "Programar 30 dias de Instagram"), além de "Vence em DD/MM", mostrar logo abaixo:
-
-> Última conclusão: DD/MM/YYYY
-
-Fonte: precisa do histórico de conclusões. Hoje `activities` armazena só o `completed_at` da instância atual. Como tarefas recorrentes são reabertas (status volta para pending), o `completed_at` é zerado.
-
-Solução: consultar `deal_history` para `event_type = 'activity_completed'` filtrando por `event_data.activity_id = a.id` e pegando o `created_at` mais recente. Já temos `history` carregado no modal — basta indexar por `activity_id` e exibir.
-
-## 6. Responsável = pessoas reais, não funções
-
-**Arquivo:** `src/components/crm/ActivityFormDialog.tsx`
-
-Hoje o campo "Função responsável" lista `JOB_FUNCTIONS` (Designer, Copywriter, etc.). O usuário quer atribuir a **pessoas ativas da plataforma**.
-
-Plano:
-- Manter o campo `required_function` como está (já é usado em filtros e cores), mas **renomear o label** para "Função (opcional)".
-- Adicionar **novo campo "Responsável"** que lista usuários da plataforma:
-  - Buscar via edge function `get-user-emails` ou query a `profiles` (verificar qual está disponível com RLS).
-  - Salvar em `activities.responsible_id` (coluna já existe no schema).
-  - Default: usuário logado.
-- O Select mostra nome (ou email) de cada usuário aprovado/ativo.
-
-**Observação:** preciso confirmar se há tabela `profiles` com lista de usuários ativos acessível via RLS, ou se devo usar a edge function `get-user-emails` para listar todos. Vou inspecionar antes de implementar.
-
-## Arquivos tocados
-
-- `src/components/crm/DealDetailModal.tsx` (itens 1, 3, 4, 5)
-- `src/components/crm/ActivityFormDialog.tsx` (itens 2, 6)
-- Possível pequena edge function update ou novo helper para listar usuários ativos (item 6)
-
-Sem mudanças de schema do banco.
+- `next_payment_due_date` continua igual; o ajuste é só no cast final para `timestamptz`.
+- Não muda schema, só corpo de duas funções `SECURITY DEFINER`.
+- O parser do subject (`— vence DD/MM`) já é estável (formato fixo definido pelas próprias funções).
