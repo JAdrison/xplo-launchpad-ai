@@ -21,18 +21,21 @@ import { PipelinesConfig } from "@/components/crm/config/PipelinesConfig";
 import { TagsConfig } from "@/components/crm/config/TagsConfig";
 import { FieldsConfig } from "@/components/crm/config/FieldsConfig";
 import { TemplatesConfig } from "@/components/crm/config/TemplatesConfig";
+import { XploTasksConfig } from "@/components/crm/config/XploTasksConfig";
 
 import { CrmContactsView } from "./CrmContacts";
 import { usePipelines, usePipelineData } from "@/hooks/useCrm";
 
-type ConfigKey = "pipelines" | "tags" | "fields" | "templates";
+type ConfigKey = "pipelines" | "tags" | "fields" | "templates" | "xplo";
 
 const CONFIG_TITLES: Record<ConfigKey, string> = {
   pipelines: "Pipelines",
   tags: "Tags",
   fields: "Campos customizáveis",
   templates: "Templates de atividade",
+  xplo: "Tarefas automáticas XPLO (recorrência)",
 };
+
 
 export default function CrmKanban() {
   const { pipelines, loading: pLoading, refetch: refetchPipelines } = usePipelines();
@@ -77,6 +80,7 @@ export default function CrmKanban() {
               <DropdownMenuItem onClick={() => setConfigDialog("tags")}>Tags</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setConfigDialog("fields")}>Campos customizáveis</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setConfigDialog("templates")}>Templates de atividade</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setConfigDialog("xplo")}>Tarefas XPLO (recorrência)</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -189,6 +193,7 @@ export default function CrmKanban() {
           {configDialog === "tags" && <TagsConfig inDialog onChanged={refetch} />}
           {configDialog === "fields" && <FieldsConfig inDialog onChanged={refetch} />}
           {configDialog === "templates" && <TemplatesConfig inDialog onChanged={refetch} />}
+          {configDialog === "xplo" && <XploTasksConfig />}
         </DialogContent>
       </Dialog>
     </div>
