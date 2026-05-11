@@ -53,6 +53,65 @@ async function ownsClient(clientId: string): Promise<boolean> {
   return !error && !!data;
 }
 
+// ----- Human-readable enrichment -----
+
+const CLIENT_STATUS_LABELS: Record<string, string> = {
+  draft: "Rascunho",
+  in_onboarding: "Em onboarding",
+  pending_approval: "Aguardando aprovação",
+  ppp_completed: "Onboarding concluído",
+  offer_generated: "Oferta gerada",
+  lp_generated: "Landing page gerada",
+  ads_generated: "Anúncios gerados",
+  active: "Ativo",
+  inactive: "Inativo",
+  archived: "Arquivado",
+};
+const DEAL_STATUS_LABELS: Record<string, string> = {
+  active: "Ativo", won: "Ganho", lost: "Perdido", archived: "Arquivado",
+};
+const ACTIVITY_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendente", in_progress: "Em andamento", completed: "Concluída", cancelled: "Cancelada",
+};
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  ligacao: "Ligação", reuniao: "Reunião", tarefa: "Tarefa",
+  email: "E-mail", whatsapp: "WhatsApp", lembrete: "Lembrete",
+};
+const fmtBRL = (cents?: number | null) =>
+  cents == null ? null : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
+const labelStatus = (s?: string | null) => (s ? CLIENT_STATUS_LABELS[s] ?? s : null);
+
+async function enrichDeals(deals: any[]) {
+  if (!deals?.length) return deals;
+  const colIds = [...new Set(deals.map(d => d.column_id).filter(Boolean))];
+  const pipeIds = [...new Set(deals.map(d => d.pipeline_id).filter(Boolean))];
+  const cliIds = [...new Set(deals.map(d => d.client_id).filter(Boolean))];
+  const s = sb();
+  const [cols, pipes, clis] = await Promise.all([
+    colIds.length ? s.from("pipeline_columns").select("id, name, checkpoint_code").in("id", colIds) : { data: [] as any[] },
+    pipeIds.length ? s.from("pipelines").select("id, name").in("id", pipeIds) : { data: [] as any[] },
+    cliIds.length ? s.from("clients").select("id, name, status").in("id", cliIds) : { data: [] as any[] },
+  ]);
+  const colMap = new Map((cols.data || []).map((c: any) => [c.id, c]));
+  const pipeMap = new Map((pipes.data || []).map((p: any) => [p.id, p]));
+  const cliMap = new Map((clis.data || []).map((c: any) => [c.id, c]));
+  return deals.map(d => {
+    const col = colMap.get(d.column_id);
+    const pipe = pipeMap.get(d.pipeline_id);
+    const cli = cliMap.get(d.client_id);
+    return {
+      ...d,
+      column_name: col?.name ?? null,
+      column_checkpoint: col?.checkpoint_code ?? null,
+      pipeline_name: pipe?.name ?? null,
+      client_name: cli?.name ?? null,
+      client_status_label: labelStatus(cli?.status),
+      status_label: DEAL_STATUS_LABELS[d.status] ?? d.status,
+      value_brl: fmtBRL(d.value_cents),
+    };
+  });
+}
+
 // ----- Route handlers -----
 
 async function listDeals(_req: Request, _ctx: AuthCtx, url: URL) {
@@ -62,15 +121,17 @@ async function listDeals(_req: Request, _ctx: AuthCtx, url: URL) {
   if (status) q = q.eq("status", status);
   const { data, error } = await q;
   if (error) return errResp("INTERNAL_ERROR", error.message, 500);
-  return jsonResp(data);
+  return jsonResp(await enrichDeals(data || []));
 }
 
 async function getDeal(id: string) {
   const { data, error } = await sb().from("deals").select("*").eq("id", id).maybeSingle();
   if (error) return errResp("INTERNAL_ERROR", error.message, 500);
   if (!data) return errResp("NOT_FOUND", "Deal not found", 404);
-  return jsonResp(data);
+  const [enriched] = await enrichDeals([data]);
+  return jsonResp(enriched);
 }
+
 
 async function createDeal(req: Request) {
   const body = await req.json().catch(() => null) as any;
