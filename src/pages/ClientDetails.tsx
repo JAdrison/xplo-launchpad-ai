@@ -93,7 +93,7 @@ export default function ClientDetails() {
   const [driveForm, setDriveForm] = useState({ url: "" });
   const [isTrafficPayOpen, setIsTrafficPayOpen] = useState(false);
   const [isSavingTrafficPay, setIsSavingTrafficPay] = useState(false);
-  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "" });
+  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "", recurrence_days: "30" });
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
   const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
