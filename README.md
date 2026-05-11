@@ -92,6 +92,19 @@ KPIs em tempo real, funil do CRM, evolução do portfólio, donut de status de o
 - Gestão de usuários (`/admin/users`) — revogar, suspender, reset e definir senha
 - Visualização de e-mails reais via edge function protegida
 
+### 7. API REST + MCP Server
+
+- **API REST pública** (`/functions/v1/api`) com autenticação via chaves de API (`xplo_sk_...`)
+  - Endpoints: `/deals`, `/activities`, `/clients`, `/me`, `/health`
+  - Escopos: `read` e `write`
+  - Geração e revogação de chaves via tela de Configurações (`/settings`)
+- **MCP Server** (`/functions/v1/mcp`) compatível com Model Context Protocol
+  - Transporte: `StreamableHttpTransport` (JSON-RPC 2.0)
+  - Tools expostas: `list_deals`, `get_deal`, `create_deal`, `update_deal`, `delete_deal`, `list_activities`, `create_activity`, `update_activity`, `list_clients`, `get_client`, `get_client_onboarding`, `start_onboarding`, `generate_icps`, `generate_promise`, `generate_pains`, `generate_swot`, `generate_offers`, `generate_demand_plan`
+  - Integração pronta com Codex, Claude Desktop e outros clientes MCP
+  - Configuração automática via `https://starter.xplo.com.br/mcp.json`
+
+
 ---
 
 ## 🏗 Arquitetura
