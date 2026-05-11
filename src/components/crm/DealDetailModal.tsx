@@ -510,61 +510,6 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                 })()}
               </TabsContent>
 
-              {/* Atividades */}
-              <TabsContent value="atividades" className="flex-1 overflow-y-auto p-6 mt-0">
-                <div className="flex justify-end mb-4">
-                  <Button size="sm" onClick={() => { setEditingActivity(null); setActDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-1" /> Criar atividade
-                  </Button>
-                </div>
-                {[
-                  { title: `🔴 Em atraso (${overdue.length})`, list: overdue },
-                  { title: `🟠 Pendentes (${pending.length})`, list: pending },
-                  { title: `🟣 Concluídas (${done.length})`, list: done },
-                ].map((g) => (
-                  <div key={g.title} className="mb-5">
-                    <h4 className="text-sm font-semibold mb-2">{g.title}</h4>
-                    <div className="space-y-2">
-                      {g.list.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma.</p>}
-                      {g.list.map((a) => {
-                        const due = getDueState(a.scheduled_at, a.status);
-                        return (
-                          <div
-                            key={a.id}
-                            className={`flex items-center gap-2 p-3 rounded-md border ${
-                              due.overdue ? "border-destructive/40 bg-destructive/5" : "border-border"
-                            }`}
-                          >
-                            <Checkbox checked={a.status === "completed"} onCheckedChange={() => toggleActivity(a)} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="outline" className="text-xs">{a.type}</Badge>
-                                <p className="text-sm font-medium truncate">{a.subject}</p>
-                                {due.overdue && (
-                                  <Badge variant="destructive" className="text-[10px] py-0 h-4">
-                                    Atrasada {due.daysLate}d
-                                  </Badge>
-                                )}
-                              </div>
-                              {a.scheduled_at && (
-                                <p className={`text-xs mt-1 ${due.textClass}`}>
-                                  Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                </p>
-                              )}
-                            </div>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditActivity(a)} title="Editar">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteActivity(a)} title="Excluir">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </TabsContent>
 
               {/* Histórico */}
               <TabsContent value="historico" className="flex-1 overflow-y-auto p-6 mt-0">
