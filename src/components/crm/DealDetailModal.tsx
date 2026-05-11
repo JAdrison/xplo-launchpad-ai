@@ -493,9 +493,21 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                                       )}
                                     </div>
                                     {a.scheduled_at && (
-                                      <p className={`text-[11px] mt-0.5 ${due.textClass}`}>
-                                        Vence em {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
-                                      </p>
+                                      (() => {
+                                        const isTraffic = (a.template_key ?? "").startsWith("traffic_payment");
+                                        const dueMatch = isTraffic ? /vence\s+(\d{2}\/\d{2})/i.exec(a.subject ?? "") : null;
+                                        return (
+                                          <div className={`text-[11px] mt-0.5 ${due.textClass}`}>
+                                            <p>
+                                              {isTraffic ? "Cobrar até " : "Vence em "}
+                                              {format(new Date(a.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
+                                            </p>
+                                            {dueMatch && (
+                                              <p className="text-muted-foreground">Vencimento da verba: {dueMatch[1]}</p>
+                                            )}
+                                          </div>
+                                        );
+                                      })()
                                     )}
                                     {a.recurrence_days && (completionsBySubject.get(a.subject)?.length ?? 0) > 0 && (
                                       <div className="mt-1 rounded border border-emerald-200 bg-emerald-50/60 px-2 py-1">
