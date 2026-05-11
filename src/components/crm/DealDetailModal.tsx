@@ -315,8 +315,18 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                 <TabsTrigger value="notas">Notas</TabsTrigger>
               </TabsList>
 
-              {/* Negócios */}
+              {/* Tarefas & Checkpoints (unificado) */}
               <TabsContent value="negocios" className="flex-1 overflow-y-auto p-6 mt-0">
+                <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="px-2 py-1 rounded bg-destructive/10 text-destructive font-medium">🔴 {overdue.length} em atraso</span>
+                    <span className="px-2 py-1 rounded bg-amber-100 text-amber-700 font-medium">🟠 {pending.length} pendentes</span>
+                    <span className="px-2 py-1 rounded bg-primary/10 text-primary font-medium">🟣 {done.length} concluídas</span>
+                  </div>
+                  <Button size="sm" onClick={() => { setEditingActivity(null); setActDialog(true); }}>
+                    <Plus className="h-4 w-4 mr-1" /> Criar atividade
+                  </Button>
+                </div>
                 <div className="flex gap-2 flex-wrap mb-6">
                   {columns.map((c) => (
                     <button
