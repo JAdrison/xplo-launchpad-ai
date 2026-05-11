@@ -80,6 +80,7 @@ export default function CrmKanban() {
               <DropdownMenuItem onClick={() => setConfigDialog("tags")}>Tags</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setConfigDialog("fields")}>Campos customizáveis</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setConfigDialog("templates")}>Templates de atividade</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setConfigDialog("xplo")}>Tarefas XPLO (recorrência)</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
