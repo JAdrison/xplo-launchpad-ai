@@ -841,10 +841,24 @@ export default function ClientDetails() {
         </CardHeader>
         <CardContent>
           {(client as any).traffic_payment_day ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Dia do vencimento</p>
                 <p className="font-semibold">Todo dia {(client as any).traffic_payment_day}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Periodicidade</p>
+                <p className="font-semibold">
+                  {(() => {
+                    const r = (client as any).traffic_payment_recurrence_days ?? 30;
+                    if (r === 7) return "Semanal";
+                    if (r === 15) return "Quinzenal";
+                    if (r === 30) return "Mensal";
+                    if (r === 60) return "Bimestral";
+                    if (r === 90) return "Trimestral";
+                    return `${r} dias`;
+                  })()}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Antecedência</p>
