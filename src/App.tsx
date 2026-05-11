@@ -23,6 +23,7 @@ import CrmKanban from "./pages/CrmKanban";
 import CrmActivities from "./pages/CrmActivities";
 import CrmContacts from "./pages/CrmContacts";
 import CrmConfig from "./pages/CrmConfig";
+import ApiDocs from "./pages/ApiDocs";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/crm/atividades" element={<CrmActivities />} />
               <Route path="/crm/contatos" element={<CrmContacts />} />
               <Route path="/crm/config" element={<CrmConfig />} />
+              <Route path="/api-docs" element={<ApiDocs />} />
               <Route
                 path="/admin/settings"
                 element={
