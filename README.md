@@ -122,7 +122,9 @@ KPIs em tempo real, funil do CRM, evolução do portfólio, donut de status de o
 │  (Supabase)   │           │  generate-content│
 │  Postgres+RLS │           │  send-webhook    │
 │  Auth+Storage │           │  admin-actions   │
-└───────────────┘           └─────────┬────────┘
+└───────────────┘           │  api (REST)      │
+                            │  mcp (MCP Server)│
+                            └─────────┬────────┘
                                       │
                             ┌─────────┴─────────┐
                             ▼                   ▼
@@ -138,6 +140,7 @@ KPIs em tempo real, funil do CRM, evolução do portfólio, donut de status de o
 - **IA seletiva** — nunca usada para dados objetivos (empresa, dores), apenas para conteúdo subjetivo.
 - **RLS por authenticated** em todas as tabelas; edge functions com `verify_jwt`.
 - **Chaves de IA** opcionais por usuário em `user_api_keys` (fallback para infraestrutura padrão Lovable).
+- **API & MCP** — autenticação independente via `api_keys` com hash SHA-256, escopos `read`/`write`, validação interna na edge function (`verify_api_key`).
 
 ---
 
