@@ -366,6 +366,149 @@ async function callGenerate(type: string, clientId: string, extra: Record<string
   return jsonResp(parsed);
 }
 
+// ----- Sales (clientes_vendidos / pagamentos / gastos) -----
+
+async function resolveUserEmails(ids: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!ids.length) return out;
+  try {
+    const admin = sb();
+    for (const id of ids) {
+      const { data } = await admin.auth.admin.getUserById(id);
+      if (data?.user?.email) out.set(id, data.user.email);
+    }
+  } catch (_) { /* ignore */ }
+  return out;
+}
+
+async function enrichSalesClients(rows: any[]) {
+  if (!rows?.length) return rows;
+  const ids = [...new Set([
+    ...rows.map(r => r.vendedor_id).filter(Boolean),
+    ...rows.map(r => r.sdr_id).filter(Boolean),
+  ])] as string[];
+  const map = await resolveUserEmails(ids);
+  return rows.map(r => ({
+    ...r,
+    valor_mensal_brl: fmtBRL(r.valor_mensal_cents),
+    valor_setup_brl: fmtBRL(r.valor_setup_cents),
+    vendedor_email: r.vendedor_id ? map.get(r.vendedor_id) ?? null : null,
+    sdr_email: r.sdr_id ? map.get(r.sdr_id) ?? null : null,
+    status_label: r.ativo ? "Ativo" : "Inativo",
+  }));
+}
+
+async function listSalesClients(url: URL) {
+  const limit = Math.min(Number(url.searchParams.get("limit") || 200), 500);
+  const ativoParam = url.searchParams.get("ativo");
+  let q = sb().from("clientes_vendidos").select("*").order("created_at", { ascending: false }).limit(limit);
+  if (ativoParam === "true") q = q.eq("ativo", true);
+  if (ativoParam === "false") q = q.eq("ativo", false);
+  const { data, error } = await q;
+  if (error) return errResp("INTERNAL_ERROR", error.message, 500);
+  return jsonResp(await enrichSalesClients(data || []));
+}
+
+async function getSalesKpis(url: URL) {
+  const today = new Date();
+  const mes = Number(url.searchParams.get("mes") || (today.getMonth() + 1));
+  const ano = Number(url.searchParams.get("ano") || today.getFullYear());
+  const prev = new Date(ano, mes - 2, 1);
+  const mesAnt = prev.getMonth() + 1;
+  const anoAnt = prev.getFullYear();
+
+  const s = sb();
+  const [cli, gast, dealsRows] = await Promise.all([
+    s.from("clientes_vendidos").select("*"),
+    s.from("gastos_anuncios").select("*"),
+    s.from("deals").select("created_at"),
+  ]);
+  if (cli.error) return errResp("INTERNAL_ERROR", cli.error.message, 500);
+  const clientes = (cli.data || []) as any[];
+  const gastos = (gast.data || []) as any[];
+
+  const dealsByMonth = new Map<string, number>();
+  for (const d of (dealsRows.data || [])) {
+    const dt = new Date((d as any).created_at);
+    const k = `${dt.getFullYear()}-${dt.getMonth() + 1}`;
+    dealsByMonth.set(k, (dealsByMonth.get(k) ?? 0) + 1);
+  }
+
+  const totalVendas = (m: number, a: number) => clientes
+    .filter(c => { const d = new Date(c.created_at); return d.getMonth() + 1 === m && d.getFullYear() === a; })
+    .reduce((acc, c) => acc + (c.valor_mensal_cents || 0) + (c.valor_setup_cents || 0), 0);
+  const qtdVendas = (m: number, a: number) => clientes
+    .filter(c => { const d = new Date(c.created_at); return d.getMonth() + 1 === m && d.getFullYear() === a; }).length;
+  const mrr = (m: number, a: number) => {
+    const last = new Date(a, m, 0, 23, 59, 59);
+    return clientes.filter(c => c.ativo && new Date(c.created_at) <= last)
+      .reduce((acc, c) => acc + (c.valor_mensal_cents || 0), 0);
+  };
+  const gastoMes = (m: number, a: number) => gastos.find(g => g.mes === m && g.ano === a)?.valor_cents ?? 0;
+  const leadsMes = (m: number, a: number) => {
+    const g = gastos.find(g => g.mes === m && g.ano === a);
+    if (g?.leads_manual != null) return g.leads_manual;
+    return dealsByMonth.get(`${a}-${m}`) ?? 0;
+  };
+  const reunioesMes = (m: number, a: number) => gastos.find(g => g.mes === m && g.ano === a)?.reunioes_manual ?? 0;
+  const variacao = (atual: number, ant: number) => ant === 0 ? (atual === 0 ? 0 : 100) : ((atual - ant) / ant) * 100;
+
+  const totalAtual = totalVendas(mes, ano);
+  const totalAnt = totalVendas(mesAnt, anoAnt);
+  const mrrAtual = mrr(mes, ano);
+  const mrrAnt = mrr(mesAnt, anoAnt);
+  const qtdAtual = qtdVendas(mes, ano);
+  const qtdAnt = qtdVendas(mesAnt, anoAnt);
+  const ticket = qtdAtual > 0 ? totalAtual / qtdAtual : 0;
+  const gasto = gastoMes(mes, ano);
+  const leads = leadsMes(mes, ano);
+  const reunioes = reunioesMes(mes, ano);
+  const cpl = leads > 0 ? gasto / leads : 0;
+  const cpr = reunioes > 0 ? gasto / reunioes : 0;
+  const cac = qtdAtual > 0 ? gasto / qtdAtual : 0;
+
+  const evolucao: any[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(ano, mes - 1 - i, 1);
+    const m = d.getMonth() + 1, a = d.getFullYear();
+    evolucao.push({
+      mes: m, ano: a,
+      label: d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      vendas_cents: totalVendas(m, a), vendas_brl: fmtBRL(totalVendas(m, a)),
+      mrr_cents: mrr(m, a), mrr_brl: fmtBRL(mrr(m, a)),
+      qtd_vendas: qtdVendas(m, a),
+    });
+  }
+
+  return jsonResp({
+    periodo: { mes, ano, label: new Date(ano, mes - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) },
+    total_vendas: { cents: totalAtual, brl: fmtBRL(totalAtual), variacao_pct: Number(variacao(totalAtual, totalAnt).toFixed(1)) },
+    ticket_medio: { cents: Math.round(ticket), brl: fmtBRL(Math.round(ticket)) },
+    mrr: { cents: mrrAtual, brl: fmtBRL(mrrAtual), variacao_pct: Number(variacao(mrrAtual, mrrAnt).toFixed(1)) },
+    quantidade_vendas: { valor: qtdAtual, variacao_pct: Number(variacao(qtdAtual, qtdAnt).toFixed(1)) },
+    gasto_anuncios: { cents: gasto, brl: fmtBRL(gasto) },
+    leads: { valor: leads, fonte: gastos.find(g => g.mes === mes && g.ano === ano)?.leads_manual != null ? "manual" : "crm_deals" },
+    reunioes: { valor: reunioes },
+    cpl: { cents: Math.round(cpl), brl: fmtBRL(Math.round(cpl)) },
+    cpr: { cents: Math.round(cpr), brl: fmtBRL(Math.round(cpr)) },
+    cac: { cents: Math.round(cac), brl: fmtBRL(Math.round(cac)) },
+    clientes_ativos: clientes.filter(c => c.ativo).length,
+    evolucao_6m: evolucao,
+  });
+}
+
+async function listSalesPayments(url: URL) {
+  const mes = url.searchParams.get("mes");
+  const ano = url.searchParams.get("ano");
+  let q = sb().from("pagamentos_clientes").select("*").order("pago_em", { ascending: false }).limit(500);
+  if (mes) q = q.eq("mes", Number(mes));
+  if (ano) q = q.eq("ano", Number(ano));
+  const { data, error } = await q;
+  if (error) return errResp("INTERNAL_ERROR", error.message, 500);
+  const enriched = (data || []).map((p: any) => ({ ...p, valor_brl: fmtBRL(p.valor_cents) }));
+  return jsonResp(enriched);
+}
+
 // ----- Router -----
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
