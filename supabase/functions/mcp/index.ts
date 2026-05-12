@@ -144,6 +144,39 @@ aiTool("generate_promise", "promise", "Generate Hormozi-style promise for the cl
 aiTool("generate_offers", "offers", "Generate the offers document for the client.");
 aiTool("generate_demand_plan", "demand-plan", "Generate the demand-generation plan for the client.");
 
+mcp.tool("list_sales_clients", {
+  description: "List sold/active clients (clientes vendidos) with monthly value, setup, vendor and SDR. Filter by ativo=true|false.",
+  inputSchema: { type: "object", properties: { ativo: { type: "string", description: "true|false" }, limit: { type: "number" } } },
+  handler: async (args: any, ctx: any) => {
+    const qs = new URLSearchParams();
+    if (args?.ativo != null) qs.set("ativo", String(args.ativo));
+    if (args?.limit != null) qs.set("limit", String(args.limit));
+    return ok(await callApi(`/sales/clients?${qs}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth }));
+  },
+});
+
+mcp.tool("get_sales_kpis", {
+  description: "Get sales KPIs for a given month: total sales, MRR, ticket, ad spend, leads, meetings, CPL/CPR/CAC, plus 6-month evolution. All values include human-readable BRL formatting.",
+  inputSchema: { type: "object", properties: { mes: { type: "number", description: "1-12 (default: current)" }, ano: { type: "number", description: "default: current" } } },
+  handler: async (args: any, ctx: any) => {
+    const qs = new URLSearchParams();
+    if (args?.mes != null) qs.set("mes", String(args.mes));
+    if (args?.ano != null) qs.set("ano", String(args.ano));
+    return ok(await callApi(`/sales/kpis?${qs}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth }));
+  },
+});
+
+mcp.tool("list_sales_payments", {
+  description: "List monthly payments (pagamentos_clientes) optionally filtered by mes/ano.",
+  inputSchema: { type: "object", properties: { mes: { type: "number" }, ano: { type: "number" } } },
+  handler: async (args: any, ctx: any) => {
+    const qs = new URLSearchParams();
+    if (args?.mes != null) qs.set("mes", String(args.mes));
+    if (args?.ano != null) qs.set("ano", String(args.ano));
+    return ok(await callApi(`/sales/payments?${qs}`, { rawAuth: ctx?.authInfo?.extra?.rawAuth }));
+  },
+});
+
 const transport = new StreamableHttpTransport();
 const httpHandler = transport.bind(mcp);
 const app = new Hono();
