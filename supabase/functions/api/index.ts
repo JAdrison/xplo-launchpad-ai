@@ -596,6 +596,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    // /sales
+    if (seg[0] === "sales") {
+      if (seg[1] === "clients" && seg.length === 2 && method === "GET") return listSalesClients(url);
+      if (seg[1] === "kpis" && seg.length === 2 && method === "GET") return getSalesKpis(url);
+      if (seg[1] === "payments" && seg.length === 2 && method === "GET") return listSalesPayments(url);
+    }
+
     return errResp("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
   } catch (e) {
     console.error("[api] error:", e);
