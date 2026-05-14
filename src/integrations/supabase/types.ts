@@ -775,6 +775,7 @@ export type Database = {
           status: Database["public"]["Enums"]["client_status"]
           traffic_payment_day: number | null
           traffic_payment_lead_days: number | null
+          traffic_payment_method: string | null
           traffic_payment_recurrence_days: number
           traffic_payment_value_cents: number | null
           updated_at: string
@@ -801,6 +802,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           traffic_payment_day?: number | null
           traffic_payment_lead_days?: number | null
+          traffic_payment_method?: string | null
           traffic_payment_recurrence_days?: number
           traffic_payment_value_cents?: number | null
           updated_at?: string
@@ -827,6 +829,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["client_status"]
           traffic_payment_day?: number | null
           traffic_payment_lead_days?: number | null
+          traffic_payment_method?: string | null
           traffic_payment_recurrence_days?: number
           traffic_payment_value_cents?: number | null
           updated_at?: string

@@ -94,7 +94,7 @@ export default function ClientDetails() {
   const [driveForm, setDriveForm] = useState({ url: "" });
   const [isTrafficPayOpen, setIsTrafficPayOpen] = useState(false);
   const [isSavingTrafficPay, setIsSavingTrafficPay] = useState(false);
-  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "", recurrence_days: "30" });
+  const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "", recurrence_days: "30", method: "pix" });
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [isSavingSocial, setIsSavingSocial] = useState(false);
   const [showSocialIgPwd, setShowSocialIgPwd] = useState(false);
@@ -157,6 +157,7 @@ export default function ClientDetails() {
             ? ((data as any).traffic_payment_value_cents / 100).toFixed(2).replace(".", ",")
             : "",
           recurrence_days: (data as any).traffic_payment_recurrence_days != null ? String((data as any).traffic_payment_recurrence_days) : "30",
+          method: (data as any).traffic_payment_method || "pix",
         });
         setXploLabForm({
           login: (data as any).xplo_lab_login || "",
@@ -330,6 +331,7 @@ export default function ClientDetails() {
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
         traffic_payment_recurrence_days: recNum,
+        traffic_payment_method: trafficPayForm.method,
       } as any)
       .eq("id", id);
     if (error) {
@@ -347,6 +349,7 @@ export default function ClientDetails() {
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
         traffic_payment_recurrence_days: recNum,
+        traffic_payment_method: trafficPayForm.method,
       } as any) : prev));
       toast({ title: "Pagamento de tráfego configurado", description: "Tarefa recorrente criada/atualizada." });
       setIsTrafficPayOpen(false);
@@ -825,6 +828,22 @@ export default function ClientDetails() {
                       </Select>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tp-method">Forma de pagamento</Label>
+                    <Select
+                      value={trafficPayForm.method}
+                      onValueChange={(v) => setTrafficPayForm((p) => ({ ...p, method: v }))}
+                    >
+                      <SelectTrigger id="tp-method"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pix">Pix</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="cartao">Cartão de crédito</SelectItem>
+                        <SelectItem value="transferencia">Transferência bancária</SelectItem>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsTrafficPayOpen(false)} disabled={isSavingTrafficPay}>
@@ -841,7 +860,7 @@ export default function ClientDetails() {
         </CardHeader>
         <CardContent>
           {(client as any).traffic_payment_day ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Dia do vencimento</p>
                 <p className="font-semibold">Todo dia {(client as any).traffic_payment_day}</p>
@@ -863,6 +882,22 @@ export default function ClientDetails() {
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Antecedência</p>
                 <p className="font-semibold">{(client as any).traffic_payment_lead_days ?? 3} dias antes</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Forma</p>
+                <p className="font-semibold">
+                  {(() => {
+                    const m = (client as any).traffic_payment_method;
+                    const map: Record<string, string> = {
+                      pix: "Pix",
+                      boleto: "Boleto",
+                      cartao: "Cartão de crédito",
+                      transferencia: "Transferência",
+                      dinheiro: "Dinheiro",
+                    };
+                    return m ? (map[m] ?? m) : "—";
+                  })()}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Valor</p>
