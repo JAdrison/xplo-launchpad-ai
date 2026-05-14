@@ -349,6 +349,7 @@ export default function ClientDetails() {
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
         traffic_payment_recurrence_days: recNum,
+        traffic_payment_method: trafficPayForm.method,
       } as any) : prev));
       toast({ title: "Pagamento de tráfego configurado", description: "Tarefa recorrente criada/atualizada." });
       setIsTrafficPayOpen(false);
