@@ -828,6 +828,22 @@ export default function ClientDetails() {
                       </Select>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tp-method">Forma de pagamento</Label>
+                    <Select
+                      value={trafficPayForm.method}
+                      onValueChange={(v) => setTrafficPayForm((p) => ({ ...p, method: v }))}
+                    >
+                      <SelectTrigger id="tp-method"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pix">Pix</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="cartao">Cartão de crédito</SelectItem>
+                        <SelectItem value="transferencia">Transferência bancária</SelectItem>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsTrafficPayOpen(false)} disabled={isSavingTrafficPay}>
