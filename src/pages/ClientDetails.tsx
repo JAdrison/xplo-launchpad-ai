@@ -860,7 +860,7 @@ export default function ClientDetails() {
         </CardHeader>
         <CardContent>
           {(client as any).traffic_payment_day ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Dia do vencimento</p>
                 <p className="font-semibold">Todo dia {(client as any).traffic_payment_day}</p>
@@ -882,6 +882,22 @@ export default function ClientDetails() {
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Antecedência</p>
                 <p className="font-semibold">{(client as any).traffic_payment_lead_days ?? 3} dias antes</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Forma</p>
+                <p className="font-semibold">
+                  {(() => {
+                    const m = (client as any).traffic_payment_method;
+                    const map: Record<string, string> = {
+                      pix: "Pix",
+                      boleto: "Boleto",
+                      cartao: "Cartão de crédito",
+                      transferencia: "Transferência",
+                      dinheiro: "Dinheiro",
+                    };
+                    return m ? (map[m] ?? m) : "—";
+                  })()}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Valor</p>
