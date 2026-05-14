@@ -331,6 +331,7 @@ export default function ClientDetails() {
         traffic_payment_lead_days: leadNum,
         traffic_payment_value_cents: valueCents,
         traffic_payment_recurrence_days: recNum,
+        traffic_payment_method: trafficPayForm.method,
       } as any)
       .eq("id", id);
     if (error) {
