@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound, FolderOpen, CalendarClock } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Trash2, Eye, EyeOff, Instagram, Facebook, Shield, TrendingUp, DollarSign, Target, KeyRound, FolderOpen, CalendarClock, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientPipelineBar } from "@/components/client/ClientPipelineBar";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +92,9 @@ export default function ClientDetails() {
   const [isDriveOpen, setIsDriveOpen] = useState(false);
   const [isSavingDrive, setIsSavingDrive] = useState(false);
   const [driveForm, setDriveForm] = useState({ url: "" });
+  const [isWhatsGroupOpen, setIsWhatsGroupOpen] = useState(false);
+  const [isSavingWhatsGroup, setIsSavingWhatsGroup] = useState(false);
+  const [whatsGroupForm, setWhatsGroupForm] = useState({ code: "" });
   const [isTrafficPayOpen, setIsTrafficPayOpen] = useState(false);
   const [isSavingTrafficPay, setIsSavingTrafficPay] = useState(false);
   const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "", recurrence_days: "30", method: "pix" });
@@ -150,6 +153,7 @@ export default function ClientDetails() {
           notes: data.notes || "",
         });
         setDriveForm({ url: (data as any).drive_url || "" });
+        setWhatsGroupForm({ code: (data as any).whatsapp_group_code || "" });
         setTrafficPayForm({
           day: (data as any).traffic_payment_day != null ? String((data as any).traffic_payment_day) : "",
           lead_days: (data as any).traffic_payment_lead_days != null ? String((data as any).traffic_payment_lead_days) : "3",
@@ -299,6 +303,24 @@ export default function ClientDetails() {
       setIsDriveOpen(false);
     }
     setIsSavingDrive(false);
+  };
+
+  const handleSaveWhatsGroup = async () => {
+    if (!id) return;
+    setIsSavingWhatsGroup(true);
+    const code = whatsGroupForm.code.trim() || null;
+    const { error } = await supabase
+      .from("clients")
+      .update({ whatsapp_group_code: code } as any)
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      setClient((prev) => (prev ? ({ ...prev, whatsapp_group_code: code } as any) : prev));
+      toast({ title: "Grupo de WhatsApp salvo" });
+      setIsWhatsGroupOpen(false);
+    }
+    setIsSavingWhatsGroup(false);
   };
 
   const handleSaveTrafficPayment = async () => {
@@ -744,6 +766,77 @@ export default function ClientDetails() {
           ) : (
             <p className="text-sm text-muted-foreground">
               Nenhum link cadastrado. Use o botão acima para adicionar.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Grupo de WhatsApp do Cliente */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Grupo de WhatsApp do Cliente
+              <Badge variant="secondary" className="ml-2 text-xs">Interno</Badge>
+            </CardTitle>
+            <Dialog open={isWhatsGroupOpen} onOpenChange={setIsWhatsGroupOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-3.5 w-3.5" />
+                  {(client as any).whatsapp_group_code ? "Editar" : "Adicionar"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Grupo de WhatsApp</DialogTitle>
+                  <DialogDescription>
+                    Cole o link de convite ou o código do grupo de WhatsApp deste cliente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="whats-group-code">Link ou código</Label>
+                    <Input
+                      id="whats-group-code"
+                      autoComplete="off"
+                      value={whatsGroupForm.code}
+                      onChange={(e) => setWhatsGroupForm({ code: e.target.value })}
+                      placeholder="https://chat.whatsapp.com/ABCxyz123"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsWhatsGroupOpen(false)} disabled={isSavingWhatsGroup}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveWhatsGroup} disabled={isSavingWhatsGroup}>
+                    {isSavingWhatsGroup ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(client as any).whatsapp_group_code ? (
+            (client as any).whatsapp_group_code.startsWith("http") ? (
+              <a
+                href={(client as any).whatsapp_group_code}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-primary hover:underline break-all"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                {(client as any).whatsapp_group_code}
+              </a>
+            ) : (
+              <p className="font-mono text-sm break-all">{(client as any).whatsapp_group_code}</p>
+            )
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum grupo cadastrado. Use o botão acima para adicionar.
             </p>
           )}
         </CardContent>
