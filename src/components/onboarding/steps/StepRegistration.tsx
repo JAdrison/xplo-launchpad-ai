@@ -93,7 +93,6 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
         responsible_cpf: cd.responsible_cpf ? maskCPF(cd.responsible_cpf.replace(/\D/g, "")) : "",
         email: cd.email || "",
         phone: cd.phone ? maskPhone(cd.phone.replace(/\D/g, "")) : "",
-        whatsapp_group_code: cd.whatsapp_group_code || "",
       }));
     }
     if (p.data) {
