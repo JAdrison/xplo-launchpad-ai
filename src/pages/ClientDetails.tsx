@@ -305,6 +305,24 @@ export default function ClientDetails() {
     setIsSavingDrive(false);
   };
 
+  const handleSaveWhatsGroup = async () => {
+    if (!id) return;
+    setIsSavingWhatsGroup(true);
+    const code = whatsGroupForm.code.trim() || null;
+    const { error } = await supabase
+      .from("clients")
+      .update({ whatsapp_group_code: code } as any)
+      .eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      setClient((prev) => (prev ? ({ ...prev, whatsapp_group_code: code } as any) : prev));
+      toast({ title: "Grupo de WhatsApp salvo" });
+      setIsWhatsGroupOpen(false);
+    }
+    setIsSavingWhatsGroup(false);
+  };
+
   const handleSaveTrafficPayment = async () => {
     if (!id) return;
     const dayNum = parseInt(trafficPayForm.day, 10);
