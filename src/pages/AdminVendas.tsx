@@ -14,13 +14,9 @@ export default function AdminVendas() {
   const today = new Date();
   const [mes, setMes] = useState(today.getMonth() + 1);
   const [ano, setAno] = useState(today.getFullYear());
-  const [masked, setMasked] = useState<boolean>(() => localStorage.getItem(MASK_KEY) === "1");
+  const [masked, setMasked] = useState<boolean>(true);
 
-  const toggleMask = () => {
-    const v = !masked;
-    setMasked(v);
-    localStorage.setItem(MASK_KEY, v ? "1" : "0");
-  };
+  const toggleMask = () => setMasked((v) => !v);
 
   const v = useVendas(mes, ano);
   const { metrics, evolucao } = v;
