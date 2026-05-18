@@ -92,6 +92,9 @@ export default function ClientDetails() {
   const [isDriveOpen, setIsDriveOpen] = useState(false);
   const [isSavingDrive, setIsSavingDrive] = useState(false);
   const [driveForm, setDriveForm] = useState({ url: "" });
+  const [isWhatsGroupOpen, setIsWhatsGroupOpen] = useState(false);
+  const [isSavingWhatsGroup, setIsSavingWhatsGroup] = useState(false);
+  const [whatsGroupForm, setWhatsGroupForm] = useState({ code: "" });
   const [isTrafficPayOpen, setIsTrafficPayOpen] = useState(false);
   const [isSavingTrafficPay, setIsSavingTrafficPay] = useState(false);
   const [trafficPayForm, setTrafficPayForm] = useState({ day: "", lead_days: "3", value_brl: "", recurrence_days: "30", method: "pix" });
