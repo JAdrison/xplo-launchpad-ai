@@ -162,7 +162,6 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
           responsible_cpf: form.responsible_cpf.trim() || null,
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
-          whatsapp_group_code: form.whatsapp_group_code.trim() || null,
           xplo_plan: xploPlan,
           xplo_bonuses: xploBonuses,
         } as any)
