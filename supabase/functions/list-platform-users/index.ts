@@ -56,8 +56,15 @@ Deno.serve(async (req) => {
     const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (listErr) throw listErr;
 
+    const now = Date.now();
     const users = (list?.users ?? [])
-      .filter((u: any) => activeIds.has(u.id))
+      .filter((u: any) => {
+        if (!activeIds.has(u.id)) return false;
+        // Exclui suspensos (banned_until no futuro) e deletados (deleted_at)
+        if (u.deleted_at) return false;
+        if (u.banned_until && new Date(u.banned_until).getTime() > now) return false;
+        return true;
+      })
       .map((u: any) => ({
         id: u.id,
         email: u.email ?? "",
