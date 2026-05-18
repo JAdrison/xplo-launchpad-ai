@@ -60,6 +60,7 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
     responsible_cpf: "",
     email: "",
     phone: "",
+    whatsapp_group_code: "",
     current_revenue: "",
     revenue_goal: "",
     monthly_investment: "",
@@ -93,6 +94,7 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
         responsible_cpf: cd.responsible_cpf ? maskCPF(cd.responsible_cpf.replace(/\D/g, "")) : "",
         email: cd.email || "",
         phone: cd.phone ? maskPhone(cd.phone.replace(/\D/g, "")) : "",
+        whatsapp_group_code: cd.whatsapp_group_code || "",
       }));
     }
     if (p.data) {
@@ -162,6 +164,7 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
           responsible_cpf: form.responsible_cpf.trim() || null,
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
+          whatsapp_group_code: form.whatsapp_group_code.trim() || null,
           xplo_plan: xploPlan,
           xplo_bonuses: xploBonuses,
         } as any)
@@ -267,6 +270,19 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone / WhatsApp *</Label>
               <Input id="phone" name="phone" placeholder="(00) 00000-0000" value={form.phone} onChange={handleField} />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="whatsapp_group_code">Código do grupo de WhatsApp do cliente</Label>
+              <Input
+                id="whatsapp_group_code"
+                name="whatsapp_group_code"
+                placeholder="Ex.: https://chat.whatsapp.com/ABCxyz123 ou ABCxyz123"
+                value={form.whatsapp_group_code}
+                onChange={handleField}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Link de convite ou código do grupo do cliente, usado para comunicação operacional.
+              </p>
             </div>
           </div>
         </div>
