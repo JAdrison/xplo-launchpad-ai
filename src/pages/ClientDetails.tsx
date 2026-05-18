@@ -771,6 +771,77 @@ export default function ClientDetails() {
         </CardContent>
       </Card>
 
+      {/* Grupo de WhatsApp do Cliente */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Grupo de WhatsApp do Cliente
+              <Badge variant="secondary" className="ml-2 text-xs">Interno</Badge>
+            </CardTitle>
+            <Dialog open={isWhatsGroupOpen} onOpenChange={setIsWhatsGroupOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Pencil className="h-3.5 w-3.5" />
+                  {(client as any).whatsapp_group_code ? "Editar" : "Adicionar"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Grupo de WhatsApp</DialogTitle>
+                  <DialogDescription>
+                    Cole o link de convite ou o código do grupo de WhatsApp deste cliente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="whats-group-code">Link ou código</Label>
+                    <Input
+                      id="whats-group-code"
+                      autoComplete="off"
+                      value={whatsGroupForm.code}
+                      onChange={(e) => setWhatsGroupForm({ code: e.target.value })}
+                      placeholder="https://chat.whatsapp.com/ABCxyz123"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsWhatsGroupOpen(false)} disabled={isSavingWhatsGroup}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveWhatsGroup} disabled={isSavingWhatsGroup}>
+                    {isSavingWhatsGroup ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {(client as any).whatsapp_group_code ? (
+            (client as any).whatsapp_group_code.startsWith("http") ? (
+              <a
+                href={(client as any).whatsapp_group_code}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-primary hover:underline break-all"
+              >
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                {(client as any).whatsapp_group_code}
+              </a>
+            ) : (
+              <p className="font-mono text-sm break-all">{(client as any).whatsapp_group_code}</p>
+            )
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum grupo cadastrado. Use o botão acima para adicionar.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Pagamento de verba de tráfego */}
       <Card>
         <CardHeader>
