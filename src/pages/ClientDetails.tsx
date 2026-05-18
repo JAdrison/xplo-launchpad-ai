@@ -153,6 +153,7 @@ export default function ClientDetails() {
           notes: data.notes || "",
         });
         setDriveForm({ url: (data as any).drive_url || "" });
+        setWhatsGroupForm({ code: (data as any).whatsapp_group_code || "" });
         setTrafficPayForm({
           day: (data as any).traffic_payment_day != null ? String((data as any).traffic_payment_day) : "",
           lead_days: (data as any).traffic_payment_lead_days != null ? String((data as any).traffic_payment_lead_days) : "3",
