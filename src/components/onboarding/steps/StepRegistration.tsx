@@ -268,19 +268,6 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
               <Label htmlFor="phone">Telefone / WhatsApp *</Label>
               <Input id="phone" name="phone" placeholder="(00) 00000-0000" value={form.phone} onChange={handleField} />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="whatsapp_group_code">Código do grupo de WhatsApp do cliente</Label>
-              <Input
-                id="whatsapp_group_code"
-                name="whatsapp_group_code"
-                placeholder="Ex.: https://chat.whatsapp.com/ABCxyz123 ou ABCxyz123"
-                value={form.whatsapp_group_code}
-                onChange={handleField}
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Link de convite ou código do grupo do cliente, usado para comunicação operacional.
-              </p>
-            </div>
           </div>
         </div>
 
