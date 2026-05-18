@@ -60,6 +60,7 @@ export function StepRegistration({ clientId, onNext, onPrevious }: StepRegistrat
     responsible_cpf: "",
     email: "",
     phone: "",
+    whatsapp_group_code: "",
     current_revenue: "",
     revenue_goal: "",
     monthly_investment: "",
