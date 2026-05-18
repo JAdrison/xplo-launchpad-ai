@@ -394,21 +394,30 @@ export function DealDetailModal({ dealId, onClose, onChanged }: Props) {
                   }
                   // Histórico de conclusões para tarefas recorrentes (agrupado por subject,
                   // pois cada recorrência cria uma nova activity com id diferente).
+                  // Dedup por dia (mesmo subject concluído no mesmo dia conta 1x),
+                  // já que history.activity_completed e activity.completed_at
+                  // geram timestamps próximos mas não idênticos.
                   const completionsBySubject = new Map<string, string[]>();
+                  const seenByDay = new Map<string, Set<string>>();
+                  const pushCompletion = (subj: string, iso: string) => {
+                    const day = iso.slice(0, 10);
+                    const seen = seenByDay.get(subj) ?? new Set<string>();
+                    if (seen.has(day)) return;
+                    seen.add(day);
+                    seenByDay.set(subj, seen);
+                    const arr = completionsBySubject.get(subj) ?? [];
+                    arr.push(iso);
+                    completionsBySubject.set(subj, arr);
+                  };
                   for (const h of history) {
                     if (h.event_type !== "activity_completed") continue;
                     const subj = (h.event_data as any)?.subject as string | undefined;
                     if (!subj) continue;
-                    const arr = completionsBySubject.get(subj) ?? [];
-                    arr.push(h.created_at);
-                    completionsBySubject.set(subj, arr);
+                    pushCompletion(subj, h.created_at);
                   }
-                  // Também inclui completed_at das próprias activities concluídas (caso histórico esteja incompleto)
                   for (const a of activities) {
                     if (!a.recurrence_days || a.status !== "completed" || !a.completed_at) continue;
-                    const arr = completionsBySubject.get(a.subject) ?? [];
-                    if (!arr.includes(a.completed_at)) arr.push(a.completed_at);
-                    completionsBySubject.set(a.subject, arr);
+                    pushCompletion(a.subject, a.completed_at);
                   }
                   for (const [k, v] of completionsBySubject) {
                     completionsBySubject.set(k, v.sort((a, b) => new Date(b).getTime() - new Date(a).getTime()));
