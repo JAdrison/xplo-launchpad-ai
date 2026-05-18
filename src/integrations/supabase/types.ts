@@ -779,6 +779,7 @@ export type Database = {
           traffic_payment_recurrence_days: number
           traffic_payment_value_cents: number | null
           updated_at: string
+          whatsapp_group_code: string | null
           xplo_bonuses: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login: string | null
           xplo_lab_password: string | null
@@ -806,6 +807,7 @@ export type Database = {
           traffic_payment_recurrence_days?: number
           traffic_payment_value_cents?: number | null
           updated_at?: string
+          whatsapp_group_code?: string | null
           xplo_bonuses?: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login?: string | null
           xplo_lab_password?: string | null
@@ -833,6 +835,7 @@ export type Database = {
           traffic_payment_recurrence_days?: number
           traffic_payment_value_cents?: number | null
           updated_at?: string
+          whatsapp_group_code?: string | null
           xplo_bonuses?: Database["public"]["Enums"]["xplo_bonus"][]
           xplo_lab_login?: string | null
           xplo_lab_password?: string | null
